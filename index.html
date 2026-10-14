@@ -74,8 +74,14 @@ padding:6px 9px;font-family:inherit;font-size:.75rem}
 .add{background:none;border:1px dashed var(--green-dim);color:var(--green);cursor:pointer;
 padding:7px 10px;font-family:inherit;font-size:.78rem;width:100%;margin-top:4px;letter-spacing:.04em}
 .add:hover{border-style:solid;box-shadow:0 0 6px rgba(57,255,106,.4)}
-.cargo-grid{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;align-items:center}
-.cargo-grid label{min-width:44px}
+.die-select{background:var(--panel2);border:1px solid var(--border);color:var(--green);
+font-family:'VT323',monospace;font-size:1rem;padding:6px 4px;width:auto;max-width:62px;caret-color:var(--green)}
+.die-select:focus{outline:none;border-color:var(--green);box-shadow:0 0 6px rgba(57,255,106,.5)}
+.cargo-bay{border:1px solid var(--border);padding:10px;margin-bottom:8px}
+.cargo-bay .bay-head{color:var(--dim);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.cargo-bay .bay-row{display:flex;gap:8px}
+.cargo-bay .bay-row input[type=text]{flex:1}
+.cargo-bay .bay-row input[type=number]{max-width:70px}
 .log-entry{border-bottom:1px solid var(--border);padding:8px 0;font-size:.82rem}
 .log-entry .t{color:var(--dim);font-size:.7rem}
 .log-entry::before{content:'$ '; color:var(--green-dim)}
@@ -199,13 +205,16 @@ text-shadow:0 0 4px rgba(57,255,106,.6)}
 <h2>Hull &amp; Systems</h2>
 <div class="row"><div class="stat"><label>Hull</label>
 <div class="bar hull"><div id="hullBar" style="width:0%"></div></div></div>
-<input id="hull" type="number" onchange="saveStatus()"> / <input id="hullMax" type="number" onchange="saveStatus()"></div>
+<input id="hull" type="number" onchange="saveStatus()"> / <input id="hullMax" type="number" onchange="saveStatus()">
+<select id="hullQuality" class="die-select" onchange="saveStatus()"></select></div>
 <div class="row"><div class="stat"><label>Shields</label>
 <div class="bar shields"><div id="shieldsBar" style="width:0%"></div></div></div>
-<input id="shields" type="number" onchange="saveStatus()"> / <input id="shieldsMax" type="number" onchange="saveStatus()"></div>
+<input id="shields" type="number" onchange="saveStatus()"> / <input id="shieldsMax" type="number" onchange="saveStatus()">
+<select id="shieldsQuality" class="die-select" onchange="saveStatus()"></select></div>
 <div class="row"><div class="stat"><label>Fuel</label>
 <div class="bar fuel"><div id="fuelBar" style="width:0%"></div></div></div>
-<input id="fuel" type="number" onchange="saveStatus()"> / <input id="fuelMax" type="number" onchange="saveStatus()"></div>
+<input id="fuel" type="number" onchange="saveStatus()"> / <input id="fuelMax" type="number" onchange="saveStatus()">
+<select id="fuelQuality" class="die-select" onchange="saveStatus()"></select></div>
 </div>
 
 <div class="panel">
@@ -216,15 +225,15 @@ text-shadow:0 0 4px rgba(57,255,106,.6)}
 </div>
 
 <div class="panel"><h2>Crew</h2><div id="crewList"></div>
-<button class="add" onclick="addItem('crew',{name:'New crew',hp:''})">+ add crew</button></div>
+<button class="add" onclick="addItem('crew',{desc:'New crew',quality:'d10',qty:1})">+ add crew</button></div>
 
 <div class="panel"><h2>Upgrades</h2><div id="upgradesList"></div>
 <button class="add" onclick="addItem('upgrades',{text:''})">+ add upgrade</button></div>
 
 <div class="panel"><h2>Defense Array</h2><div id="defenseList"></div>
-<button class="add" onclick="addItem('defense',{text:''})">+ add defense item</button></div>
+<button class="add" onclick="addItem('defense',{desc:'',quality:'d10'})">+ add defense item</button></div>
 
-<div class="panel"><h2>Cargo Holds</h2><div class="cargo-grid" id="cargoGrid"></div></div>
+<div class="panel"><h2>Cargo Bays</h2><div id="cargoGrid"></div></div>
 
 <div class="panel"><h2>Hangar Bay</h2><div id="hangarList"></div>
 <button class="add" onclick="addItem('hangar',{name:'',qty:1})">+ add craft</button></div>
@@ -257,6 +266,16 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+const DIE_OPTIONS = ['d4','d6','d8','d10','d12','d20'];
+function fillDieSelect(sel, value){
+  sel.innerHTML='';
+  DIE_OPTIONS.forEach(d=>{
+    const opt=document.createElement('option'); opt.value=d; opt.textContent=d;
+    sel.appendChild(opt);
+  });
+  sel.value = DIE_OPTIONS.includes(value) ? value : 'd10';
+}
+
 function tryUnlock(){
 const v = document.getElementById('passInput').value;
 if(v === PARTY_PASSCODE){
@@ -276,21 +295,25 @@ window.addEventListener('DOMContentLoaded', boot);
 }
 
 const DEFAULTS = {
-status:{hull:100,hullMax:100,shields:100,shieldsMax:100,fuel:100,fuelMax:100},
+status:{hull:100,hullMax:100,hullQuality:'d10',shields:100,shieldsMax:100,shieldsQuality:'d10',fuel:100,fuelMax:100,fuelQuality:'d10'},
 location:{name:'',coords:'',notes:''},
 crew:{
-c1:{name:'Rogue Trader Jude Sparrow',hp:''},
-c2:{name:'Dusty Cummings Handerstorm',hp:''},
-c3:{name:'Ren Hammerstorm',hp:''},
-c4:{name:'Servitor',hp:''},
-c5:{name:'Servitor',hp:''}
+c1:{desc:'Rogue Trader Jude Sparrow',quality:'d10',qty:1},
+c2:{desc:'Dusty Cummings Handerstorm',quality:'d10',qty:1},
+c3:{desc:'Ren Hammerstorm',quality:'d10',qty:1},
+c4:{desc:'Servitor',quality:'d6',qty:2}
 },
 upgrades:{u1:{text:'Chameleon paint bodywork'}},
 defense:{
-d1:{text:'Broadside defense laser bank (4 lasers, port & starboard)'},
-d2:{text:'Standard peacetime void shield matrix'}
+d1:{desc:'Broadside defense laser bank (4 lasers, port & starboard)',quality:'d10'},
+d2:{desc:'Standard peacetime void shield matrix',quality:'d8'}
 },
-cargo:{A:{contents:'4 million tons iron ore'},B:{contents:'3 million tons iron ore'},C:{contents:''},D:{contents:''}},
+cargo:{
+A:{desc:'Iron ore',qty:4},
+B:{desc:'Iron ore',qty:3},
+C:{desc:'',qty:0},
+D:{desc:'',qty:0}
+},
 hangar:{h1:{name:'Arvus lighter',qty:5}},
 log:{}
 };
@@ -301,11 +324,21 @@ if(!snap.exists()) db.ref('/').set(DEFAULTS);
 });
 db.ref('status').on('value', s=>renderStatus(s.val()||DEFAULTS.status));
 db.ref('location').on('value', s=>renderLocation(s.val()||DEFAULTS.location));
-db.ref('crew').on('value', s=>renderList('crew','crewList',s.val(),['name','hp']));
-db.ref('upgrades').on('value', s=>renderList('upgrades','upgradesList',s.val(),['text']));
-db.ref('defense').on('value', s=>renderList('defense','defenseList',s.val(),['text']));
+db.ref('crew').on('value', s=>renderList('crew','crewList',s.val(),[
+  {key:'desc',placeholder:'description'},
+  {key:'quality',type:'select',width:'62px'},
+  {key:'qty',type:'number',placeholder:'qty',width:'55px'}
+]));
+db.ref('upgrades').on('value', s=>renderList('upgrades','upgradesList',s.val(),[{key:'text',placeholder:'text'}]));
+db.ref('defense').on('value', s=>renderList('defense','defenseList',s.val(),[
+  {key:'desc',placeholder:'description'},
+  {key:'quality',type:'select',width:'62px'}
+]));
 db.ref('cargo').on('value', s=>renderCargo(s.val()||DEFAULTS.cargo));
-db.ref('hangar').on('value', s=>renderList('hangar','hangarList',s.val(),['name','qty']));
+db.ref('hangar').on('value', s=>renderList('hangar','hangarList',s.val(),[
+  {key:'name',placeholder:'craft'},
+  {key:'qty',type:'number',placeholder:'qty',width:'55px'}
+]));
 db.ref('log').on('value', s=>renderLog(s.val()));
 }
 
@@ -314,6 +347,10 @@ function renderStatus(v){
 const el=document.getElementById(k);
 if(document.activeElement!==el) el.value = v[k];
 });
+['hullQuality','shieldsQuality','fuelQuality'].forEach(k=>{
+const el=document.getElementById(k);
+if(document.activeElement!==el) fillDieSelect(el, v[k]);
+});
 document.getElementById('hullBar').style.width = Math.min(100,(v.hull/v.hullMax)*100)+'%';
 document.getElementById('shieldsBar').style.width = Math.min(100,(v.shields/v.shieldsMax)*100)+'%';
 document.getElementById('fuelBar').style.width = Math.min(100,(v.fuel/v.fuelMax)*100)+'%';
@@ -321,8 +358,11 @@ document.getElementById('fuelBar').style.width = Math.min(100,(v.fuel/v.fuelMax)
 function saveStatus(){
 db.ref('status').update({
 hull:+document.getElementById('hull').value, hullMax:+document.getElementById('hullMax').value,
+hullQuality:document.getElementById('hullQuality').value,
 shields:+document.getElementById('shields').value, shieldsMax:+document.getElementById('shieldsMax').value,
-fuel:+document.getElementById('fuel').value, fuelMax:+document.getElementById('fuelMax').value
+shieldsQuality:document.getElementById('shieldsQuality').value,
+fuel:+document.getElementById('fuel').value, fuelMax:+document.getElementById('fuelMax').value,
+fuelQuality:document.getElementById('fuelQuality').value
 });
 }
 
@@ -347,10 +387,18 @@ el.innerHTML='';
 Object.entries(data||{}).forEach(([id,item])=>{
 const row = document.createElement('div'); row.className='list-item';
 fields.forEach(f=>{
-const inp = document.createElement('input');
-inp.value = item[f]||''; inp.placeholder = f;
-if(f==='hp'||f==='qty') inp.style.maxWidth='60px';
-inp.onchange = ()=> db.ref(`${path}/${id}`).update({[f]: f==='qty'? +inp.value : inp.value});
+let inp;
+if(f.type==='select'){
+inp = document.createElement('select'); inp.className='die-select';
+fillDieSelect(inp, item[f.key]);
+} else {
+inp = document.createElement('input');
+if(f.type==='number') inp.type='number';
+inp.value = item[f.key] || '';
+inp.placeholder = f.placeholder || f.key;
+}
+if(f.width) inp.style.maxWidth = f.width;
+inp.onchange = ()=> db.ref(`${path}/${id}`).update({[f.key]: f.type==='number' ? +inp.value : inp.value});
 row.appendChild(inp);
 });
 const del = document.createElement('button'); del.className='del'; del.textContent='×';
@@ -366,11 +414,22 @@ const el = document.getElementById('cargoGrid');
 if(document.activeElement && el.contains(document.activeElement)) return;
 el.innerHTML='';
 ['A','B','C','D'].forEach(h=>{
-const lbl=document.createElement('label'); lbl.textContent='Hold '+h;
-const inp=document.createElement('input');
-inp.value=(v[h]&&v[h].contents)||''; inp.placeholder='empty';
-inp.onchange=()=>db.ref('cargo/'+h).update({contents:inp.value});
-el.appendChild(lbl); el.appendChild(inp);
+const bay = v[h] || {};
+const wrap = document.createElement('div'); wrap.className='cargo-bay';
+const head = document.createElement('div'); head.className='bay-head'; head.textContent='Bay '+h;
+const row = document.createElement('div'); row.className='bay-row';
+
+const descInp = document.createElement('input'); descInp.type='text';
+descInp.value = bay.desc || ''; descInp.placeholder = 'description';
+descInp.onchange = ()=> db.ref('cargo/'+h).update({desc: descInp.value});
+
+const qtyInp = document.createElement('input'); qtyInp.type='number';
+qtyInp.value = bay.qty || 0; qtyInp.placeholder = 'qty';
+qtyInp.onchange = ()=> db.ref('cargo/'+h).update({qty: +qtyInp.value});
+
+row.appendChild(descInp); row.appendChild(qtyInp);
+wrap.appendChild(head); wrap.appendChild(row);
+el.appendChild(wrap);
 });
 }
 
