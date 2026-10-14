@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voidship Status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=IBM+Plex+Mono:wght@400;500;600&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{
+--bg:#020a03; --panel:#03110a; --panel2:#04170d; --border:#0f4d27;
+--green:#39ff6a; --green-dim:#1e8f45; --text:#8fffa8; --dim:#3f8a55;
+--danger:#ff4444; --ok:#39ff6a;
+}
+*{box-sizing:border-box}
+html{font-size:117%}
+@keyframes flicker{0%,96%,100%{opacity:1}97%{opacity:.85}98%{opacity:1}99%{opacity:.9}}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+@keyframes jitter{0%,88%,100%{transform:translate(0,0)}89%{transform:translate(-.5px,.5px)}
+90%{transform:translate(.5px,0)}91%{transform:translate(0,-.5px)}92%{transform:translate(0,0)}}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'VT323',monospace;
+padding:24px 16px 60px;min-height:100vh;position:relative;animation:flicker 6s infinite;
+filter:blur(.1px);
+text-shadow:1px 0 1.6px rgba(57,255,106,.35), -0.8px 0 1.6px rgba(57,255,106,.18),
+0 0 1px rgba(57,255,106,.3)}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:15;
+background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 1px,rgba(0,255,80,.05) 2px,rgba(0,0,0,0) 3px)}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:14;
+background:linear-gradient(180deg,rgba(140,255,180,.09) 0%,rgba(0,0,0,0) 32%,rgba(0,0,0,0) 62%,rgba(0,0,0,.14) 100%),
+radial-gradient(ellipse at center,rgba(0,0,0,0) 52%,rgba(0,0,0,.65) 100%)}
+@keyframes staticShift{0%{background-position:0 0}20%{background-position:-17px 9px}
+40%{background-position:12px -14px}60%{background-position:-9px -6px}
+80%{background-position:15px 11px}100%{background-position:0 0}}
+.noise-overlay{position:fixed;inset:0;pointer-events:none;z-index:16;opacity:.07;mix-blend-mode:screen;
+background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+animation:staticShift .5s steps(1) infinite}
+@keyframes glitchBar{0%,96.5%,100%{opacity:0;transform:translateY(0) scaleY(1)}
+97%{opacity:.5;transform:translateY(-2px) scaleY(1.4)}
+97.6%{opacity:0}
+98.3%{opacity:.35;transform:translateY(3px) scaleY(.8)}
+98.6%{opacity:0}}
+.glitch-bar{position:fixed;left:0;right:0;top:38%;height:3px;pointer-events:none;z-index:17;
+background:rgba(57,255,106,.5);mix-blend-mode:screen;animation:glitchBar 9s infinite}
+.glitch-bar.b2{top:71%;height:2px;animation-duration:13s;animation-delay:2.4s}
+h1,h2{font-family:'VT323',monospace;font-weight:400;margin:0;text-transform:uppercase}
+h1{font-size:1.9rem;color:var(--green);letter-spacing:.14em;text-align:center;
+text-shadow:0 0 4px var(--green),0 0 9px rgba(57,255,106,.45),
+1.1px 0 2px rgba(57,255,106,.4),-0.9px 0 2px rgba(57,255,106,.2);animation:jitter 4.5s infinite}
+h1::before{content:'▓▓ '} h1::after{content:' ▓▓'}
+.sub{text-align:center;color:var(--dim);font-size:.75rem;margin:6px 0 28px;letter-spacing:.05em}
+.wrap{max-width:640px;margin:0 auto;position:relative;z-index:1}
+.panel{background:var(--panel);border:1px solid var(--border);
+box-shadow:0 0 0 1px rgba(0,0,0,.6),inset 0 0 20px rgba(0,255,80,.03);
+padding:16px 18px;margin-bottom:16px}
+.panel h2{font-size:.9rem;color:var(--green);margin-bottom:14px;letter-spacing:.08em;
+text-shadow:0 0 5px rgba(57,255,106,.6)}
+.panel h2::before{content:'> '}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.row:last-child{margin-bottom:0}
+label{color:var(--dim);font-size:.75rem;min-width:70px;text-transform:uppercase;letter-spacing:.04em}
+input,textarea{background:var(--panel2);border:1px solid var(--border);color:var(--green);
+font-family:'VT323',monospace;font-size:1.05rem;padding:7px 9px;width:100%;caret-color:var(--green)}
+input:focus,textarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 6px rgba(57,255,106,.5)}
+input[type=number]{max-width:70px;text-align:center}
+.stat{flex:1}
+.bar{height:8px;background:var(--panel2);margin-top:4px;overflow:hidden;border:1px solid var(--border)}
+.bar>div{height:100%;background:repeating-linear-gradient(90deg,var(--green) 0 6px,var(--bg) 6px 8px);
+box-shadow:0 0 8px rgba(57,255,106,.7)}
+.list-item{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.list-item input{flex:1}
+.del{background:none;border:1px solid var(--danger);color:var(--danger);cursor:pointer;
+padding:6px 9px;font-family:inherit;font-size:.75rem}
+.del:hover{box-shadow:0 0 6px rgba(255,68,68,.6)}
+.add{background:none;border:1px dashed var(--green-dim);color:var(--green);cursor:pointer;
+padding:7px 10px;font-family:inherit;font-size:.78rem;width:100%;margin-top:4px;letter-spacing:.04em}
+.add:hover{border-style:solid;box-shadow:0 0 6px rgba(57,255,106,.4)}
+.cargo-grid{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;align-items:center}
+.cargo-grid label{min-width:44px}
+.log-entry{border-bottom:1px solid var(--border);padding:8px 0;font-size:.82rem}
+.log-entry .t{color:var(--dim);font-size:.7rem}
+.log-entry::before{content:'$ '; color:var(--green-dim)}
+#gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;
+justify-content:center;z-index:10;flex-direction:column;gap:14px;padding:20px}
+#gate input{max-width:220px;text-align:center;letter-spacing:.15em}
+#gate button{background:transparent;color:var(--green);border:1px solid var(--green);padding:10px 24px;
+font-family:'VT323',monospace;font-size:1.2rem;cursor:pointer;letter-spacing:.14em;text-transform:uppercase;
+text-shadow:0 0 4px var(--green),0 0 8px rgba(57,255,106,.35),.9px 0 1.8px rgba(57,255,106,.4),-0.7px 0 1.8px rgba(57,255,106,.2)}
+#gate button:hover{box-shadow:0 0 10px rgba(57,255,106,.5);background:rgba(57,255,106,.05)}
+#gate input{text-shadow:0.6px 0 1.2px rgba(57,255,106,.3)}
+#gateErr{color:var(--danger);font-size:.8rem;min-height:1em}
+#app{display:none}
+.status-dot{display:inline-block;width:7px;height:7px;background:var(--green);margin-right:6px;
+box-shadow:0 0 6px var(--green);animation:blink 1.4s infinite}
+@keyframes dash{to{stroke-dashoffset:-16}}
+.schematic{width:100%;height:auto;display:block}
+.schematic .hull{fill:rgba(57,255,106,.04);stroke:var(--green);stroke-width:1.6;
+filter:drop-shadow(0 0 3px rgba(57,255,106,.5))}
+.schematic .shield-line{fill:none;stroke:var(--green-dim);stroke-width:1;stroke-dasharray:5 4;
+animation:dash 3.5s linear infinite}
+.schematic .section{fill:rgba(57,255,106,.1);stroke:var(--green);stroke-width:1;stroke-dasharray:3 2}
+.schematic .deco{fill:none;stroke:var(--green-dim);stroke-width:1}
+.schematic .leader{stroke:var(--green-dim);stroke-width:.75}
+.schematic text{fill:var(--green);font-family:'IBM Plex Mono',monospace;letter-spacing:.06em;
+text-shadow:0 0 4px rgba(57,255,106,.6)}
+.schematic .lbl{font-size:9.5px}
+.schematic .tick{stroke:var(--green-dim);stroke-width:.5}
+.schematic .ref{font-size:8px;fill:var(--dim)}
+</style>
+</head>
+<body>
+
+<div class="noise-overlay"></div>
+<div class="glitch-bar"></div>
+<div class="glitch-bar b2"></div>
+
+<div id="gate">
+<h1>Augur Terminal</h1>
+<div class="sub" style="margin:-10px 0 4px">// authentication required</div>
+<input id="passInput" type="password" placeholder="enter passcode" autocomplete="off">
+<button onclick="tryUnlock()">[ connect ]</button>
+<div id="gateErr"></div>
+</div>
+
+<div id="app">
+<div class="wrap">
+<h1 id="shipNameHead">VOIDSHIP STATUS</h1>
+<div class="sub"><span class="status-dot"></span>connection live // synced across the party</div>
+
+<div class="panel">
+<h2>Ship Schematic</h2>
+<svg class="schematic" viewBox="0 0 920 500" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+<path d="M0,0 L10,5 L0,10 Z" fill="#39ff6a"/>
+</marker>
+</defs>
+
+<line class="tick" x1="20" y1="14" x2="880" y2="14"/>
+<line class="tick" x1="20" y1="10" x2="20" y2="18"/>
+<line class="tick" x1="300" y1="10" x2="300" y2="18"/>
+<line class="tick" x1="580" y1="10" x2="580" y2="18"/>
+<line class="tick" x1="860" y1="10" x2="860" y2="18"/>
+<text class="ref" x="20" y="10">STERN</text><text class="ref" x="555" y="10">MIDSHIP</text><text class="ref" x="800" y="10">BOW</text>
+<text class="ref" x="900" y="493" text-anchor="end">SCHEM REF VT-1 // HULL SCAN IMPORT // TO SCALE</text>
+
+<!-- void shield envelope — the one feature allowed outside the hull -->
+<path class="shield-line" d="M 0 143 L 0 288 L 12 301 L 41 302 L 59 314 L 77 316 L 101 346 L 132 420 L 145 435 L 165 442 L 195 442 L 226 429 L 226 332 L 284 332 L 313 324 L 335 344 L 360 345 L 382 332 L 391 317 L 419 316 L 434 300 L 459 296 L 475 284 L 502 294 L 528 295 L 569 320 L 595 319 L 615 310 L 637 329 L 659 334 L 844 325 L 883 317 L 896 303 L 897 275 L 889 260 L 842 249 L 802 249 L 696 211 L 633 171 L 622 147 L 591 122 L 526 111 L 485 140 L 398 140 L 385 136 L 377 107 L 360 97 L 332 98 L 319 120 L 307 120 L 303 66 L 264 30 L 230 30 L 210 48 L 200 25 L 162 24 L 151 35 L 150 53 L 117 89 L 102 118 L 51 119 L 31 130 L 13 131 Z"/>
+
+<!-- hull: exact traced silhouette -->
+<path class="hull" d="M 20.8 153.6 L 20.0 274.6 L 21.6 280.3 L 24.9 284.4 L 30.6 284.4 L 37.2 281.2 L 48.6 281.2 L 56.0 285.2 L 62.5 284.4 L 69.9 291.8 L 70.7 297.5 L 73.1 300.0 L 75.6 299.1 L 78.0 290.2 L 84.6 284.4 L 94.4 284.4 L 96.0 289.3 L 100.9 291.8 L 100.9 295.9 L 94.4 302.4 L 94.4 305.7 L 104.2 304.9 L 105.8 306.5 L 108.3 316.3 L 121.4 333.5 L 121.4 344.1 L 128.7 351.5 L 131.2 361.3 L 133.6 362.9 L 146.7 391.5 L 147.5 404.6 L 154.1 407.9 L 159.8 418.5 L 165.5 421.0 L 176.1 420.1 L 179.4 426.7 L 182.7 426.7 L 186.0 421.0 L 194.9 421.0 L 197.4 417.7 L 205.6 416.9 L 206.4 418.5 L 211.3 416.0 L 208.8 412.0 L 211.3 406.2 L 208.0 403.8 L 205.6 387.4 L 202.3 385.8 L 201.5 362.9 L 204.8 356.4 L 205.6 342.5 L 203.1 337.6 L 202.3 323.7 L 203.9 313.9 L 221.9 312.2 L 232.5 313.9 L 236.6 309.8 L 252.2 310.6 L 257.9 313.0 L 278.3 313.0 L 282.4 310.6 L 291.4 310.6 L 297.9 303.2 L 324.1 300.8 L 347.0 323.7 L 347.8 328.6 L 351.9 330.2 L 356.8 318.8 L 371.5 314.7 L 372.3 310.6 L 363.3 309.8 L 362.5 298.3 L 408.3 298.3 L 413.2 295.9 L 411.6 292.6 L 412.4 283.6 L 404.2 273.0 L 405.0 268.1 L 409.1 264.0 L 413.2 264.8 L 413.2 276.3 L 418.1 277.9 L 420.6 281.2 L 432.0 281.2 L 436.9 277.9 L 442.6 277.9 L 449.2 281.2 L 448.4 271.3 L 454.9 269.7 L 459.8 265.6 L 483.5 264.8 L 499.9 262.4 L 501.5 268.1 L 508.9 271.3 L 512.9 276.3 L 532.6 275.4 L 545.6 272.2 L 548.9 275.4 L 548.9 279.5 L 546.5 282.0 L 553.8 285.2 L 553.8 290.2 L 563.6 286.9 L 564.4 291.0 L 570.2 292.6 L 576.7 298.3 L 578.3 304.0 L 582.4 304.0 L 583.3 296.7 L 589.0 296.7 L 592.2 293.4 L 603.7 291.0 L 606.1 286.9 L 617.6 285.2 L 620.9 291.0 L 639.7 293.4 L 641.3 303.2 L 647.8 304.9 L 651.9 313.0 L 665.8 313.0 L 669.1 316.3 L 674.8 316.3 L 678.1 313.0 L 705.1 312.2 L 745.1 313.0 L 753.3 316.3 L 754.1 313.9 L 750.8 310.6 L 751.7 306.5 L 826.9 305.7 L 829.3 307.3 L 834.2 305.7 L 835.9 307.3 L 840.8 305.7 L 844.0 300.0 L 864.5 300.8 L 868.6 298.3 L 873.5 299.1 L 878.4 293.4 L 878.4 278.7 L 875.9 277.1 L 844.8 273.0 L 835.9 268.9 L 785.2 268.1 L 778.6 262.4 L 763.1 259.9 L 754.9 255.8 L 727.9 249.3 L 673.2 225.6 L 660.1 216.6 L 651.1 213.3 L 643.7 206.8 L 638.0 205.1 L 625.8 193.7 L 620.0 192.1 L 614.3 186.3 L 614.3 183.9 L 610.2 183.9 L 605.3 178.2 L 605.3 174.9 L 610.2 173.3 L 607.8 164.3 L 602.9 160.2 L 591.4 159.4 L 589.8 156.1 L 583.3 154.4 L 581.6 149.5 L 584.9 147.9 L 582.4 140.6 L 560.4 140.6 L 559.5 138.1 L 550.6 132.4 L 541.6 132.4 L 535.8 127.5 L 533.4 129.1 L 532.6 135.6 L 526.8 138.1 L 526.0 145.5 L 518.7 150.4 L 508.9 150.4 L 503.1 161.0 L 491.7 161.0 L 489.2 157.7 L 485.2 160.2 L 477.0 160.2 L 473.7 156.1 L 470.4 160.2 L 458.2 162.6 L 457.4 157.7 L 454.1 157.7 L 451.6 161.0 L 441.8 161.0 L 438.6 156.1 L 435.3 161.0 L 423.0 162.6 L 421.4 156.9 L 418.9 156.9 L 417.3 161.8 L 409.9 161.8 L 407.5 157.7 L 403.4 157.7 L 401.8 162.6 L 396.0 163.4 L 392.8 162.6 L 388.7 156.9 L 386.2 156.9 L 378.1 162.6 L 374.8 162.6 L 365.0 156.9 L 368.3 148.7 L 364.2 142.2 L 356.8 141.4 L 355.2 138.9 L 356.8 129.1 L 360.1 126.7 L 365.0 126.7 L 365.8 124.2 L 357.6 121.7 L 351.1 114.4 L 342.1 116.8 L 340.5 153.6 L 337.2 153.6 L 335.6 151.2 L 329.0 151.2 L 325.7 147.9 L 326.6 143.0 L 322.5 138.1 L 308.6 139.7 L 307.8 154.4 L 304.5 154.4 L 299.6 148.7 L 295.5 147.9 L 285.7 153.6 L 273.4 155.3 L 274.2 138.9 L 271.8 130.7 L 271.8 116.0 L 275.1 112.8 L 286.5 110.3 L 286.5 102.1 L 284.0 99.7 L 277.5 98.9 L 277.5 92.3 L 281.6 85.0 L 289.0 84.1 L 290.6 81.7 L 281.6 79.2 L 280.8 71.1 L 277.5 68.6 L 271.8 68.6 L 271.0 63.7 L 262.0 63.7 L 257.1 54.7 L 256.3 49.0 L 253.8 49.0 L 252.2 52.3 L 248.1 52.3 L 247.3 45.7 L 244.8 45.7 L 240.7 51.4 L 239.9 57.2 L 234.2 58.8 L 234.2 62.1 L 230.1 63.7 L 226.8 69.4 L 226.8 74.3 L 220.3 80.9 L 216.2 80.1 L 216.2 70.2 L 217.8 69.4 L 214.6 67.8 L 207.2 67.8 L 203.1 78.4 L 200.7 80.1 L 189.2 80.1 L 188.4 44.1 L 185.1 42.5 L 185.1 40.0 L 177.8 40.0 L 172.9 47.4 L 165.5 49.0 L 167.1 52.3 L 171.2 52.3 L 173.7 54.7 L 173.7 58.8 L 171.2 61.3 L 170.4 76.0 L 166.3 76.8 L 163.9 73.5 L 161.4 73.5 L 155.7 82.5 L 147.5 84.1 L 146.7 88.2 L 150.0 88.2 L 150.8 92.3 L 143.4 98.9 L 136.1 101.3 L 132.8 111.1 L 127.1 115.2 L 128.7 124.2 L 124.6 127.5 L 124.6 138.9 L 109.9 137.3 L 106.7 141.4 L 97.7 143.0 L 93.6 149.5 L 90.3 149.5 L 89.5 147.1 L 85.4 146.3 L 80.5 141.4 L 69.9 140.6 L 69.0 134.8 L 65.8 134.0 L 64.1 140.6 L 57.6 141.4 L 46.2 150.4 L 34.7 150.4 L 29.0 147.9 Z"/>
+
+<!-- turret line: defense array, all sitting on the flat deck -->
+<circle class="deco" cx="340" cy="195" r="3.5"/><circle class="deco" cx="368" cy="195" r="3.5"/>
+<circle class="deco" cx="396" cy="195" r="3.5"/><circle class="deco" cx="424" cy="195" r="3.5"/>
+<circle class="deco" cx="452" cy="195" r="3.5"/><circle class="deco" cx="480" cy="195" r="3.5"/>
+<circle class="deco" cx="508" cy="195" r="3.5"/>
+<line class="leader" x1="326" y1="195" x2="520" y2="195"/>
+
+<!-- BRIDGE: command deck, forward of the tower -->
+<rect class="section" x="141" y="105" width="123" height="56"/>
+<!-- CREW QUARTERS -->
+<rect class="section" x="114" y="168" width="209" height="50"/>
+<!-- CARGO BAYS A-D -->
+<rect class="section" x="114" y="230" width="52" height="60"/>
+<rect class="section" x="166" y="230" width="52" height="60"/>
+<rect class="section" x="218" y="230" width="52" height="60"/>
+<rect class="section" x="270" y="230" width="53" height="60"/>
+<!-- PLASMA DRIVE -->
+<rect class="section" x="27" y="161" width="83" height="113"/>
+<!-- DEFENSE ARRAY -->
+<rect class="section" x="328" y="177" width="198" height="68"/>
+<!-- HANGAR DECK -->
+<rect class="section" x="325" y="251" width="74" height="41"/>
+
+<line class="leader" x1="421" y1="34" x2="421" y2="177" marker-end="url(#arr)"/>
+<text class="lbl" x="355" y="26">DEFENSE ARRAY</text>
+
+<line class="leader" x1="360" y1="462" x2="360" y2="292" marker-end="url(#arr)"/>
+<text class="lbl" x="310" y="474">HANGAR DECK</text>
+
+<line class="leader" x1="202" y1="34" x2="202" y2="105" marker-end="url(#arr)"/>
+<text class="lbl" x="165" y="26">BRIDGE</text>
+
+<line class="leader" x1="280" y1="34" x2="280" y2="168" marker-end="url(#arr)"/>
+<text class="lbl" x="240" y="26">CREW QUARTERS</text>
+
+<line class="leader" x1="60" y1="34" x2="60" y2="161" marker-end="url(#arr)"/>
+<text class="lbl" x="5" y="26">PLASMA DRIVE</text>
+
+<line class="leader" x1="595" y1="462" x2="595" y2="319" marker-end="url(#arr)"/>
+<text class="lbl" x="540" y="474">VOID SHIELD ENVELOPE</text>
+
+<line class="leader" x1="260" y1="480" x2="260" y2="290" marker-end="url(#arr)"/>
+<text class="lbl" x="200" y="492">CARGO BAYS A–D</text>
+</svg>
+</div>
+
+<div class="panel">
+<h2>Hull &amp; Systems</h2>
+<div class="row"><div class="stat"><label>Hull</label>
+<div class="bar hull"><div id="hullBar" style="width:0%"></div></div></div>
+<input id="hull" type="number" onchange="saveStatus()"> / <input id="hullMax" type="number" onchange="saveStatus()"></div>
+<div class="row"><div class="stat"><label>Shields</label>
+<div class="bar shields"><div id="shieldsBar" style="width:0%"></div></div></div>
+<input id="shields" type="number" onchange="saveStatus()"> / <input id="shieldsMax" type="number" onchange="saveStatus()"></div>
+<div class="row"><div class="stat"><label>Fuel</label>
+<div class="bar fuel"><div id="fuelBar" style="width:0%"></div></div></div>
+<input id="fuel" type="number" onchange="saveStatus()"> / <input id="fuelMax" type="number" onchange="saveStatus()"></div>
+</div>
+
+<div class="panel">
+<h2>Position</h2>
+<div class="row"><label>System</label><input id="locName" onchange="saveLocation()"></div>
+<div class="row"><label>Coords</label><input id="locCoords" onchange="saveLocation()"></div>
+<div class="row"><label>Notes</label><input id="locNotes" onchange="saveLocation()"></div>
+</div>
+
+<div class="panel"><h2>Crew</h2><div id="crewList"></div>
+<button class="add" onclick="addItem('crew',{name:'New crew',hp:''})">+ add crew</button></div>
+
+<div class="panel"><h2>Upgrades</h2><div id="upgradesList"></div>
+<button class="add" onclick="addItem('upgrades',{text:''})">+ add upgrade</button></div>
+
+<div class="panel"><h2>Defense Array</h2><div id="defenseList"></div>
+<button class="add" onclick="addItem('defense',{text:''})">+ add defense item</button></div>
+
+<div class="panel"><h2>Cargo Holds</h2><div class="cargo-grid" id="cargoGrid"></div></div>
+
+<div class="panel"><h2>Hangar Bay</h2><div id="hangarList"></div>
+<button class="add" onclick="addItem('hangar',{name:'',qty:1})">+ add craft</button></div>
+
+<div class="panel"><h2>Mission Log</h2>
+<div class="row"><input id="logInput" placeholder="log an event..." style="flex:1">
+<button class="add" style="width:auto" onclick="addLog()">add</button></div>
+<div id="logList"></div>
+</div>
+</div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script>
+// ====== EDIT THESE TWO THINGS BEFORE DEPLOYING ======
+const PARTY_PASSCODE = "imperator"; // change to your party's passcode
+const firebaseConfig = {
+  apiKey: "AIzaSyC8_a7nJyGvXuR9GxWpcNPwBfbTuvACGAA",
+  authDomain: "warhammer-30000.firebaseapp.com",
+  databaseURL: "https://warhammer-30000-default-rtdb.firebaseio.com",
+  projectId: "warhammer-30000",
+  storageBucket: "warhammer-30000.firebasestorage.app",
+  messagingSenderId: "705567856813",
+  appId: "1:705567856813:web:26782f8253d3d4472fce24"
+};
+
+// =====================================================
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+function tryUnlock(){
+const v = document.getElementById('passInput').value;
+if(v === PARTY_PASSCODE){
+localStorage.setItem('vt_unlocked','1');
+document.getElementById('gate').style.display='none';
+document.getElementById('app').style.display='block';
+boot();
+} else {
+document.getElementById('gateErr').textContent = 'Wrong passcode.';
+}
+}
+document.getElementById('passInput').addEventListener('keydown', e=>{if(e.key==='Enter')tryUnlock();});
+if(localStorage.getItem('vt_unlocked')==='1'){
+document.getElementById('gate').style.display='none';
+document.getElementById('app').style.display='block';
+window.addEventListener('DOMContentLoaded', boot);
+}
+
+const DEFAULTS = {
+status:{hull:100,hullMax:100,shields:100,shieldsMax:100,fuel:100,fuelMax:100},
+location:{name:'',coords:'',notes:''},
+crew:{
+c1:{name:'Rogue Trader Jude Sparrow',hp:''},
+c2:{name:'Dusty Cummings Handerstorm',hp:''},
+c3:{name:'Ren Hammerstorm',hp:''},
+c4:{name:'Servitor',hp:''},
+c5:{name:'Servitor',hp:''}
+},
+upgrades:{u1:{text:'Chameleon paint bodywork'}},
+defense:{
+d1:{text:'Broadside defense laser bank (4 lasers, port & starboard)'},
+d2:{text:'Standard peacetime void shield matrix'}
+},
+cargo:{A:{contents:'4 million tons iron ore'},B:{contents:'3 million tons iron ore'},C:{contents:''},D:{contents:''}},
+hangar:{h1:{name:'Arvus lighter',qty:5}},
+log:{}
+};
+
+function boot(){
+db.ref('/').once('value').then(snap=>{
+if(!snap.exists()) db.ref('/').set(DEFAULTS);
+});
+db.ref('status').on('value', s=>renderStatus(s.val()||DEFAULTS.status));
+db.ref('location').on('value', s=>renderLocation(s.val()||DEFAULTS.location));
+db.ref('crew').on('value', s=>renderList('crew','crewList',s.val(),['name','hp']));
+db.ref('upgrades').on('value', s=>renderList('upgrades','upgradesList',s.val(),['text']));
+db.ref('defense').on('value', s=>renderList('defense','defenseList',s.val(),['text']));
+db.ref('cargo').on('value', s=>renderCargo(s.val()||DEFAULTS.cargo));
+db.ref('hangar').on('value', s=>renderList('hangar','hangarList',s.val(),['name','qty']));
+db.ref('log').on('value', s=>renderLog(s.val()));
+}
+
+function renderStatus(v){
+['hull','hullMax','shields','shieldsMax','fuel','fuelMax'].forEach(k=>{
+const el=document.getElementById(k);
+if(document.activeElement!==el) el.value = v[k];
+});
+document.getElementById('hullBar').style.width = Math.min(100,(v.hull/v.hullMax)*100)+'%';
+document.getElementById('shieldsBar').style.width = Math.min(100,(v.shields/v.shieldsMax)*100)+'%';
+document.getElementById('fuelBar').style.width = Math.min(100,(v.fuel/v.fuelMax)*100)+'%';
+}
+function saveStatus(){
+db.ref('status').update({
+hull:+document.getElementById('hull').value, hullMax:+document.getElementById('hullMax').value,
+shields:+document.getElementById('shields').value, shieldsMax:+document.getElementById('shieldsMax').value,
+fuel:+document.getElementById('fuel').value, fuelMax:+document.getElementById('fuelMax').value
+});
+}
+
+function renderLocation(v){
+['locName','locCoords','locNotes'].forEach((id,i)=>{
+const key=['name','coords','notes'][i], el=document.getElementById(id);
+if(document.activeElement!==el) el.value = v[key]||'';
+});
+}
+function saveLocation(){
+db.ref('location').update({
+name:document.getElementById('locName').value,
+coords:document.getElementById('locCoords').value,
+notes:document.getElementById('locNotes').value
+});
+}
+
+function renderList(path, elId, data, fields){
+const el = document.getElementById(elId);
+if(document.activeElement && el.contains(document.activeElement)) return;
+el.innerHTML='';
+Object.entries(data||{}).forEach(([id,item])=>{
+const row = document.createElement('div'); row.className='list-item';
+fields.forEach(f=>{
+const inp = document.createElement('input');
+inp.value = item[f]||''; inp.placeholder = f;
+if(f==='hp'||f==='qty') inp.style.maxWidth='60px';
+inp.onchange = ()=> db.ref(`${path}/${id}`).update({[f]: f==='qty'? +inp.value : inp.value});
+row.appendChild(inp);
+});
+const del = document.createElement('button'); del.className='del'; del.textContent='×';
+del.onclick = ()=> db.ref(`${path}/${id}`).remove();
+row.appendChild(del);
+el.appendChild(row);
+});
+}
+function addItem(path, obj){ db.ref(path).push(obj); }
+
+function renderCargo(v){
+const el = document.getElementById('cargoGrid');
+if(document.activeElement && el.contains(document.activeElement)) return;
+el.innerHTML='';
+['A','B','C','D'].forEach(h=>{
+const lbl=document.createElement('label'); lbl.textContent='Hold '+h;
+const inp=document.createElement('input');
+inp.value=(v[h]&&v[h].contents)||''; inp.placeholder='empty';
+inp.onchange=()=>db.ref('cargo/'+h).update({contents:inp.value});
+el.appendChild(lbl); el.appendChild(inp);
+});
+}
+
+function addLog(){
+const inp = document.getElementById('logInput');
+if(!inp.value.trim()) return;
+db.ref('log').push({text:inp.value.trim(), time:new Date().toLocaleString()});
+inp.value='';
+}
+function renderLog(data){
+const el = document.getElementById('logList');
+el.innerHTML='';
+const entries = Object.values(data||{}).reverse();
+entries.forEach(e=>{
+const d=document.createElement('div'); d.className='log-entry';
+d.innerHTML = `<div class="t">${e.time}</div>${e.text}`;
+el.appendChild(d);
+});
+}
+</script>
+</body>
+</html>
