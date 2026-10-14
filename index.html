@@ -79,8 +79,8 @@ font-family:'VT323',monospace;font-size:1rem;padding:6px 4px;width:auto;max-widt
 .die-select:focus{outline:none;border-color:var(--green);box-shadow:0 0 6px rgba(57,255,106,.5)}
 .cargo-bay{border:1px solid var(--border);padding:10px;margin-bottom:8px}
 .cargo-bay .bay-head{color:var(--dim);font-size:.75rem;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
-.cargo-bay .bay-row{display:flex;gap:8px}
-.cargo-bay .bay-row input[type=text]{flex:1}
+.cargo-bay .bay-row{display:flex;gap:8px;flex-wrap:wrap}
+.cargo-bay .bay-row input[type=text]{flex:1;min-width:90px}
 .cargo-bay .bay-row input[type=number]{max-width:70px}
 .log-entry{border-bottom:1px solid var(--border);padding:8px 0;font-size:.82rem}
 .log-entry .t{color:var(--dim);font-size:.7rem}
@@ -309,10 +309,10 @@ d1:{desc:'Broadside defense laser bank (4 lasers, port & starboard)',quality:'d1
 d2:{desc:'Standard peacetime void shield matrix',quality:'d8'}
 },
 cargo:{
-A:{desc:'Iron ore',qty:4},
-B:{desc:'Iron ore',qty:3},
-C:{desc:'',qty:0},
-D:{desc:'',qty:0}
+A:{desc:'Iron ore',qty:4,unit:'million tons'},
+B:{desc:'Iron ore',qty:3,unit:'million tons'},
+C:{desc:'',qty:0,unit:''},
+D:{desc:'',qty:0,unit:''}
 },
 hangar:{h1:{name:'Arvus lighter',qty:5}},
 log:{}
@@ -425,9 +425,15 @@ descInp.onchange = ()=> db.ref('cargo/'+h).update({desc: descInp.value});
 
 const qtyInp = document.createElement('input'); qtyInp.type='number';
 qtyInp.value = bay.qty || 0; qtyInp.placeholder = 'qty';
+qtyInp.style.maxWidth='65px';
 qtyInp.onchange = ()=> db.ref('cargo/'+h).update({qty: +qtyInp.value});
 
-row.appendChild(descInp); row.appendChild(qtyInp);
+const unitInp = document.createElement('input'); unitInp.type='text';
+unitInp.value = bay.unit || ''; unitInp.placeholder = 'unit (tons, km, units...)';
+unitInp.style.maxWidth='130px';
+unitInp.onchange = ()=> db.ref('cargo/'+h).update({unit: unitInp.value});
+
+row.appendChild(descInp); row.appendChild(qtyInp); row.appendChild(unitInp);
 wrap.appendChild(head); wrap.appendChild(row);
 el.appendChild(wrap);
 });
