@@ -13,6 +13,19 @@
 --danger:#39ff6b; --ok:#39ff6b;
 }
 *{box-sizing:border-box}
+*{scrollbar-width:thin;scrollbar-color:var(--green-dim) var(--panel2)}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--panel2);border-left:1px solid var(--border)}
+::-webkit-scrollbar-thumb{background:var(--green-dim);border:2px solid var(--panel2);border-radius:0}
+::-webkit-scrollbar-thumb:hover{background:var(--green)}
+::-webkit-scrollbar-corner{background:var(--panel2)}
+::selection{background:var(--green-dim);color:#eaffef;text-shadow:none}
+:focus-visible{outline:1px solid var(--green);outline-offset:1px}
+select{color-scheme:dark}
+select option{background:var(--panel2);color:var(--green)}
+input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus{
+  -webkit-text-fill-color:var(--green);-webkit-box-shadow:0 0 0 1000px var(--panel2) inset;
+  caret-color:var(--green);transition:background-color 9999s ease-in-out 0s}
 html{font-size:117%}
 @keyframes flicker{0%,96%,100%{opacity:1}97%{opacity:.85}98%{opacity:1}99%{opacity:.9}}
 @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
@@ -72,7 +85,7 @@ background:rgba(57,255,107,.5);mix-blend-mode:screen;animation:glitchBar 9s infi
   color:#c2ffd1;text-shadow:0 0 6px var(--green),0 0 22px rgba(57,255,107,.85);opacity:0}
 @keyframes asciiEyeFlicker{0%{opacity:0}8%{opacity:1}16%{opacity:.25}24%{opacity:1}80%{opacity:1}92%{opacity:.3}100%{opacity:0}}
 .warp-ascii-eye.show{animation:asciiEyeFlicker 2.6s steps(10) forwards}
-.warp-test-btn{position:fixed;right:14px;top:14px;z-index:40;background:rgba(2,10,4,.85);
+.warp-test-btn{display:none;position:fixed;right:14px;top:14px;z-index:40;background:rgba(2,10,4,.85);
   color:var(--green);border:1px solid var(--green);padding:8px 12px;font-family:'VT323',monospace;
   font-size:.95rem;letter-spacing:.06em;cursor:pointer;text-transform:uppercase;
   box-shadow:0 0 8px rgba(57,255,107,.4)}
@@ -216,7 +229,7 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 <div class="warp-text" id="warpText"></div>
 <pre class="warp-ascii-eye" id="warpAsciiEye"></pre>
 </div>
-<button class="warp-test-btn" onclick="triggerWarpEvent()">⚠ test warp event</button>
+<button id="warpTestBtn" class="warp-test-btn" onclick="triggerWarpEvent()">⚠ test warp event</button>
 
 <div id="gate">
 <h1>Augur Terminal</h1>
@@ -323,7 +336,9 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 
 <div class="panel"><h2>Roll History</h2><div id="rollHistory" class="roll-history">
 <div class="roll-hist-empty">// no rolls logged yet</div>
-</div></div>
+</div>
+<button id="clearRollsBtn" class="add gm-only" style="display:none;margin-top:8px" onclick="clearRollHistory()">clear roll log (GM)</button>
+</div>
 
 <div class="panel">
 <h2>Hull &amp; Systems</h2>
@@ -487,7 +502,22 @@ hangar:{h1:{name:'Arvus lighter',qty:5}},
 log:{}
 };
 
+function applyGmVisibility(){
+const isGm = !!(currentUser && currentUser.type === 'gm');
+document.querySelectorAll('.gm-only').forEach(el=>{
+  el.style.display = isGm ? '' : 'none';
+});
+document.getElementById('warpTestBtn').style.display = isGm ? 'block' : 'none';
+}
+
+function clearRollHistory(){
+if(!currentUser || currentUser.type !== 'gm') return;
+if(!confirm('Clear the entire roll log for everyone? This cannot be undone.')) return;
+db.ref('rolls').remove();
+}
+
 function boot(){
+applyGmVisibility();
 scheduleWarpEvent();
 db.ref('/').once('value').then(snap=>{
 if(!snap.exists()) db.ref('/').set(DEFAULTS);
