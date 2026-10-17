@@ -90,6 +90,10 @@ background:rgba(57,255,107,.5);mix-blend-mode:screen;animation:glitchBar 9s infi
   font-size:.95rem;letter-spacing:.06em;cursor:pointer;text-transform:uppercase;
   box-shadow:0 0 8px rgba(57,255,107,.4)}
 .warp-test-btn:hover{box-shadow:0 0 14px rgba(57,255,107,.7)}
+.logout-btn{display:none;position:fixed;left:14px;top:14px;z-index:40;background:rgba(2,10,4,.85);
+  color:var(--green);border:1px solid var(--green-dim);padding:8px 12px;font-family:'VT323',monospace;
+  font-size:.95rem;letter-spacing:.06em;cursor:pointer;text-transform:uppercase}
+.logout-btn:hover{border-color:var(--green);box-shadow:0 0 10px rgba(57,255,107,.5)}
 
 h1,h2{font-family:'VT323',monospace;font-weight:400;margin:0;text-transform:uppercase}
 h1{font-size:1.9rem;color:var(--green);letter-spacing:.14em;text-align:center;
@@ -230,6 +234,7 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 <pre class="warp-ascii-eye" id="warpAsciiEye"></pre>
 </div>
 <button id="warpTestBtn" class="warp-test-btn" onclick="triggerWarpEvent()">⚠ test warp event</button>
+<button id="logoutBtn" class="logout-btn" onclick="logout()">log out</button>
 
 <div id="gate">
 <h1>Augur Terminal</h1>
@@ -426,6 +431,15 @@ try { return localStorage.getItem(key); } catch(e) { return null; }
 function safeStorageSet(key, value){
 try { localStorage.setItem(key, value); } catch(e) { /* storage unavailable, ignore */ }
 }
+function safeStorageRemove(key){
+try { localStorage.removeItem(key); } catch(e) { /* storage unavailable, ignore */ }
+}
+
+function logout(){
+safeStorageRemove('vt_unlocked');
+safeStorageRemove('vt_identity');
+location.reload();
+}
 
 // currentUser: {type:'player'} | {type:'gm', name:'GM'} | {type:'crew', name:'<full crew name>'}
 let currentUser = null;
@@ -518,6 +532,7 @@ db.ref('rolls').remove();
 
 function boot(){
 applyGmVisibility();
+document.getElementById('logoutBtn').style.display = 'block';
 scheduleWarpEvent();
 db.ref('/').once('value').then(snap=>{
 if(!snap.exists()) db.ref('/').set(DEFAULTS);
