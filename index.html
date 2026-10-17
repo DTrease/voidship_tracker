@@ -138,7 +138,6 @@ font-family:'VT323',monospace;font-size:1rem;padding:6px 4px;width:auto;max-widt
 .cargo-bay .bay-row input[type=number]{max-width:70px}
 .log-entry{border-bottom:1px solid var(--border);padding:8px 0;font-size:.82rem}
 .log-entry .t{color:var(--dim);font-size:.7rem}
-.log-idate{color:var(--green);opacity:.85;letter-spacing:.04em}
 .log-entry::before{content:'$ '; color:var(--green-dim)}
 #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;
 justify-content:center;z-index:10;flex-direction:column;gap:14px;padding:20px}
@@ -346,6 +345,14 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 </div>
 
 <div class="panel">
+<h2>Position</h2>
+<div class="row"><label>System</label><input id="locName" onchange="saveLocation()"></div>
+<div class="row"><label>Planet</label><input id="locCoords" onchange="saveLocation()"></div>
+<div class="row"><label>Date</label><input id="locDate" placeholder="e.g. 6.122.008.M31" onchange="saveLocation()"></div>
+<div class="row"><label>Notes</label><input id="locNotes" onchange="saveLocation()"></div>
+</div>
+
+<div class="panel">
 <h2>Hull &amp; Systems</h2>
 <div class="row"><div class="stat"><label>Hull</label>
 <div class="bar hull"><div id="hullBar" style="width:0%"></div></div></div>
@@ -359,14 +366,6 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 <div class="bar fuel"><div id="fuelBar" style="width:0%"></div></div></div>
 <input id="fuel" type="number" onchange="saveStatus()"> / <input id="fuelMax" type="number" onchange="saveStatus()">
 <select id="fuelQuality" class="die-select" onchange="saveStatus()"></select></div>
-</div>
-
-<div class="panel">
-<h2>Position</h2>
-<div class="row"><label>System</label><input id="locName" onchange="saveLocation()"></div>
-<div class="row"><label>Planet</label><input id="locCoords" onchange="saveLocation()"></div>
-<div class="row"><label>Date</label><input id="locDate" placeholder="e.g. 6.122.008.M31" onchange="saveLocation()"></div>
-<div class="row"><label>Notes</label><input id="locNotes" onchange="saveLocation()"></div>
 </div>
 
 <div class="panel"><h2>Crew</h2><div id="crewList"></div>
@@ -951,8 +950,8 @@ el.innerHTML='';
 const entries = Object.values(data||{}).reverse();
 entries.forEach(e=>{
 const d=document.createElement('div'); d.className='log-entry';
-const dateTag = e.imperialDate ? ` <span class="log-idate">[${e.imperialDate}]</span>` : '';
-d.innerHTML = `<div class="t">${e.time}${dateTag}</div>${e.text}`;
+const dateLine = e.imperialDate ? `<div class="t">${e.imperialDate}</div>` : '';
+d.innerHTML = `${dateLine}${e.text}`;
 el.appendChild(d);
 });
 }
