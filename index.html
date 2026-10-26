@@ -104,6 +104,15 @@ text-shadow:0 0 4px var(--green),0 0 9px rgba(57,255,107,.45),
 h1::before{content:'▓▓ '} h1::after{content:' ▓▓'}
 .sub{text-align:center;color:var(--dim);font-size:.75rem;margin:6px 0 28px;letter-spacing:.05em}
 .wrap{max-width:640px;margin:0 auto;position:relative;z-index:1}
+.group{margin-bottom:14px}
+.group-title{display:flex;align-items:center;gap:14px;margin:0 0 14px;
+  font-size:1.4rem;letter-spacing:.22em;color:var(--green);
+  text-shadow:0 0 6px rgba(57,255,107,.6),0 0 14px rgba(57,255,107,.3)}
+.group-title::before,.group-title::after{content:'';flex:1;height:1px}
+.group-title::before{background:linear-gradient(90deg,transparent,var(--green-dim))}
+.group-title::after{background:linear-gradient(90deg,var(--green-dim),transparent)}
+.group-title span::before{content:'[ '}
+.group-title span::after{content:' ]'}
 .panel{background:var(--panel);border:1px solid var(--border);
 box-shadow:0 0 0 1px rgba(0,0,0,.6),inset 0 0 20px rgba(0,255,64,.03);
 padding:16px 18px;margin-bottom:16px}
@@ -268,6 +277,8 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 <div class="wrap">
 <h1 id="shipNameHead">VOIDSHIP STATUS</h1>
 <div class="sub"><span class="status-dot"></span>connection live // praise the omnissiah</div>
+<section class="group">
+<h2 class="group-title"><span>Status Report</span></h2>
 
 <div class="panel">
 <h2>Ship Schematic</h2>
@@ -339,6 +350,77 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 </div>
 
 <div class="panel">
+<h2>Hull &amp; Systems</h2>
+<div class="row"><div class="stat"><label>Hull</label>
+<div class="bar hull"><div id="hullBar" style="width:0%"></div></div></div>
+<input id="hull" type="number" onchange="saveStatus()"> / <input id="hullMax" type="number" onchange="saveStatus()">
+<select id="hullQuality" class="die-select" onchange="saveStatus()"></select></div>
+<div class="row"><div class="stat"><label>Shields</label>
+<div class="bar shields"><div id="shieldsBar" style="width:0%"></div></div></div>
+<input id="shields" type="number" onchange="saveStatus()"> / <input id="shieldsMax" type="number" onchange="saveStatus()">
+<select id="shieldsQuality" class="die-select" onchange="saveStatus()"></select></div>
+<div class="row"><div class="stat"><label>Fuel</label>
+<div class="bar fuel"><div id="fuelBar" style="width:0%"></div></div></div>
+<input id="fuel" type="number" onchange="saveStatus()"> / <input id="fuelMax" type="number" onchange="saveStatus()">
+<select id="fuelQuality" class="die-select" onchange="saveStatus()"></select></div>
+</div>
+
+<div class="panel">
+<h2>Position</h2>
+<div class="row"><label>System</label><input id="locName" onchange="saveLocation()"></div>
+<div class="row"><label>Planet</label><input id="locCoords" onchange="saveLocation()"></div>
+<div class="row"><label>Date</label><input id="locDate" placeholder="e.g. 6.122.008.M31" onchange="saveLocation()"></div>
+<div class="row"><label>Notes</label><input id="locNotes" onchange="saveLocation()"></div>
+</div>
+</section>
+
+<section class="group">
+<h2 class="group-title"><span>Manifest</span></h2>
+
+<div class="panel"><h2>Crew</h2><div id="crewList"></div>
+<button class="add" onclick="addItem('crew',{desc:'New crew',quality:'d10',qty:1})">+ add crew</button></div>
+
+<div class="panel"><h2>Defense Array</h2><div id="defenseList"></div>
+<button class="add" onclick="addItem('defense',{desc:'',quality:'d10'})">+ add defense item</button></div>
+
+<div class="panel"><h2>Hangar Bay</h2><div id="hangarList"></div>
+<button class="add" onclick="addItem('hangar',{name:'',qty:1})">+ add craft</button></div>
+
+<div class="panel"><h2>Cargo Bays</h2><div id="cargoGrid"></div></div>
+
+<div class="panel"><h2>Upgrades</h2><div id="upgradesList"></div>
+<button class="add" onclick="addItem('upgrades',{text:''})">+ add upgrade</button></div>
+</section>
+
+<section class="group">
+<h2 class="group-title"><span>Chronicle</span></h2>
+
+<div class="panel"><h2>Progress</h2>
+<div id="clockList"></div>
+<div class="clock-add">
+<input id="clockLabel" placeholder="new clock — what is it counting?">
+<select id="clockSegs" class="seg-select">
+<option value="4">4 seg</option>
+<option value="6" selected>6 seg</option>
+<option value="8">8 seg</option>
+<option value="10">10 seg</option>
+</select>
+<button class="add" style="width:auto;margin-top:0" onclick="addClock()">+ add clock</button>
+</div>
+</div>
+
+<div class="panel"><h2>Mission Log</h2>
+<div class="row"><input id="logInput" placeholder="log an event..." style="flex:1">
+<input id="logDate" placeholder="date (optional)" style="max-width:130px">
+<button class="add" style="width:auto" onclick="addLog()">add</button></div>
+<div id="logList"></div>
+</div>
+</section>
+
+<section class="group">
+<h2 class="group-title"><span>Fate</span></h2>
+
+<div class="panel">
 <h2>Dice Roller</h2>
 <div class="dice-row">
 <button class="die-btn" onclick="rollDie(4)">
@@ -359,70 +441,12 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 </div>
 </div>
 
-<div class="panel"><h2>Roll History</h2><div id="rollHistory" class="roll-history">
+<div class="panel"><h2>Roll Log</h2><div id="rollHistory" class="roll-history">
 <div class="roll-hist-empty">// no rolls logged yet</div>
 </div>
 <button id="clearRollsBtn" class="add gm-only" style="display:none;margin-top:8px" onclick="clearRollHistory()">clear roll log (GM)</button>
 </div>
-
-<div class="panel">
-<h2>Position</h2>
-<div class="row"><label>System</label><input id="locName" onchange="saveLocation()"></div>
-<div class="row"><label>Planet</label><input id="locCoords" onchange="saveLocation()"></div>
-<div class="row"><label>Date</label><input id="locDate" placeholder="e.g. 6.122.008.M31" onchange="saveLocation()"></div>
-<div class="row"><label>Notes</label><input id="locNotes" onchange="saveLocation()"></div>
-</div>
-
-<div class="panel">
-<h2>Hull &amp; Systems</h2>
-<div class="row"><div class="stat"><label>Hull</label>
-<div class="bar hull"><div id="hullBar" style="width:0%"></div></div></div>
-<input id="hull" type="number" onchange="saveStatus()"> / <input id="hullMax" type="number" onchange="saveStatus()">
-<select id="hullQuality" class="die-select" onchange="saveStatus()"></select></div>
-<div class="row"><div class="stat"><label>Shields</label>
-<div class="bar shields"><div id="shieldsBar" style="width:0%"></div></div></div>
-<input id="shields" type="number" onchange="saveStatus()"> / <input id="shieldsMax" type="number" onchange="saveStatus()">
-<select id="shieldsQuality" class="die-select" onchange="saveStatus()"></select></div>
-<div class="row"><div class="stat"><label>Fuel</label>
-<div class="bar fuel"><div id="fuelBar" style="width:0%"></div></div></div>
-<input id="fuel" type="number" onchange="saveStatus()"> / <input id="fuelMax" type="number" onchange="saveStatus()">
-<select id="fuelQuality" class="die-select" onchange="saveStatus()"></select></div>
-</div>
-
-<div class="panel"><h2>Crew</h2><div id="crewList"></div>
-<button class="add" onclick="addItem('crew',{desc:'New crew',quality:'d10',qty:1})">+ add crew</button></div>
-
-<div class="panel"><h2>Upgrades</h2><div id="upgradesList"></div>
-<button class="add" onclick="addItem('upgrades',{text:''})">+ add upgrade</button></div>
-
-<div class="panel"><h2>Defense Array</h2><div id="defenseList"></div>
-<button class="add" onclick="addItem('defense',{desc:'',quality:'d10'})">+ add defense item</button></div>
-
-<div class="panel"><h2>Cargo Bays</h2><div id="cargoGrid"></div></div>
-
-<div class="panel"><h2>Hangar Bay</h2><div id="hangarList"></div>
-<button class="add" onclick="addItem('hangar',{name:'',qty:1})">+ add craft</button></div>
-
-<div class="panel"><h2>Clocks</h2>
-<div id="clockList"></div>
-<div class="clock-add">
-<input id="clockLabel" placeholder="new clock — what is it counting?">
-<select id="clockSegs" class="seg-select">
-<option value="4">4 seg</option>
-<option value="6" selected>6 seg</option>
-<option value="8">8 seg</option>
-<option value="10">10 seg</option>
-</select>
-<button class="add" style="width:auto;margin-top:0" onclick="addClock()">+ add clock</button>
-</div>
-</div>
-
-<div class="panel"><h2>Mission Log</h2>
-<div class="row"><input id="logInput" placeholder="log an event..." style="flex:1">
-<input id="logDate" placeholder="date (optional)" style="max-width:130px">
-<button class="add" style="width:auto" onclick="addLog()">add</button></div>
-<div id="logList"></div>
-</div>
+</section>
 
 <button id="logoutBtn" class="logout-inline" onclick="logout()">log out</button>
 </div>
@@ -563,7 +587,7 @@ document.getElementById('warpTestBtn').style.display = isGm ? 'block' : 'none';
 function clearRollHistory(){
 if(!currentUser || currentUser.type !== 'gm') return;
 if(!confirm('Clear the entire roll log for everyone? This cannot be undone.')) return;
-db.ref('rolls').remove();
+dbRemove('rolls');
 }
 
 function boot(){
@@ -634,9 +658,58 @@ notes:document.getElementById('locNotes').value
 });
 }
 
+// ---- render safety ----
+// Only text-entry controls should block a re-render (so nobody's typing gets wiped).
+// A focused BUTTON — e.g. the × you just clicked — must not.
+function isTypingIn(container){
+const a = document.activeElement;
+return !!(a && container.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName));
+}
+
+// Never rebuild the DOM between the press and release of a click: the browser
+// drops the click if the element it started on has been replaced in the meantime.
+let pointerIsDown = false;
+let pointerSafety = null;
+const deferredRenders = new Map();
+function releasePointer(){
+pointerIsDown = false;
+clearTimeout(pointerSafety);
+setTimeout(()=>{ deferredRenders.forEach(fn=>fn()); deferredRenders.clear(); }, 0); // after the click fires
+}
+document.addEventListener('pointerdown', ()=>{
+pointerIsDown = true;
+clearTimeout(pointerSafety);
+pointerSafety = setTimeout(releasePointer, 3000); // failsafe if pointerup never arrives
+}, true);
+document.addEventListener('pointerup', releasePointer, true);
+document.addEventListener('pointercancel', releasePointer, true);
+function deferWhilePointerDown(key, fn){
+if(pointerIsDown){
+  deferredRenders.set(key, fn);   // latest data wins
+  return true;
+}
+deferredRenders.delete(key);      // a fresh render supersedes anything held back (stale data)
+return false;
+}
+
+function dropFocus(){
+const a = document.activeElement;
+if(a && a !== document.body && a.blur) a.blur();   // commits any pending edit first
+}
+
+// Deletes surface failures instead of failing silently.
+function dbRemove(path){
+dropFocus();
+return Promise.resolve(db.ref(path).remove()).catch(err=>{
+  alert('Could not delete: the database refused the change.\n\n' + (err && err.message ? err.message : err) +
+        '\n\nIf this mentions "permission denied", the Firebase database rules may have expired.');
+});
+}
+
 function renderList(path, elId, data, fields){
 const el = document.getElementById(elId);
-if(document.activeElement && el.contains(document.activeElement)) return;
+if(deferWhilePointerDown(elId, ()=>renderList(path, elId, data, fields))) return;
+if(isTypingIn(el)) return;
 el.innerHTML='';
 Object.entries(data||{}).forEach(([id,item])=>{
 const row = document.createElement('div'); row.className='list-item';
@@ -656,7 +729,7 @@ inp.onchange = ()=> db.ref(`${path}/${id}`).update({[f.key]: f.type==='number' ?
 row.appendChild(inp);
 });
 const del = document.createElement('button'); del.className='del'; del.textContent='×';
-del.onclick = ()=> db.ref(`${path}/${id}`).remove();
+del.onclick = ()=> dbRemove(`${path}/${id}`);
 row.appendChild(del);
 el.appendChild(row);
 });
@@ -665,7 +738,8 @@ function addItem(path, obj){ db.ref(path).push(obj); }
 
 function renderCargo(v){
 const el = document.getElementById('cargoGrid');
-if(document.activeElement && el.contains(document.activeElement)) return;
+if(deferWhilePointerDown('cargoGrid', ()=>renderCargo(v))) return;
+if(isTypingIn(el)) return;
 el.innerHTML='';
 ['A','B','C','D'].forEach(h=>{
 const bay = v[h] || {};
@@ -1005,7 +1079,8 @@ db.ref('clocks/'+id+'/fill').transaction(cur=>{
 
 function renderClocks(data){
 const el = document.getElementById('clockList');
-if(document.activeElement && el.contains(document.activeElement)) return;
+if(deferWhilePointerDown('clockList', ()=>renderClocks(data))) return;
+if(isTypingIn(el)) return;
 el.innerHTML = '';
 const entries = Object.entries(data || {});
 if(!entries.length){
@@ -1049,7 +1124,7 @@ entries.forEach(([id, c])=>{
   del.className = 'del';
   del.textContent = '×';
   del.onclick = ()=>{
-    if(confirm('Delete clock "' + (c.label || 'untitled') + '"?')) db.ref('clocks/'+id).remove();
+    if(confirm('Delete clock "' + (c.label || 'untitled') + '"?')) dbRemove('clocks/'+id);
   };
 
   item.appendChild(svg);
