@@ -15,6 +15,8 @@
 --danger:#39ff6b; --ok:#39ff6b;
 --term:'VT323','VT323 Dots',monospace;   /* the only font stack on the page */
 --fs-s:.75rem; --fs-m:1rem;                 /* body text sizes: small / base */
+--dmg:0; --crit:0;                          /* hull damage: set by script. dmg 0..1 builds steadily; crit 0..1 only below 25% hull */
+--noise-base:calc(.07 + var(--dmg)*.2 + var(--crit)*.3);
 }
 *{box-sizing:border-box}
 *{scrollbar-width:thin;scrollbar-color:var(--green-dim) var(--panel2)}
@@ -39,7 +41,7 @@ html{font-size:117%}
 90%{transform:translate(.5px,0)}91%{transform:translate(0,-.5px)}92%{transform:translate(0,0)}}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--term);
 padding:24px 16px 60px;min-height:100vh;position:relative;animation:flicker 6s infinite;
-filter:blur(.1px);
+filter:blur(calc(.1px + var(--dmg)*.12px + var(--crit)*.15px));
 text-shadow:1px 0 1.6px rgba(57,255,107,.35), -0.8px 0 1.6px rgba(57,255,107,.18),
 0 0 1px rgba(57,255,107,.3)}
 body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:15;
@@ -50,9 +52,10 @@ radial-gradient(ellipse at center,rgba(0,0,0,0) 52%,rgba(0,0,0,.65) 100%)}
 @keyframes staticShift{0%{background-position:0 0}20%{background-position:-17px 9px}
 40%{background-position:12px -14px}60%{background-position:-9px -6px}
 80%{background-position:15px 11px}100%{background-position:0 0}}
-.noise-overlay{position:fixed;inset:0;pointer-events:none;z-index:16;opacity:.07;mix-blend-mode:screen;
-background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+.noise-overlay{position:fixed;inset:0;pointer-events:none;z-index:16;opacity:var(--noise-base);mix-blend-mode:screen;
+background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0.041 0 0 0 0 1 0 0 0 0 0.147 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 animation:staticShift .5s steps(1) infinite}
+.noise-overlay{animation-duration:calc(.5s - var(--dmg)*.3s - var(--crit)*.1s)}
 @keyframes glitchBar{0%,96.5%,100%{opacity:0;transform:translateY(0) scaleY(1)}
 97%{opacity:.5;transform:translateY(-2px) scaleY(1.4)}
 97.6%{opacity:0}
@@ -60,7 +63,21 @@ animation:staticShift .5s steps(1) infinite}
 98.6%{opacity:0}}
 .glitch-bar{position:fixed;left:0;right:0;top:38%;height:3px;pointer-events:none;z-index:17;
 background:rgba(57,255,107,.5);mix-blend-mode:screen;animation:glitchBar 9s infinite}
-.glitch-bar.b2{top:71%;height:2px;animation-duration:13s;animation-delay:2.4s}
+.glitch-bar{animation-duration:calc(9s / (1 + var(--dmg)*7 + var(--crit)*8));height:calc(3px + var(--crit)*4px)}
+.glitch-bar.b2{top:71%;height:calc(2px + var(--crit)*3px);animation-duration:calc(13s / (1 + var(--dmg)*7 + var(--crit)*8));animation-delay:2.4s}
+
+/* hull damage layers: invisible and switched off entirely until the hull is hurt (html.hull-hurt) */
+.dmg-scan,.dmg-roll{display:none}
+html.hull-hurt .dmg-scan,html.hull-hurt .dmg-roll{display:block}
+.dmg-scan{position:fixed;inset:0;pointer-events:none;z-index:15;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 1px,rgba(0,255,64,.2) 2px,rgba(0,0,0,.35) 3px);
+  opacity:calc(var(--dmg)*.9 + var(--crit)*.5)}
+@keyframes dmgRoll{0%{transform:translateY(-30vh)}100%{transform:translateY(130vh)}}
+.dmg-roll{position:fixed;left:0;right:0;top:0;height:26vh;pointer-events:none;z-index:15;mix-blend-mode:screen;
+  background:linear-gradient(180deg,rgba(57,255,107,0),rgba(57,255,107,.14) 50%,rgba(57,255,107,0));
+  opacity:calc(var(--dmg)*.9 - .3 + var(--crit)*.5);
+  animation:dmgRoll calc(9s - var(--dmg)*3s - var(--crit)*3.5s) linear infinite}
+.dmg-dim{position:fixed;inset:0;pointer-events:none;z-index:18;background:#000;opacity:0}
 
 .warp-overlay{position:fixed;inset:0;z-index:30;pointer-events:none;opacity:0;
   background:rgba(2,10,4,.78)}
@@ -72,7 +89,7 @@ background:rgba(57,255,107,.5);mix-blend-mode:screen;animation:glitchBar 9s infi
 .warp-stream .line.hi{color:#c2ffd1;opacity:1;letter-spacing:.1em;
   text-shadow:0 0 6px var(--green),0 0 16px rgba(57,255,107,.9)}
 .warp-noise{position:absolute;inset:0;opacity:.6;mix-blend-mode:screen;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='wn'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23wn)'/%3E%3C/svg%3E");
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='wn'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0.041 0 0 0 0 1 0 0 0 0 0.147 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23wn)'/%3E%3C/svg%3E");
   animation:staticShift .25s steps(1) infinite}
 .warp-scanlines{position:absolute;inset:0;opacity:.8;mix-blend-mode:multiply;
   background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0) 2px,rgba(0,0,0,.65) 3px,rgba(0,0,0,0) 4px)}
@@ -238,8 +255,8 @@ text-shadow:0 0 4px rgba(57,255,107,.6)}
 .roll-hist-verdict{flex:1;text-align:right;letter-spacing:.06em;text-transform:uppercase;font-size:var(--fs-s)}
 .roll-hist-time{color:var(--dim);font-size:var(--fs-s);min-width:52px;text-align:right}
 .roll-hist-roller{text-align:right;color:var(--dim);font-size:var(--fs-s);margin-top:1px}
-@keyframes interferenceBurst{0%{opacity:.07}8%{opacity:.5}16%{opacity:.08}26%{opacity:.45}
-  36%{opacity:.07}50%{opacity:.4}64%{opacity:.07}78%{opacity:.3}100%{opacity:.07}}
+@keyframes interferenceBurst{0%{opacity:var(--noise-base)}8%{opacity:calc(var(--noise-base) + .43)}16%{opacity:var(--noise-base)}26%{opacity:calc(var(--noise-base) + .38)}
+  36%{opacity:var(--noise-base)}50%{opacity:calc(var(--noise-base) + .33)}64%{opacity:var(--noise-base)}78%{opacity:calc(var(--noise-base) + .23)}100%{opacity:var(--noise-base)}}
 .noise-overlay.burst{animation:staticShift .5s steps(1) infinite, interferenceBurst .5s steps(2) 1}
 .noise-overlay.burst.strong{animation:staticShift .5s steps(1) infinite, interferenceBurst .9s steps(2) 1}
 @keyframes glitchBarBurst{0%{opacity:0;transform:translateY(0) scaleY(1)}
@@ -266,6 +283,9 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 <div class="noise-overlay"></div>
 <div class="glitch-bar"></div>
 <div class="glitch-bar b2"></div>
+<div class="dmg-scan"></div>
+<div class="dmg-roll"></div>
+<div class="dmg-dim" id="dmgDim"></div>
 
 <div id="warpOverlay" class="warp-overlay">
 <div class="warp-stream" id="warpStream"></div>
@@ -287,7 +307,6 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 
 <div id="app">
 <div class="wrap">
-<h1 id="shipNameHead">VOIDSHIP STATUS</h1>
 <div class="sub"><span class="status-dot"></span>connection live // praise the omnissiah</div>
 <section class="group">
 <h2 class="group-title"><span>Status Report</span></h2>
@@ -631,6 +650,101 @@ db.ref('hangar').on('value', s=>renderList('hangar','hangarList',s.val(),[
 db.ref('log').on('value', s=>renderLog(s.val()));
 }
 
+// ---- hull damage: the display degrades as hull falls, brutally so under 25% ----
+// hull is read as a fraction of max. dmg (0..1) builds steadily; crit (0..1) only exists below 25%.
+// CSS turns those into static, scanlines, blur, a rolling bar and glitch-bar rate.
+// The loop below adds the random faults: jitter, tearing, dropouts, vertical slips, garbled labels.
+let hullLevels = {dmg:0, crit:0};
+let damageTimer = null;
+
+function hullLevelsFor(hull, hullMax){
+if(hull === null || hull === undefined || String(hull).trim() === '') return {dmg:0, crit:0};  // unknown != destroyed
+let max = Number(hullMax);
+if(!(max > 0)) max = 100;
+let h = Number(hull) / max;
+if(!isFinite(h)) h = 1;
+h = Math.min(1, Math.max(0, h));
+return {
+  dmg: Math.pow(1 - h, 1.8),
+  crit: h < 0.25 ? Math.pow((0.25 - h) / 0.25, 0.8) : 0
+};
+}
+
+function applyHullDamage(hull, hullMax){
+hullLevels = hullLevelsFor(hull, hullMax);
+const root = document.documentElement;
+root.style.setProperty('--dmg', hullLevels.dmg.toFixed(3));
+root.style.setProperty('--crit', hullLevels.crit.toFixed(3));
+root.classList.toggle('hull-hurt', hullLevels.dmg > 0.04);
+clearTimeout(damageTimer); damageTimer = null;      // re-pace the loop for the new severity
+scheduleDamageGlitch();
+}
+
+function scheduleDamageGlitch(){
+if(hullLevels.dmg < 0.08 || damageTimer !== null) return;
+// mean gap falls from ~9s (light damage) to under 1s (critical); exponential gaps = bursts and lulls
+const meanGap = 14000 / (1 + hullLevels.dmg*6 + hullLevels.crit*10);
+const gap = Math.max(150, -meanGap * Math.log(1 - Math.random()));
+damageTimer = setTimeout(()=>{
+  damageTimer = null;
+  runDamageGlitch();
+  scheduleDamageGlitch();
+}, gap);
+}
+
+function dimBlink(level, ms){
+const dim = document.getElementById('dmgDim');
+dim.style.opacity = level.toFixed(2);
+setTimeout(()=>{ dim.style.opacity = '0'; }, ms);
+}
+
+function nudgeDisplay(tx, ty, skew, ms){
+const wrap = document.querySelector('#app .wrap');
+wrap.style.transform = 'translate('+tx.toFixed(1)+'px,'+ty.toFixed(1)+'px) skewX('+skew.toFixed(2)+'deg)';
+setTimeout(()=>{ wrap.style.transform = ''; }, ms);
+}
+
+function garbleLabels(){
+const pool = document.querySelectorAll('#app .panel h2, #app .group-title span, #app label');
+const n = 1 + Math.floor(Math.random()*3);
+for(let i=0;i<n;i++){
+  const el = pool[Math.floor(Math.random()*pool.length)];
+  if(!el || el.dataset.orig !== undefined) continue;
+  const orig = el.textContent;
+  el.dataset.orig = orig;
+  el.textContent = corrupt(orig, 0.4);
+  setTimeout(()=>{ el.textContent = orig; delete el.dataset.orig; }, 120 + Math.random()*260);
+}
+}
+
+function runDamageGlitch(force){
+const dmg = hullLevels.dmg, crit = hullLevels.crit;
+// the nastier faults only exist once the hull is critical
+const menu = ['jitter','jitter','tear','dim','burst'];
+if(dmg > 0.35) menu.push('dim','tear','burst');
+if(crit > 0) menu.push('slip','garble','burst','tear');
+if(crit > 0.5) menu.push('slip','garble','garble','jitter','dim');
+const fx = force || menu[Math.floor(Math.random()*menu.length)];
+const sgn = ()=> Math.random() < 0.5 ? -1 : 1;
+if(fx === 'jitter'){
+  const amp = 2 + dmg*5 + crit*8;
+  const reps = 2 + Math.floor(Math.random()*3);
+  for(let i=0;i<reps;i++) setTimeout(()=> nudgeDisplay(sgn()*Math.random()*amp, 0, 0, 45), i*85);
+} else if(fx === 'tear'){
+  nudgeDisplay(sgn()*(3 + Math.random()*(6 + crit*14)), 0, sgn()*(0.8 + Math.random()*(2 + crit*4)), 70 + Math.random()*90);
+} else if(fx === 'slip'){
+  nudgeDisplay(0, sgn()*(14 + Math.random()*26), 0, 90 + Math.random()*110);
+} else if(fx === 'dim'){
+  dimBlink(0.2 + Math.random()*(0.25 + crit*0.35), 40 + Math.random()*80);
+  if(crit > 0 && Math.random() < 0.5) setTimeout(()=> dimBlink(0.25 + Math.random()*0.4, 50 + Math.random()*70), 150);
+} else if(fx === 'burst'){
+  triggerInterference(crit > 0 && Math.random() < 0.5);
+} else if(fx === 'garble'){
+  garbleLabels();
+}
+return fx;
+}
+
 function renderStatus(v){
 ['hull','hullMax','shields','shieldsMax','fuel','fuelMax'].forEach(k=>{
 const el=document.getElementById(k);
@@ -643,6 +757,7 @@ if(document.activeElement!==el) fillDieSelect(el, v[k]);
 document.getElementById('hullBar').style.width = Math.min(100,(v.hull/v.hullMax)*100)+'%';
 document.getElementById('shieldsBar').style.width = Math.min(100,(v.shields/v.shieldsMax)*100)+'%';
 document.getElementById('fuelBar').style.width = Math.min(100,(v.fuel/v.fuelMax)*100)+'%';
+applyHullDamage(v.hull, v.hullMax);
 }
 function saveStatus(){
 db.ref('status').update({
