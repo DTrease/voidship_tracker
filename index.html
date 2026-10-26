@@ -140,6 +140,26 @@ font-family:'VT323',monospace;font-size:1rem;padding:6px 20px 6px 6px;width:auto
 .cargo-bay .bay-row input[type=number]{max-width:70px}
 .log-entry{border-bottom:1px solid var(--border);padding:8px 0;font-size:.82rem}
 .log-entry .t{color:var(--dim);font-size:.7rem}
+
+.clock-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.clock-item:last-child{border-bottom:none}
+.clock-svg{width:92px;height:92px;flex:none;touch-action:manipulation;
+  filter:drop-shadow(0 0 3px rgba(57,255,107,.3))}
+.clock-seg{fill:rgba(57,255,107,.05);stroke:var(--green);stroke-width:1.6;stroke-linejoin:round;cursor:pointer}
+.clock-seg:hover{fill:rgba(57,255,107,.22)}
+.clock-seg.on{fill:rgba(57,255,107,.7)}
+.clock-seg.on:hover{fill:rgba(57,255,107,.55)}
+.clock-meta{flex:1;min-width:0}
+.clock-meta textarea{resize:none;display:block}
+.clock-count{margin-top:4px;color:var(--dim);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase}
+.clock-item.full .clock-count{color:var(--green);text-shadow:0 0 6px rgba(57,255,107,.7)}
+.clock-empty{color:var(--dim);text-align:center;padding:6px 0}
+.clock-add{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;
+  padding-top:12px;border-top:1px dashed var(--border)}
+.clock-add input{flex:1;min-width:150px}
+.seg-select{background-color:var(--panel2);border:1px solid var(--border);color:var(--green);
+  font-family:'VT323',monospace;font-size:1rem;padding:7px 22px 7px 8px;width:auto;caret-color:var(--green)}
+.seg-select:focus{outline:none;border-color:var(--green);box-shadow:0 0 6px rgba(57,255,107,.5)}
 .log-entry::before{content:'$ '; color:var(--green-dim)}
 #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;
 justify-content:center;z-index:10;flex-direction:column;gap:14px;padding:20px}
@@ -383,6 +403,20 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 <div class="panel"><h2>Hangar Bay</h2><div id="hangarList"></div>
 <button class="add" onclick="addItem('hangar',{name:'',qty:1})">+ add craft</button></div>
 
+<div class="panel"><h2>Clocks</h2>
+<div id="clockList"></div>
+<div class="clock-add">
+<input id="clockLabel" placeholder="new clock — what is it counting?">
+<select id="clockSegs" class="seg-select">
+<option value="4">4 seg</option>
+<option value="6" selected>6 seg</option>
+<option value="8">8 seg</option>
+<option value="10">10 seg</option>
+</select>
+<button class="add" style="width:auto;margin-top:0" onclick="addClock()">+ add clock</button>
+</div>
+</div>
+
 <div class="panel"><h2>Mission Log</h2>
 <div class="row"><input id="logInput" placeholder="log an event..." style="flex:1">
 <input id="logDate" placeholder="date (optional)" style="max-width:130px">
@@ -553,6 +587,7 @@ db.ref('defense').on('value', s=>renderList('defense','defenseList',s.val(),[
 ]));
 db.ref('cargo').on('value', s=>renderCargo(s.val()||DEFAULTS.cargo));
 db.ref('rolls').on('value', s=>renderRollHistory(s.val()));
+db.ref('clocks').on('value', s=>renderClocks(s.val()));
 db.ref('hangar').on('value', s=>renderList('hangar','hangarList',s.val(),[
   {key:'name',placeholder:'craft'},
   {key:'qty',type:'number',placeholder:'qty',width:'55px'}
@@ -935,6 +970,93 @@ setTimeout(()=>{
   triggerWarpEvent();
   scheduleWarpEvent();
 }, interval);
+}
+
+// ---- Clocks ----
+// each clock: { label, segments: 4|6|8|10, fill: "0101.." (one char per segment) }
+function clockWedgePath(i, n){
+const cx = 50, cy = 50, r = 45;
+const a0 = (-90 + i*360/n) * Math.PI/180;
+const a1 = (-90 + (i+1)*360/n) * Math.PI/180;
+const x0 = cx + r*Math.cos(a0), y0 = cy + r*Math.sin(a0);
+const x1 = cx + r*Math.cos(a1), y1 = cy + r*Math.sin(a1);
+return 'M'+cx+' '+cy+' L'+x0.toFixed(2)+' '+y0.toFixed(2)+
+       ' A'+r+' '+r+' 0 0 1 '+x1.toFixed(2)+' '+y1.toFixed(2)+' Z';
+}
+
+function addClock(){
+const inp = document.getElementById('clockLabel');
+const sel = document.getElementById('clockSegs');
+const label = inp.value.trim();
+if(!label){ inp.focus(); return; }
+const n = parseInt(sel.value, 10);
+db.ref('clocks').push({label: label, segments: n, fill: '0'.repeat(n)});
+inp.value = '';
+}
+document.getElementById('clockLabel').addEventListener('keydown', e=>{ if(e.key==='Enter') addClock(); });
+
+function toggleClockSeg(id, i){
+// transaction so simultaneous taps on different segments both land
+db.ref('clocks/'+id+'/fill').transaction(cur=>{
+  if(typeof cur !== 'string' || i >= cur.length) return cur;
+  return cur.substring(0,i) + (cur.charAt(i)==='1' ? '0' : '1') + cur.substring(i+1);
+});
+}
+
+function renderClocks(data){
+const el = document.getElementById('clockList');
+if(document.activeElement && el.contains(document.activeElement)) return;
+el.innerHTML = '';
+const entries = Object.entries(data || {});
+if(!entries.length){
+  el.innerHTML = '<div class="clock-empty">// no clocks running</div>';
+  return;
+}
+const NS = 'http://www.w3.org/2000/svg';
+entries.forEach(([id, c])=>{
+  const n = parseInt(c.segments, 10) || (typeof c.fill === 'string' ? c.fill.length : 6);
+  const fill = (typeof c.fill === 'string' ? c.fill : '').padEnd(n, '0').slice(0, n);
+  const filled = (fill.match(/1/g) || []).length;
+
+  const item = document.createElement('div');
+  item.className = 'clock-item' + (filled === n ? ' full' : '');
+
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 100 100');
+  svg.setAttribute('class', 'clock-svg');
+  for(let i=0;i<n;i++){
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', clockWedgePath(i, n));
+    p.setAttribute('class', 'clock-seg' + (fill.charAt(i)==='1' ? ' on' : ''));
+    p.addEventListener('click', ()=> toggleClockSeg(id, i));
+    svg.appendChild(p);
+  }
+
+  const meta = document.createElement('div');
+  meta.className = 'clock-meta';
+  const ta = document.createElement('textarea');
+  ta.rows = 2;
+  ta.value = c.label || '';
+  ta.placeholder = 'what is this clock counting?';
+  ta.onchange = ()=> db.ref('clocks/'+id).update({label: ta.value});
+  const count = document.createElement('div');
+  count.className = 'clock-count';
+  count.textContent = filled + ' / ' + n + (filled === n ? ' // full' : '');
+  meta.appendChild(ta);
+  meta.appendChild(count);
+
+  const del = document.createElement('button');
+  del.className = 'del';
+  del.textContent = '×';
+  del.onclick = ()=>{
+    if(confirm('Delete clock "' + (c.label || 'untitled') + '"?')) db.ref('clocks/'+id).remove();
+  };
+
+  item.appendChild(svg);
+  item.appendChild(meta);
+  item.appendChild(del);
+  el.appendChild(item);
+});
 }
 
 function addLog(){
