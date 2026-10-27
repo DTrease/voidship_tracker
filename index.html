@@ -79,6 +79,11 @@ html.hull-hurt .dmg-scan,html.hull-hurt .dmg-roll{display:block}
   animation:dmgRoll calc(9s - var(--dmg)*3s - var(--crit)*3.5s) linear infinite}
 .dmg-dim{position:fixed;inset:0;pointer-events:none;z-index:18;background:#000;opacity:0}
 
+/* rare idle glitch (healthy hull): a faint line rolls down the screen, one slow pass at a time */
+.idle-roll{display:none;position:fixed;left:0;right:0;top:0;height:26vh;pointer-events:none;z-index:15;mix-blend-mode:screen;
+  background:linear-gradient(180deg,rgba(57,255,107,0),rgba(57,255,107,.14) 50%,rgba(57,255,107,0));opacity:.3}
+.idle-roll.go{display:block;animation:dmgRoll 9s linear 1 forwards}
+
 .warp-overlay{position:fixed;inset:0;z-index:30;pointer-events:none;opacity:0;
   background:rgba(2,10,4,.78)}
 .warp-stream{position:absolute;inset:0;overflow:hidden;display:flex;flex-direction:column;
@@ -211,6 +216,7 @@ text-transform:inherit;font-weight:400;color:inherit;text-shadow:inherit;text-al
 #app{display:none}
 .status-dot{display:inline-block;width:7px;height:7px;background:var(--green);margin-right:6px;
 box-shadow:0 0 6px var(--green);animation:blink 1.4s infinite}
+.sub.offline .status-dot{animation:none;background:var(--dim);box-shadow:none}
 @keyframes dash{to{stroke-dashoffset:-16}}
 .schematic{width:100%;height:auto;display:block}
 .schematic .hull{fill:rgba(57,255,107,.04);stroke:var(--green);stroke-width:1.6;
@@ -285,6 +291,7 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 <div class="glitch-bar b2"></div>
 <div class="dmg-scan"></div>
 <div class="dmg-roll"></div>
+<div class="idle-roll" id="idleRoll"></div>
 <div class="dmg-dim" id="dmgDim"></div>
 
 <div id="warpOverlay" class="warp-overlay">
@@ -307,7 +314,7 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 
 <div id="app">
 <div class="wrap">
-<div class="sub"><span class="status-dot"></span>connection live // praise the omnissiah</div>
+<div class="sub" id="connLine"><span class="status-dot"></span><span id="connText">connection live // praise the omnissiah</span></div>
 <section class="group">
 <h2 class="group-title"><span>Status Report</span></h2>
 
@@ -384,24 +391,24 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 <h2>Hull &amp; Systems</h2>
 <div class="row"><div class="stat"><label>Hull</label>
 <div class="bar hull"><div id="hullBar" style="width:0%"></div></div></div>
-<input id="hull" type="number" onchange="saveStatus()"> / <input id="hullMax" type="number" onchange="saveStatus()">
-<select id="hullQuality" class="die-select" onchange="saveStatus()"></select></div>
+<input id="hull" type="number" onchange="saveStatus(this)"> / <input id="hullMax" type="number" onchange="saveStatus(this)">
+<select id="hullQuality" class="die-select" onchange="saveStatus(this)"></select></div>
 <div class="row"><div class="stat"><label>Shields</label>
 <div class="bar shields"><div id="shieldsBar" style="width:0%"></div></div></div>
-<input id="shields" type="number" onchange="saveStatus()"> / <input id="shieldsMax" type="number" onchange="saveStatus()">
-<select id="shieldsQuality" class="die-select" onchange="saveStatus()"></select></div>
+<input id="shields" type="number" onchange="saveStatus(this)"> / <input id="shieldsMax" type="number" onchange="saveStatus(this)">
+<select id="shieldsQuality" class="die-select" onchange="saveStatus(this)"></select></div>
 <div class="row"><div class="stat"><label>Fuel</label>
 <div class="bar fuel"><div id="fuelBar" style="width:0%"></div></div></div>
-<input id="fuel" type="number" onchange="saveStatus()"> / <input id="fuelMax" type="number" onchange="saveStatus()">
-<select id="fuelQuality" class="die-select" onchange="saveStatus()"></select></div>
+<input id="fuel" type="number" onchange="saveStatus(this)"> / <input id="fuelMax" type="number" onchange="saveStatus(this)">
+<select id="fuelQuality" class="die-select" onchange="saveStatus(this)"></select></div>
 </div>
 
 <div class="panel">
 <h2>Position</h2>
-<div class="row"><label>System</label><input id="locName" onchange="saveLocation()"></div>
-<div class="row"><label>Planet</label><input id="locCoords" onchange="saveLocation()"></div>
-<div class="row"><label>Date</label><input id="locDate" placeholder="6.122.008.M31" onchange="saveLocation()"></div>
-<div class="row"><label>Notes</label><input id="locNotes" onchange="saveLocation()"></div>
+<div class="row"><label>System</label><input id="locName" onchange="saveLocation(this)"></div>
+<div class="row"><label>Planet</label><input id="locCoords" onchange="saveLocation(this)"></div>
+<div class="row"><label>Date</label><input id="locDate" placeholder="6.122.008.M31" onchange="saveLocation(this)"></div>
+<div class="row"><label>Notes</label><input id="locNotes" onchange="saveLocation(this)"></div>
 </div>
 </section>
 
@@ -621,10 +628,30 @@ if(!confirm('Clear roll log for everyone?')) return;
 dbRemove('rolls');
 }
 
+// Honest connection line: if the link to the database drops, say so instead of claiming it's live.
+const CONN_LIVE_TEXT = document.getElementById('connText').textContent;
+let offlineTimer = null;
+function watchConnection(){
+db.ref('.info/connected').on('value', s=>{
+  const line = document.getElementById('connLine'), text = document.getElementById('connText');
+  clearTimeout(offlineTimer);
+  if(s.val() === true){
+    line.classList.remove('offline');
+    text.textContent = CONN_LIVE_TEXT;
+  } else {
+    // short grace period: it reads "not connected" for a moment while the page first connects
+    offlineTimer = setTimeout(()=>{ line.classList.add('offline'); text.textContent = 'connection lost // retrying'; }, 3000);
+  }
+});
+}
+
 function boot(){
+watchConnection();
 applyGmVisibility();
 document.getElementById('logoutBtn').style.display = 'block';
 scheduleWarpEvent();
+scheduleIdle(idleRoll, IDLE_ROLL_MEAN_MS);
+scheduleIdle(idleTear, IDLE_TEAR_MEAN_MS);
 db.ref('/').once('value').then(snap=>{
 if(!snap.exists()) db.ref('/').set(DEFAULTS);
 });
@@ -746,43 +773,40 @@ return fx;
 }
 
 function renderStatus(v){
+let held = false;                    // a field is being edited right now, so it can't be refreshed yet
 ['hull','hullMax','shields','shieldsMax','fuel','fuelMax'].forEach(k=>{
 const el=document.getElementById(k);
-if(document.activeElement!==el) el.value = v[k];
+if(document.activeElement!==el) el.value = v[k]; else held = true;
 });
 ['hullQuality','shieldsQuality','fuelQuality'].forEach(k=>{
 const el=document.getElementById(k);
-if(document.activeElement!==el) fillDieSelect(el, v[k]);
+if(document.activeElement!==el) fillDieSelect(el, v[k]); else held = true;
 });
+if(held) pendingBlur.set('status', ()=>renderStatus(v)); else pendingBlur.delete('status');
 document.getElementById('hullBar').style.width = Math.min(100,(v.hull/v.hullMax)*100)+'%';
 document.getElementById('shieldsBar').style.width = Math.min(100,(v.shields/v.shieldsMax)*100)+'%';
 document.getElementById('fuelBar').style.width = Math.min(100,(v.fuel/v.fuelMax)*100)+'%';
 applyHullDamage(v.hull, v.hullMax);
 }
-function saveStatus(){
-db.ref('status').update({
-hull:+document.getElementById('hull').value, hullMax:+document.getElementById('hullMax').value,
-hullQuality:document.getElementById('hullQuality').value,
-shields:+document.getElementById('shields').value, shieldsMax:+document.getElementById('shieldsMax').value,
-shieldsQuality:document.getElementById('shieldsQuality').value,
-fuel:+document.getElementById('fuel').value, fuelMax:+document.getElementById('fuelMax').value,
-fuelQuality:document.getElementById('fuelQuality').value
-});
+function saveStatus(el){
+// Save ONLY the field that changed. Writing every field would let a stale value in some other
+// field overwrite what another player just set. (Field ids are the database keys.)
+if(!el || !el.id) return;
+db.ref('status').update({[el.id]: el.tagName === 'SELECT' ? el.value : +el.value});
 }
 
 function renderLocation(v){
+let held = false;
 ['locName','locCoords','locDate','locNotes'].forEach((id,i)=>{
 const key=['name','coords','date','notes'][i], el=document.getElementById(id);
-if(document.activeElement!==el) el.value = v[key]||'';
+if(document.activeElement!==el) el.value = v[key]||''; else held = true;
 });
+if(held) pendingBlur.set('location', ()=>renderLocation(v)); else pendingBlur.delete('location');
 }
-function saveLocation(){
-db.ref('location').update({
-name:document.getElementById('locName').value,
-coords:document.getElementById('locCoords').value,
-date:document.getElementById('locDate').value,
-notes:document.getElementById('locNotes').value
-});
+const LOC_KEYS = {locName:'name', locCoords:'coords', locDate:'date', locNotes:'notes'};
+function saveLocation(el){
+if(!el || !LOC_KEYS[el.id]) return;     // only the field that changed, same reason as saveStatus
+db.ref('location').update({[LOC_KEYS[el.id]]: el.value});
 }
 
 // ---- render safety ----
@@ -810,12 +834,18 @@ pointerSafety = setTimeout(releasePointer, 3000); // failsafe if pointerup never
 }, true);
 document.addEventListener('pointerup', releasePointer, true);
 document.addEventListener('pointercancel', releasePointer, true);
-function deferWhilePointerDown(key, fn){
-if(pointerIsDown){
-  deferredRenders.set(key, fn);   // latest data wins
-  return true;
-}
-deferredRenders.delete(key);      // a fresh render supersedes anything held back (stale data)
+// Renders skipped because someone was typing in that area. They are applied when the person
+// leaves it, so another player's change is delayed, never lost.
+const pendingBlur = new Map();
+document.addEventListener('focusout', ()=>{
+setTimeout(()=>{ const fns = [...pendingBlur.values()]; pendingBlur.clear(); fns.forEach(fn=>fn()); }, 0);
+}, true);
+
+// Should this render wait? Returns true if it was held back.
+function holdRender(key, container, fn){
+if(pointerIsDown){ deferredRenders.set(key, fn); return true; }                    // mid-click: wait for the release
+if(container && isTypingIn(container)){ pendingBlur.set(key, fn); return true; }   // mid-typing: wait until they leave
+deferredRenders.delete(key); pendingBlur.delete(key);                              // a fresh render supersedes anything held back
 return false;
 }
 
@@ -834,8 +864,7 @@ return Promise.resolve(db.ref(path).remove()).catch(err=>{
 
 function renderList(path, elId, data, fields){
 const el = document.getElementById(elId);
-if(deferWhilePointerDown(elId, ()=>renderList(path, elId, data, fields))) return;
-if(isTypingIn(el)) return;
+if(holdRender(elId, el, ()=>renderList(path, elId, data, fields))) return;
 el.innerHTML='';
 Object.entries(data||{}).forEach(([id,item])=>{
 const row = document.createElement('div'); row.className='list-item';
@@ -864,8 +893,7 @@ function addItem(path, obj){ db.ref(path).push(obj); }
 
 function renderCargo(v){
 const el = document.getElementById('cargoGrid');
-if(deferWhilePointerDown('cargoGrid', ()=>renderCargo(v))) return;
-if(isTypingIn(el)) return;
+if(holdRender('cargoGrid', el, ()=>renderCargo(v))) return;
 el.innerHTML='';
 ['A','B','C','D'].forEach(h=>{
 const bay = v[h] || {};
@@ -1163,6 +1191,33 @@ function sampleExponential(meanMs){
 return -meanMs * Math.log(1 - Math.random());
 }
 
+// ---- idle glitches: rare, always on, even with a healthy hull ----
+// (the damage system supplies far more of both once the hull is hurt, so these stand down then)
+const IDLE_ROLL_MEAN_MS = 150000;   // a faint line rolls down the screen about every 2.5 min on average
+const IDLE_TEAR_MEAN_MS = 90000;    // the display slides left at an angle about every 1.5 min on average
+
+function idleRoll(){
+const el = document.getElementById('idleRoll');
+el.classList.remove('go');
+void el.offsetWidth;                // restart the sweep if one is somehow still running
+el.classList.add('go');
+}
+document.getElementById('idleRoll').addEventListener('animationend', e=> e.currentTarget.classList.remove('go'));
+
+function idleTear(){
+// the damage "tear" at zero crit, but always sliding to the left
+nudgeDisplay(-(3 + Math.random()*6), 0, (Math.random() < 0.5 ? -1 : 1) * (0.8 + Math.random()*2), 70 + Math.random()*90);
+}
+
+function scheduleIdle(fn, meanMs){
+// exponential gaps: sometimes close together, sometimes minutes apart, never a metronome
+const gap = Math.max(2000, -meanMs * Math.log(1 - Math.random()));
+setTimeout(()=>{
+  if(!document.documentElement.classList.contains('hull-hurt')) fn();
+  scheduleIdle(fn, meanMs);
+}, gap);
+}
+
 function scheduleWarpEvent(){
 const meanMs = 0.75 * 60 * 60 * 1000; // Poisson mean: 0.75 hours
 const interval = sampleExponential(meanMs);
@@ -1205,8 +1260,7 @@ db.ref('clocks/'+id+'/fill').transaction(cur=>{
 
 function renderClocks(data){
 const el = document.getElementById('clockList');
-if(deferWhilePointerDown('clockList', ()=>renderClocks(data))) return;
-if(isTypingIn(el)) return;
+if(holdRender('clockList', el, ()=>renderClocks(data))) return;
 el.innerHTML = '';
 const entries = Object.entries(data || {});
 if(!entries.length){
