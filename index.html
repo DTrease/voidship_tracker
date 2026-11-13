@@ -376,6 +376,17 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 #gc-root{margin-bottom:14px}
 .gc-ovl{align-items:center;margin-top:.8rem;padding-top:.7rem;border-top:1px dashed var(--border)}
 
+#gc-root #locDate{text-transform:none}   /* the imperial date keeps its capital M */
+.gc-keybox{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1rem;margin-top:.7rem}
+.gc-keybox .gc-key{gap:.3rem 1rem}
+#gc-index>summary{cursor:pointer;list-style:none;user-select:none;-webkit-user-select:none}
+#gc-index>summary::-webkit-details-marker{display:none}
+#gc-index>summary::after{content:' [ + ]';color:var(--dim)}
+#gc-index[open]>summary::after{content:' [ - ]'}
+#gc-index:not([open])>summary{margin-bottom:0}
+#gc-index>summary:hover{text-shadow:0 0 8px rgba(57,255,107,.9)}
+#gc-index>summary:focus-visible{outline:1px solid var(--green);outline-offset:2px}
+
 /* collapsible sections: click a heading to fold the group away */
 .group-title[role=button]{cursor:pointer;user-select:none;-webkit-user-select:none}
 .group-title[role=button]:hover{text-shadow:0 0 8px rgba(57,255,107,.9),0 0 18px rgba(57,255,107,.5)}
@@ -384,9 +395,6 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 .group.collapsed>*:not(.group-title){display:none}
 .group.collapsed .group-title{margin-bottom:0}
 
-/* position fields that follow the starmap are read-only */
-input[readonly]{border-style:dashed;color:var(--text);cursor:default}
-input[readonly]:focus{box-shadow:none;border-color:var(--border)}
 </style>
 </head>
 <body>
@@ -507,18 +515,14 @@ input[readonly]:focus{box-shadow:none;border-color:var(--border)}
 <input id="fuel" type="number" onchange="saveStatus(this)"> / <input id="fuelMax" type="number" onchange="saveStatus(this)">
 <select id="fuelQuality" class="die-select" onchange="saveStatus(this)"></select></div>
 </div>
-
-<div class="panel">
-<h2>Position</h2>
-<div class="row"><label>System</label><input id="locName" readonly placeholder="// from the starmap"></div>
-<div class="row"><label>Planet</label><input id="locCoords" readonly placeholder="// from the starmap"></div>
-<div class="row"><label>Date</label><input id="locDate" placeholder="6.122.008.M31" onchange="saveLocation(this)"></div>
-<div class="row"><label>Notes</label><input id="locNotes" onchange="saveLocation(this)"></div>
-</div>
 </section>
 
 <section class="group" id="gc-root">
 <h2 class="group-title"><span>Navigation</span></h2>
+  <div class="gc-panel">
+    <h2 class="gc-ptitle">&gt; date</h2>
+    <input id="locDate" aria-label="imperial date" placeholder="6.122.008.M31" onchange="saveLocation(this)">
+  </div>
 
   <div class="gc-panel">
     <h2 class="gc-ptitle">&gt; starmap</h2>
@@ -546,12 +550,21 @@ input[readonly]:focus{box-shadow:none;border-color:var(--border)}
       <button class="gc-btn" id="gc-bDom" type="button" aria-pressed="true">dominions</button>
       <button class="gc-btn" id="gc-bHw" type="button" aria-pressed="true">homeworlds</button>
     </div>
+    <div class="gc-keybox" id="gc-key">
+      <span class="gc-dim gc-sm">dominions //</span>
+      <ul class="gc-key">
+        <li><span class="gc-sw gc-p0"></span>warmaster</li>
+        <li><span class="gc-sw gc-p1"></span>imperial</li>
+        <li><span class="gc-sw gc-p2"></span>unaligned</li>
+        <li><span class="gc-sw gc-p3"></span>xenos</li>
+      </ul>
+    </div>
     <p id="gc-status">// drag: turn // pinch: zoom // 2 fingers: slide</p>
   </div>
 
   <div class="gc-panel gc-blur" aria-live="polite">
-    <h2 class="gc-ptitle" id="gc-dtitle">&gt; target</h2>
-    <div id="gc-dnone" class="gc-dim">// no target selected</div>
+    <h2 class="gc-ptitle" id="gc-dtitle">&gt; selected</h2>
+    <div id="gc-dnone" class="gc-dim">// nothing selected</div>
     <div id="gc-dbody" hidden>
       <div class="gc-dim" id="gc-dsub"></div>
       <p id="gc-dtext"></p>
@@ -600,7 +613,7 @@ input[readonly]:focus{box-shadow:none;border-color:var(--border)}
       <dt>plane offset</dt><dd id="gc-soff"></dd>
     </dl>
     <label class="gc-fld" for="gc-sname">designation</label>
-    <input type="text" id="gc-sname" maxlength="40" autocomplete="off" placeholder="our ship">
+    <input type="text" id="gc-sname" maxlength="40" autocomplete="off" placeholder="emperor's paddle">
     <label class="gc-fld" for="gc-sheight">plane offset</label>
     <input type="range" id="gc-sheight" min="-3" max="3" step="0.1">
     <div class="gc-ctl">
@@ -609,8 +622,8 @@ input[readonly]:focus{box-shadow:none;border-color:var(--border)}
     </div>
   </div>
 
-  <div class="gc-panel gc-blur">
-    <h2 class="gc-ptitle">&gt; index</h2>
+  <details class="gc-panel" id="gc-index">
+    <summary class="gc-ptitle">&gt; index</summary>
     <h3 class="gc-gtitle">[ campaign ]</h3>
     <ul class="gc-list" id="gc-listA"></ul>
     <h3 class="gc-gtitle">[ legiones astartes ]</h3>
@@ -619,18 +632,7 @@ input[readonly]:focus{box-shadow:none;border-color:var(--border)}
       <h3 class="gc-gtitle">[ surveyed systems ]</h3>
       <ul class="gc-list" id="gc-listC"></ul>
     </div>
-  </div>
-
-  <div class="gc-panel gc-blur">
-    <h2 class="gc-ptitle">&gt; key</h2>
-    <h3 class="gc-gtitle">[ dominions ]</h3>
-    <ul class="gc-key">
-      <li><span class="gc-sw gc-p0"></span>warmaster</li>
-      <li><span class="gc-sw gc-p1"></span>imperial</li>
-      <li><span class="gc-sw gc-p2"></span>unaligned</li>
-      <li><span class="gc-sw gc-p3"></span>xenos</li>
-    </ul>
-  </div>
+  </details>
 </section>
 
 <section class="group">
@@ -1018,14 +1020,12 @@ db.ref('status').update({[el.id]: el.tagName === 'SELECT' ? el.value : +el.value
 }
 
 function renderLocation(v){
-let held = false;
-['locName','locCoords','locDate','locNotes'].forEach((id,i)=>{
-const key=['name','coords','date','notes'][i], el=document.getElementById(id);
-if(document.activeElement!==el) el.value = v[key]||''; else held = true;
-});
-if(held) pendingBlur.set('location', ()=>renderLocation(v)); else pendingBlur.delete('location');
+// the campaign date is the only field left of the old Position panel (still stored at location/date)
+const el = document.getElementById('locDate');
+if(document.activeElement!==el){ el.value = (v && v.date) || ''; pendingBlur.delete('location'); }
+else pendingBlur.set('location', ()=>renderLocation(v));
 }
-const LOC_KEYS = {locName:'name', locCoords:'coords', locDate:'date', locNotes:'notes'};
+const LOC_KEYS = {locDate:'date'};
 function saveLocation(el){
 if(!el || !LOC_KEYS[el.id]) return;     // only the field that changed, same reason as saveStatus
 db.ref('location').update({[LOC_KEYS[el.id]]: el.value});
@@ -1588,6 +1588,7 @@ el.appendChild(d);
   var SOL = V(-SUN_R, 0, 0.02);
   // id, name, sub, region, e, n, u, label side, text, group
   var RAW = [
+    ['rattigon', 'rattigon', 'mycifur', 'ultima', 30, -3, 0, 'r', 'one inhabited planet.', 'a'],
     ['sol', 'sol', 'terra // luna // mars', 'segmentum solar', -26, 0, 0.02, 'l', 'throneworld. seat of the imperium. base of the vii legion.', 'a'],
     ['eye', 'cygnus x-1 warp maelstrom', 'the eye of terror', 'segmentum obscurus', -34, 17, 0.3, 'l', 'great warp storm. thousands of ly across.', 'a'],
     ['calth', 'calth', 'veridian star', 'ultramar // ultima', 36, -20, -0.12, 'l', 'jewel of ultramar. eastern fringe.', 'a'],
@@ -1713,7 +1714,7 @@ el.appendChild(d);
   // dominions: one green, told apart by hatch. 0 warmaster (diagonal), 1 imperial (flat), 2 unaligned (dots), 3 xenos (grid)
   var DOMS = [
     { blobs: [[5, 30, 13], [16, 26, 10], [10, 17, 9], [-8, 25, 10], [-17, 13, 6], [-40, 4, 6], [-17, -12, 5], [33, 21, 7]], labels: [[6, 36, 'warmaster']] },
-    { blobs: [[-26, 0, 13], [-20, -6, 9], [37, -21, 12], [30, -12, 8], [24, 14, 6], [20, 3, 6], [12, -10, 6], [-28, 15, 4], [-29, 22, 4], [-14, -24, 5], [-20, 26, 4]], labels: [[-27, -10, 'imperial'], [42, -28, 'imperium secundus']] },
+    { blobs: [[-26, 0, 13], [-20, -6, 9], [37, -21, 12], [30, -12, 8], [24, 14, 6], [20, 3, 6], [12, -10, 6], [-28, 15, 4], [-29, 22, 4], [-14, -24, 5], [-20, 26, 4]], labels: [[-27, -10, 'imperial']] },
     { blobs: [[-43, -9, 10], [-36, -22, 9], [-22, -33, 12], [0, -36, 12], [20, -32, 9], [-44, 18, 6]], labels: [[-41, -17, 'unaligned'], [1, -41, 'unaligned']] },
     { blobs: [[43, 28, 8], [30, -37, 7], [-30, 41, 8], [12, 46, 6], [1, -1, 7], [49, -6, 5]], labels: [[43, 32, 'ghoul stars // xenos'], [31, -41, 'charadon // orks'], [-30, 44, 'halo stars // xenos'], [1, -5, 'core wilds // xenos']] }
   ];
@@ -1761,14 +1762,16 @@ el.appendChild(d);
 
   // ---------------- ship ----------------
   var STORE = 'hh-galactic-chart-ship-v2';
-  var ship = { name: 'our ship', at: null, body: null, star: null, e: 30, n: -3, u: 0 };
+  var SHIP_NAME = 'emperor\'s paddle';
+  var ship = { name: SHIP_NAME, at: 'rattigon', body: null, star: null, e: 30, n: -3, u: 0 };
   try {
     var sv = JSON.parse(window.localStorage.getItem(STORE) || 'null');
     if (sv && typeof sv.e === 'number' && typeof sv.n === 'number' && typeof sv.u === 'number') {
       ship.e = sv.e; ship.n = sv.n; ship.u = sv.u; ship.at = (sv.at && byId[sv.at]) ? sv.at : null;
       ship.star = (!ship.at && typeof sv.star === 'string') ? sv.star.slice(0, 80) : null;
       ship.body = ((ship.at || ship.star) && typeof sv.body === 'string') ? sv.body : null;
-      if (typeof sv.name === 'string' && sv.name.trim()) ship.name = sv.name.slice(0, 40);
+      if (typeof sv.name === 'string' && sv.name.trim() && sv.name !== 'our ship') ship.name = sv.name.slice(0, 40);
+      if (sv.name === 'our ship' && !sv.at && !sv.star && sv.e === 30 && sv.n === -3 && sv.u === 0) ship.at = 'rattigon';   // untouched old default
     }
   } catch (e) { /* storage unavailable */ }
   var shipP = V(ship.e, ship.n, ship.u);
@@ -1888,7 +1891,7 @@ el.appendChild(d);
     if (bodyTarget() || starTarget()) return;
     var pl = selected && byId[selected];
     $('gc-dnone').hidden = !!pl; $('gc-dbody').hidden = !pl;
-    $('gc-dtitle').textContent = pl ? '> target: ' + pl.name : '> target';
+    $('gc-dtitle').textContent = pl ? '> selected: ' + pl.name : '> selected';
     if (!pl) return;
     $('gc-dsub').textContent = '// ' + pl.sub;
     $('gc-dtext').textContent = pl.text + (SYS[pl.id] ? ' star: ' + placeStar(pl.id) + '.' : '');
@@ -1930,7 +1933,7 @@ el.appendChild(d);
     stalk.visible = Math.abs(u) > 0.06;
     saveShip(silent); refreshTierShip(); refreshShip();
   }
-  $('gc-sname').addEventListener('input', function () { ship.name = this.value.trim().slice(0, 40) || 'our ship'; saveShip(); refreshShip(); });
+  $('gc-sname').addEventListener('input', function () { ship.name = this.value.trim().slice(0, 40) || SHIP_NAME; saveShip(); refreshShip(); });
   $('gc-sheight').addEventListener('input', function () { setShip(ship.e, ship.n, parseFloat(this.value) || 0, null); });
   $('gc-bShipFly').addEventListener('click', function () { flyShip(); if (chart.scrollIntoView) chart.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' }); });
   var bPlace = $('gc-bPlace');
@@ -1978,7 +1981,7 @@ el.appendChild(d);
   function setHw(on) { hwOn = on; $('gc-bHw').setAttribute('aria-pressed', on ? 'true' : 'false'); setGroup('hw', on); if (!on && selected && byId[selected] && byId[selected].group === 'hw') clearTarget(); }
   bTop.addEventListener('click', function () { var on = toggle(bTop); if (on) { goal.phi = 0.02; goal.theta = Math.round(cur.theta / (Math.PI * 2)) * Math.PI * 2; } else goal.phi = 0.92; });
   $('gc-bGuides').addEventListener('click', function () { var on = toggle(this); guides.visible = on; setGroup('guides', on); guidesOn = on; if (guidesL) guidesL.visible = on; });
-  $('gc-bDom').addEventListener('click', function () { var on = toggle(this); domMesh.visible = on; setGroup('dom', on); });
+  $('gc-bDom').addEventListener('click', function () { var on = toggle(this); domMesh.visible = on; setGroup('dom', on); $('gc-key').hidden = !on; });
   $('gc-bHw').addEventListener('click', function () { setHw(!hwOn); });
   $('gc-bReset').addEventListener('click', resetView);
 
@@ -2052,6 +2055,7 @@ el.appendChild(d);
   // each tier has its own scene and its own origin, so precision never runs out.
   // charted systems: [star (null = named by the survey generator), bodies]. body: 'name', 'name|g' gas giant, 'name|b' belt, 'name|r|moon,moon'
   var SYS = {
+    rattigon: ['rattigon', ['rattigon i', 'mycifur|r|mycifur station|science and mining facility. administrator lucan dork. orbital station: one life sign.', 'asteroid belt|b', 'rattigon iv|g']],
     sol: ['sol', ['mercury', 'venus', 'terra|r|luna', 'mars|r|phobos,deimos', 'asteroid belt|b', 'jupiter|g|io,europa,ganymede,callisto', 'saturn|g|titan', 'uranus|g', 'neptune|g|triton', 'pluto']],
     calth: ['veridia', ['veridia i', 'veridius maxim', 'calth', 'veridia iv|g', 'asteroid belt|b', 'veridia vi|g']],
     isstvan: ['isstvan', ['isstvan i', 'isstvan ii', 'isstvan iii|r|the white moon', 'isstvan iv', 'isstvan v', 'isstvan vi|g', 'isstvan vii|g', 'isstvan extremis']],
@@ -2075,7 +2079,7 @@ el.appendChild(d);
     nocturne: ['thraxun', ['nocturne|r|prometheus', 'nocturne ii|g', 'asteroid belt|b']],
     deliverance: ['corvane', ['kiavahr i', 'kiavahr|r|deliverance', 'kiavahr iii|g']]
   };
-  var HOME = { terra: 'throneworld', mars: 'forge world', venus: 'dead world', pluto: 'ice world', uranus: 'ice giant', neptune: 'ice giant', calth: 'civilised world', 'isstvan iii': 'civilised world', 'isstvan v': 'dead world', 'isstvan extremis': 'ice world',
+  var HOME = { terra: 'throneworld', mars: 'forge world', venus: 'dead world', pluto: 'ice world', uranus: 'ice giant', neptune: 'ice giant', calth: 'civilised world', mycifur: 'mining world', 'isstvan iii': 'civilised world', 'isstvan v': 'dead world', 'isstvan extremis': 'ice world',
     'ullanor prime': 'war world', nikaea: 'lava world', caliban: 'death world', chemos: 'mining world', olympia: 'civilised world', chogoris: 'feral world', fenris: 'death world', midgardia: 'death world', frostheim: 'ice world', svellgard: 'ocean world',
     inwit: 'death world', nostramo: 'hive world', baal: 'desert world', medusa: 'death world', nuceria: 'civilised world', macragge: 'civilised world', ardium: 'hive world', barbarus: 'death world', prospero: 'civilised world', cthonia: 'mining world',
     colchis: 'feudal world', nocturne: 'death world', kiavahr: 'forge world' };
@@ -2211,7 +2215,7 @@ el.appendChild(d);
     if (!silent && typeof api.onSystemsChange === 'function') { try { api.onSystemsChange(JSON.parse(JSON.stringify(saved))); } catch (e) { /* ignore */ } }
     refreshSavedList();
   }
-  function parseBody(s) { var q = s.split('|'), k = q[1] || 'r'; return { name: q[0], type: HOME[q[0]] || (k === 'g' ? 'gas giant' : (k === 'b' ? 'asteroid belt' : 'rock world')), moons: q[2] ? q[2].split(',') : [], note: '' }; }
+  function parseBody(s) { var q = s.split('|'), k = q[1] || 'r'; return { name: q[0], type: HOME[q[0]] || (k === 'g' ? 'gas giant' : (k === 'b' ? 'asteroid belt' : 'rock world')), moons: q[2] ? q[2].split(',') : [], note: q[3] || '' }; }
   function placeStar(id) { return saved['p:' + id] ? saved['p:' + id].star : (SYS[id][0] || genStarName(hashStr('p:' + id))); }
   function sysDef(key) {
     if (saved[key]) return saved[key];
@@ -2503,7 +2507,7 @@ el.appendChild(d);
   }
   function fillTarget(title, sub, text, reg, w, shipTxt, hideMove, viewTxt) {
     $('gc-dnone').hidden = true; $('gc-dbody').hidden = false;
-    $('gc-dtitle').textContent = '> target: ' + title; $('gc-dsub').textContent = '// ' + sub; $('gc-dtext').textContent = text;
+    $('gc-dtitle').textContent = '> selected: ' + title; $('gc-dsub').textContent = '// ' + sub; $('gc-dtext').textContent = text;
     $('gc-dreg').textContent = reg; $('gc-dsol').textContent = ly(w.distanceTo(SOL)); $('gc-dcore').textContent = ly(w.length());
     $('gc-dship').textContent = shipTxt; $('gc-bMove').hidden = hideMove; $('gc-bFly').textContent = viewTxt;
   }
@@ -2657,19 +2661,8 @@ el.appendChild(d);
   api.getShip = function () { return { name: ship.name, at: ship.at, body: ship.body, star: ship.star, e: ship.e, n: ship.n, u: ship.u }; };
   api.setShip = function (o) {
     if (!o) return;
-    if (typeof o.name === 'string' && o.name.trim()) ship.name = o.name.slice(0, 40);
+    if (typeof o.name === 'string' && o.name.trim() && o.name !== 'our ship') ship.name = o.name.slice(0, 40);
     setShip(typeof o.e === 'number' ? o.e : ship.e, typeof o.n === 'number' ? o.n : ship.n, typeof o.u === 'number' ? o.u : ship.u, (o.at && byId[o.at]) ? o.at : null, true, typeof o.body === 'string' ? o.body : null, typeof o.star === 'string' ? o.star.slice(0, 80) : null);
-  };
-  // where the ship is, in the words of the tracker's Position panel: system + planet (planet is blank when there isn't one)
-  api.getPosition = function () {
-    var sys, pl = '';
-    if (ship.at && byId[ship.at]) {
-      var P = byId[ship.at];
-      if (SYS[ship.at]) { sys = placeStar(ship.at); pl = ship.body || (P.name !== sys ? P.name : ''); }
-      else { sys = P.name; pl = ship.body || ''; }
-    } else if (ship.star) { sys = starLabel(ship.star); pl = ship.body || ''; }
-    else sys = 'in transit';
-    return { system: sys, planet: pl };
   };
   api.flyTo = function (id) { if (byId[id]) openPlace(id, true); };
   api.getSystems = function () { return JSON.parse(JSON.stringify(saved)); };
@@ -2703,7 +2696,7 @@ el.appendChild(d);
     return JSON.stringify(out);
   }
   function shipOut(s) {
-    return { name: s.name || 'our ship', at: s.at || null, body: s.body || null, star: s.star || null, e: s.e, n: s.n, u: s.u };
+    return { name: s.name || 'emperor\'s paddle', at: s.at || null, body: s.body || null, star: s.star || null, e: s.e, n: s.n, u: s.u };
   }
   function sameShip(a, b) {
     return (a.name || '') === (b.name || '') && (a.at || null) === (b.at || null) && (a.body || null) === (b.body || null) &&
@@ -2719,34 +2712,22 @@ el.appendChild(d);
 
     // ---- ship ----
     var shipTimer = null, shipSeen = false;
-    // The Position panel's system and planet always mirror the ship (those two fields are read-only). Any signed-in
-    // browser that sees them disagree writes the fix, which is harmless because they all compute the same answer.
-    var loc = null;   // location as held in firebase
-    function ensureLoc() {
-      if (!loc || !shipSeen || shipTimer) return;   // wait until the ship itself has loaded, and until a local move is sent
-      var p = G.getPosition();
-      if ((loc.name || '') !== p.system || (loc.coords || '') !== p.planet) db.ref('location').update({ name: p.system, coords: p.planet }).catch(warn);
-    }
-    db.ref('location').on('value', function (s) { loc = s.val() || {}; ensureLoc(); }, warn);
-
     G.onShipChange = function () {
       clearTimeout(shipTimer);   // the plane-offset slider fires constantly: send the last value only
       shipTimer = setTimeout(function () {
         shipTimer = null;
         shipRef.set(shipOut(G.getShip())).catch(warn);
-        ensureLoc();
       }, 350);
     };
     shipRef.on('value', function (snap) {
       var v = snap.val();
       if (!v) {
-        if (!shipSeen) { shipSeen = true; shipRef.set(shipOut(G.getShip())).catch(warn); ensureLoc(); }   // first run: publish this browser's ship
+        if (!shipSeen) { shipSeen = true; shipRef.set(shipOut(G.getShip())).catch(warn); }   // first run: publish this browser's ship
         return;
       }
       shipSeen = true;
       if (shipTimer) return;   // a local change is waiting to be sent, it wins
       if (typeof v.e === 'number' && typeof v.n === 'number' && typeof v.u === 'number' && !sameShip(G.getShip(), shipOut(v))) G.setShip(v);
-      ensureLoc();
     }, warn);
 
     // ---- surveyed systems ----
