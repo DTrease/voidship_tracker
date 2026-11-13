@@ -387,6 +387,22 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 #gc-index>summary:hover{text-shadow:0 0 8px rgba(57,255,107,.9)}
 #gc-index>summary:focus-visible{outline:1px solid var(--green);outline-offset:2px}
 
+/* in-map travel controls */
+#gc-nav{position:absolute;inset:0;pointer-events:none;z-index:5}
+.gc-pad{position:absolute;left:6px;bottom:6px;display:grid;grid-template-columns:repeat(3,30px);grid-template-rows:repeat(2,30px);gap:3px}
+.gc-pad .gc-f{grid-column:2;grid-row:1} .gc-pad .gc-l{grid-column:1;grid-row:2} .gc-pad .gc-b{grid-column:2;grid-row:2} .gc-pad .gc-r{grid-column:3;grid-row:2}
+.gc-col{position:absolute;right:6px;bottom:22px;display:flex;flex-direction:column;gap:3px}
+.gc-ib{width:30px;height:30px;padding:0;display:grid;place-items:center;background:rgba(2,10,4,.72);border:1px solid var(--border);color:var(--green);cursor:pointer;pointer-events:auto;touch-action:none;-webkit-user-select:none;user-select:none}
+.gc-ib:hover{border-color:var(--green-dim);background:rgba(57,255,107,.1)}
+.gc-ib:active{border-color:var(--green);background:rgba(57,255,107,.22)}
+.gc-ib:focus-visible{outline:1px solid var(--green);outline-offset:1px}
+.gc-ib svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:square;stroke-linejoin:miter;pointer-events:none}
+.gc-col .gc-gap{margin-top:8px}
+#gc-chart{-webkit-user-select:none;user-select:none}
+.gc-view{position:absolute;left:108px;bottom:6px;display:flex;flex-direction:row;gap:3px}
+.gc-ib[aria-pressed="true"]{border-color:var(--green);background:rgba(57,255,107,.18)}
+.gc-ctl.gc-lab{align-items:center}
+
 /* collapsible sections: click a heading to fold the group away */
 .group-title[role=button]{cursor:pointer;user-select:none;-webkit-user-select:none}
 .group-title[role=button]:hover{text-shadow:0 0 8px rgba(57,255,107,.9),0 0 18px rgba(57,255,107,.5)}
@@ -530,19 +546,32 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
       <canvas id="gc-sky" tabindex="0" aria-label="starmap. drag to turn, pinch or scroll to zoom."></canvas>
       <canvas id="gc-ink"></canvas>
       <div id="gc-labels" class="gc-blur"></div>
+      <div id="gc-nav">
+        <div class="gc-view">
+          <button class="gc-ib" id="gc-bTop" type="button" aria-pressed="false" title="top-down view" aria-label="top-down view"><svg viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="11.5" rx="6" ry="2.5"/><path d="M8 2v6M5.5 5.5L8 8l2.5-2.5"/></svg></button>
+          <button class="gc-ib" id="gc-bReset" type="button" title="reset view" aria-label="reset view"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v3.2h-3.2"/></svg></button>
+        </div>
+        <div class="gc-pad">
+          <button class="gc-ib gc-f" id="gc-mF" type="button" title="travel forward" aria-label="travel forward"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 10l5-5 5 5"/></svg></button>
+          <button class="gc-ib gc-l" id="gc-mL" type="button" title="travel left" aria-label="travel left"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3l-5 5 5 5"/></svg></button>
+          <button class="gc-ib gc-b" id="gc-mB" type="button" title="travel back" aria-label="travel back"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6l5 5 5-5"/></svg></button>
+          <button class="gc-ib gc-r" id="gc-mR" type="button" title="travel right" aria-label="travel right"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg></button>
+        </div>
+        <div class="gc-col">
+          <button class="gc-ib" id="gc-bZin" type="button" title="zoom in" aria-label="zoom in"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg></button>
+          <button class="gc-ib" id="gc-bZout" type="button" title="zoom out" aria-label="zoom out"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10"/></svg></button>
+          <button class="gc-ib gc-gap" id="gc-mU" type="button" title="rise above the plane" aria-label="rise above the plane"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 11V3M4.5 6.5L8 3l3.5 3.5M3 14h10"/></svg></button>
+          <button class="gc-ib" id="gc-mD" type="button" title="descend below the plane" aria-label="descend below the plane"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 5v8M4.5 9.5L8 13l3.5-3.5M3 2h10"/></svg></button>
+        </div>
+      </div>
       <div id="gc-foot">chart ref gc-31 // ring = 10k ly // to scale</div>
       <div id="gc-nogl">// webgl unavailable // chart offline</div>
     </div>
-    <div class="gc-ctl">
+    <div class="gc-ctl gc-lab">
+      <span class="gc-dim gc-sm">scale //</span>
       <button class="gc-btn" id="gc-bT0" type="button" aria-pressed="true">galaxy</button>
       <button class="gc-btn" id="gc-bT1" type="button" aria-pressed="false">local group</button>
       <button class="gc-btn" id="gc-bT2" type="button" aria-pressed="false">system</button>
-      <button class="gc-btn" id="gc-bZin" type="button">zoom +</button>
-      <button class="gc-btn" id="gc-bZout" type="button">zoom -</button>
-    </div>
-    <div class="gc-ctl">
-      <button class="gc-btn" id="gc-bTop" type="button" aria-pressed="false">top-down</button>
-      <button class="gc-btn" id="gc-bReset" type="button">reset view</button>
     </div>
     <div class="gc-ctl gc-ovl">
       <span class="gc-dim gc-sm">overlays //</span>
@@ -1783,13 +1812,20 @@ el.appendChild(d);
 
   // ---------------- markers ----------------
   var items = [];
+  // double click / double tap on a marker (system, ship, body) centres the view on it
+  var lastMk = { it: null, t: 0 };
+  function mkTap(it) {
+    var now = performance.now();
+    if (lastMk.it === it && now - lastMk.t < 380) { lastMk.it = null; goal.target.copy(it.p); zoomPt = it.p.clone(); clampGoal(); }
+    else { lastMk.it = it; lastMk.t = now; }
+  }
   function makeItem(o) {
     var el = document.createElement('div');
     el.className = 'gc-mk gc-' + o.side + (o.cls ? ' ' + o.cls : '');
     var nm = document.createElement('span'); nm.className = 'gc-nm'; nm.textContent = o.name;
     if (o.onTap) {
       var hit = document.createElement('button'); hit.type = 'button'; hit.className = 'gc-hit'; hit.setAttribute('aria-label', o.name);
-      hit.addEventListener('click', o.onTap); nm.addEventListener('click', o.onTap); el.appendChild(hit);
+      var tapped = function (ev) { o.onTap(ev); mkTap(it); }; hit.addEventListener('click', tapped); nm.addEventListener('click', tapped); el.appendChild(hit);
     }
     el.appendChild(nm); layer.appendChild(el);
     var it = { el: el, nm: nm, p: o.p, side: o.side, on: true, w: 60, h: 14, shown: true, hid: false, id: o.id || null, group: o.group || null, lead: !!o.lead, tier: o.tier || 0, ship: !!o.ship, keep: false };
@@ -1831,6 +1867,7 @@ el.appendChild(d);
   goal.radius = fitR; cur.radius = calm ? fitR : fitR * 1.7;
   if (!calm) { cur.theta = -0.5; cur.phi = 0.5; }
 
+  var lastTap = null;   // for double click / double tap
   var pointers = new Map(), moved = 0, downAt = 0, pinchD = 0, mid = { x: 0, y: 0 }, panning = false;
   var camRight = new THREE.Vector3(), camUp = new THREE.Vector3();
   function pan(dx, dy) {
@@ -1861,7 +1898,10 @@ el.appendChild(d);
     var had = pointers.has(ev.pointerId); pointers.delete(ev.pointerId);
     if (pointers.size === 1) moved = 99;
     if (had && pointers.size === 0 && ev.type === 'pointerup' && moved < 8 && performance.now() - downAt < 500) {
-      var r = canvas.getBoundingClientRect(); tap(ev.clientX - r.left, ev.clientY - r.top);
+      var r = canvas.getBoundingClientRect(), lx = ev.clientX - r.left, ty = ev.clientY - r.top, now = performance.now();
+      tap(lx, ty);
+      if (!placing && lastTap && now - lastTap.t < 380 && Math.hypot(lx - lastTap.x, ty - lastTap.y) < 26) { centreOn(lx, ty); lastTap = null; }
+      else lastTap = { t: now, x: lx, y: ty };
     }
   }
   canvas.addEventListener('pointerup', pointerEnd);
@@ -1873,7 +1913,7 @@ el.appendChild(d);
     var k = ev.key, used = true;
     if (k === 'ArrowLeft') goal.theta += 0.12; else if (k === 'ArrowRight') goal.theta -= 0.12;
     else if (k === 'ArrowUp') goal.phi -= 0.1; else if (k === 'ArrowDown') goal.phi += 0.1;
-    else if (k === '+' || k === '=') goal.radius *= 0.85; else if (k === '-' || k === '_') goal.radius *= 1.18;
+    else if (k === '+' || k === '=') { zoomBy(0.85); used = true; } else if (k === '-' || k === '_') { zoomBy(1.18); used = true; }
     else used = false;
     if (used) { ev.preventDefault(); clampGoal(); }
   });
@@ -1882,9 +1922,9 @@ el.appendChild(d);
   var selected = null, placing = false, HINT = '// drag: turn // pinch: zoom // local group: tap any star';
   function ly(kly) { return (kly < 0.095 ? Math.round(kly * 1000) : Math.round(kly * 10) * 100).toLocaleString('en-US') + ' ly'; }
   function status(t) { $('gc-status').textContent = t || HINT; }
-  function select(id) { selected = id; items.forEach(function (it) { if (it.id) it.el.classList.toggle('gc-sel', it.id === id); }); }
+  function select(id) { selected = id; if (id) zoomPt = null; items.forEach(function (it) { if (it.id) it.el.classList.toggle('gc-sel', it.id === id); }); }
   function flyTo(p, radius) { goal.target.copy(p); goal.radius = Math.min(cur.radius, radius); clampGoal(); }
-  function resetView() { goal.target.set(0, 0, 0); goal.radius = tier === 0 ? fitR : (tier === 1 ? 400 : sysMax * 0.6); goal.theta = Math.round(cur.theta / (Math.PI * 2)) * Math.PI * 2; goal.phi = 0.92; setTop(false); }
+  function resetView() { zoomPt = null; goal.target.set(0, 0, 0); goal.radius = tier === 0 ? fitR : (tier === 1 ? 400 : sysMax * 0.6); goal.theta = Math.round(cur.theta / (Math.PI * 2)) * Math.PI * 2; goal.phi = 0.92; setTop(false); }
 
   function refreshTarget() {
     sysControls(null);
@@ -1945,9 +1985,23 @@ el.appendChild(d);
   }
   bPlace.addEventListener('click', function () { setPlacing(!placing); });
 
+  // zoom focus: a tapped patch of empty space, taken to lie in the galactic plane (y = 0). a selected system overrides it.
+  var zoomPt = null;
+  // double click / double tap: centre the view on that spot (a star if one was picked, else the galactic plane under the pointer)
+  function centreOn(x, y) {
+    var p = (tier === 1 && selStar) ? selStar.p : groundPoint(x, y);
+    if (!p) return;
+    goal.target.copy(p); zoomPt = p.clone(); clampGoal();
+  }
+  function groundPoint(x, y) {
+    ray.setFromCamera({ x: x / W * 2 - 1, y: -(y / H * 2 - 1) }, camera);
+    var p = new THREE.Vector3();
+    if (!ray.ray.intersectPlane(plane, p) || p.distanceTo(cur.target) > cur.radius * 4) return null;   // edge-on view: no sensible point
+    return p;
+  }
   var ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitP = new THREE.Vector3(), tmp = new THREE.Vector3();
   function tap(x, y) {
-    if (!placing) { if (tier === 1 && pickStar(x, y)) return; clearTarget(); return; }
+    if (!placing) { if (tier === 1 && pickStar(x, y)) return; clearTarget(); zoomPt = groundPoint(x, y); return; }
     var snap = null, sd = 22;
     PLACES.forEach(function (pl) {
       if (pl.group === 'hw' && !hwOn) return;
@@ -2394,6 +2448,7 @@ el.appendChild(d);
 
   // ---- moving between tiers ----
   function tierChanged(from) {
+    zoomPt = null;
     cur.target.copy(goal.target); cur.radius = goal.radius;
     if (from === 2 && tier !== 2) { selBody = null; if (selected && selected.indexOf('body:') === 0) select(null); }
     if (tier !== 1 && selStar) { setSelStar(null); if (selected && (selected === 'selstar' || selected.indexOf('star:') === 0)) select(null); }
@@ -2444,13 +2499,55 @@ el.appendChild(d);
       if (goal.target.length() > sysMax * 0.5) goal.target.setLength(sysMax * 0.5);
     }
   }
-  function zoomBy(f) { goal.radius *= f; clampGoal(); }
+  // zoom homes in on the selected system or body, else on the last tapped empty space, else on the middle of the view.
+  // the view slides toward that point twice as fast as it closes in, so the point drifts to the centre as you zoom.
+  function zoomAnchor() {
+    var pl = selected ? byId[selected] : null, i;
+    if (tier === 2) {
+      if (selBody) { for (i = 0; i < sysBodies.length; i++) if (sysBodies[i].name === selBody) return sysBodies[i].p; }
+      if (pl && sysCtx && sysCtx.key === 'p:' + pl.id) return ORIGIN;
+      return zoomPt;
+    }
+    if (tier === 1) {
+      if (selStar) return selStar.p;
+      if (pl && LSmap['p:' + pl.id]) return LSmap['p:' + pl.id].p;
+      return zoomPt;
+    }
+    return pl ? pl.p : zoomPt;
+  }
+  function zoomBy(f) {
+    var a = zoomAnchor();
+    goal.radius *= f;
+    if (a) goal.target.sub(a).multiplyScalar(f * f).add(a);
+    clampGoal();
+  }
   [['gc-bZin', 0.7], ['gc-bZout', 1 / 0.7]].forEach(function (z) {
     var b = $(z[0]), t1 = null, t2 = null;
     function stop() { clearTimeout(t1); clearInterval(t2); t1 = t2 = null; }
     b.addEventListener('pointerdown', function () { stop(); zoomBy(z[1]); t1 = setTimeout(function () { t2 = setInterval(function () { zoomBy(Math.sqrt(z[1])); }, 110); }, 380); });
     ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (e) { b.addEventListener(e, stop); });
     b.addEventListener('click', function (ev) { if (ev.detail === 0) zoomBy(z[1]); });
+  });
+  // travel: hold a button to glide the view through space. forward/back/left/right follow the way the view is turned,
+  // rise/descend move perpendicular to the galactic plane. speed scales with zoom so it feels the same at every range.
+  var mv = { x: 0, y: 0, z: 0 };
+  function travel(ax, ay, az, dist) {
+    var s = Math.sin(cur.theta), c = Math.cos(cur.theta);
+    goal.target.x += (ax * c - az * s) * dist;
+    goal.target.z += (-ax * s - az * c) * dist;
+    goal.target.y += ay * dist * 0.5;
+    clampGoal();
+  }
+  [['gc-mF', 0, 0, 1], ['gc-mB', 0, 0, -1], ['gc-mL', -1, 0, 0], ['gc-mR', 1, 0, 0], ['gc-mU', 0, 1, 0], ['gc-mD', 0, -1, 0]].forEach(function (m) {
+    var b = $(m[0]);
+    function stop() { mv.x = mv.y = mv.z = 0; }
+    b.addEventListener('pointerdown', function (ev) {
+      ev.preventDefault();
+      try { b.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+      mv.x = m[1]; mv.y = m[2]; mv.z = m[3];
+    });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (e) { b.addEventListener(e, stop); });
+    b.addEventListener('click', function (ev) { if (ev.detail === 0) travel(m[1], m[2], m[3], cur.radius * 0.2); });   // keyboard
   });
   function flyPlace(pl) {
     if (tier === 2 && sysCtx && sysCtx.key === 'p:' + pl.id) { goal.target.set(0, 0, 0); return; }
@@ -2647,6 +2744,7 @@ el.appendChild(d);
     var k = 1 - Math.exp(-dt * (calm ? 60 : 7));
     cur.theta += (goal.theta - cur.theta) * k; cur.phi += (goal.phi - cur.phi) * k; cur.radius += (goal.radius - cur.radius) * k; cur.target.lerp(goal.target, k);
     if (!calm) { ringSpin.rotation.y += dt * 0.012; if (spinL) spinL.rotation.y += dt * 0.012; if (spinS) spinS.rotation.y += dt * 0.02; }
+    if (mv.x || mv.y || mv.z) travel(mv.x, mv.y, mv.z, cur.radius * 0.75 * dt);
     var sp = Math.sin(cur.phi);
     camera.position.set(cur.target.x + cur.radius * sp * Math.sin(cur.theta), cur.target.y + cur.radius * Math.cos(cur.phi), cur.target.z + cur.radius * sp * Math.cos(cur.theta));
     camera.lookAt(cur.target);
