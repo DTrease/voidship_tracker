@@ -12,7 +12,7 @@
 :root{
 --bg:#020a04; --panel:#031107; --panel2:#041709; --border:#0f4d1f;
 --green:#39ff6b; --green-dim:#1e8f3a; --text:#8fffab; --dim:#3f8a52;
---danger:#39ff6b; --ok:#39ff6b;
+--danger:#39ff6b; --ok:#39ff6b; --hi:#c2ffd1;
 --term:'VT323','VT323 Dots',monospace;   /* the only font stack on the page */
 --fs-s:.75rem; --fs-m:1rem;                 /* body text sizes: small / base */
 --dmg:0; --crit:0;                          /* hull damage: set by script. dmg 0..1 builds steadily; crit 0..1 only below 25% hull */
@@ -135,8 +135,8 @@ h1::before{content:'▓▓ '} h1::after{content:' ▓▓'}
   font-size:1.4rem;letter-spacing:.22em;color:var(--green);
   text-shadow:0 0 6px rgba(57,255,107,.6),0 0 14px rgba(57,255,107,.3)}
 .group-title::before,.group-title::after{content:'';flex:1;height:1px}
-.group-title::before{background:linear-gradient(90deg,transparent,var(--green-dim))}
-.group-title::after{background:linear-gradient(90deg,var(--green-dim),transparent)}
+.group-title::before{background:var(--green-dim)}
+.group-title::after{background:var(--green-dim)}
 .group-title span::before{content:'[ '}
 .group-title span::after{content:' ]'}
 .panel{background:var(--panel);border:1px solid var(--border);
@@ -282,6 +282,111 @@ text-shadow:0 0 4px rgba(57,255,107,.6)}
   90%{transform:translate(-1px,1px) rotate(0)}
 }
 body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.19,.97) both}
+/* ===== navigation: starmap (everything prefixed gc-) ===== */
+#gc-root,#gc-root *,#gc-root *::before,#gc-root *::after{box-sizing:border-box}
+#gc-root{font-family:'VT323','VT323 Dots',monospace;font-size:1rem;line-height:1.15;font-weight:400;font-style:normal;color:var(--text);
+  text-shadow:1px 0 1.6px rgba(57,255,107,.35),-.8px 0 1.6px rgba(57,255,107,.18);
+  scrollbar-color:var(--green-dim) var(--bg);scrollbar-width:thin;text-transform:lowercase}
+#gc-root ::selection{background:rgba(57,255,107,.28);color:var(--hi)}
+#gc-root ::-webkit-scrollbar{width:8px;height:8px;background:var(--bg)}
+#gc-root ::-webkit-scrollbar-thumb{background:var(--border)}
+#gc-root button,#gc-root input,#gc-root select{font:inherit;font-weight:400;color:inherit;text-shadow:inherit;border-radius:0;text-transform:inherit}
+
+.gc-panel{background:var(--panel);border:1px solid var(--border);box-shadow:0 0 0 1px rgba(0,0,0,.6),inset 0 0 20px rgba(0,255,64,.03);padding:16px 18px;margin-bottom:16px}
+.gc-ptitle{margin:0 0 14px;font-size:var(--fs-m);font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--green);text-shadow:0 0 5px rgba(57,255,107,.6)}
+.gc-gtitle{display:flex;align-items:center;gap:.6rem;margin:.7rem 0 .4rem;font-size:1rem;font-weight:400;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
+.gc-gtitle::before,.gc-gtitle::after{content:"";flex:1;height:1px}
+.gc-gtitle::before{background:var(--green-dim)}
+.gc-gtitle::after{background:var(--green-dim)}
+.gc-dim{color:var(--dim)}
+.gc-sm{font-size:.75rem}
+
+/* chart */
+#gc-chart{position:relative;width:100%;aspect-ratio:1/1.08;max-height:74vh;background:var(--bg);border:1px solid var(--border);overflow:hidden}
+#gc-sky,#gc-ink{position:absolute;inset:0;width:100%;height:100%;display:block}
+#gc-sky{touch-action:none;cursor:crosshair;outline:none}
+#gc-sky:focus-visible{outline:1px solid var(--green-dim);outline-offset:-2px}
+#gc-ink,#gc-labels{pointer-events:none}
+#gc-labels{position:absolute;inset:0;overflow:hidden}
+#gc-foot{position:absolute;right:6px;bottom:4px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);pointer-events:none}
+#gc-nogl{display:none;position:absolute;inset:0;place-items:center;text-align:center;padding:1rem;color:var(--dim)}
+#gc-chart.gc-nogl #gc-nogl{display:grid}
+#gc-chart.gc-retune>*{opacity:.3}
+
+.gc-mk{position:absolute;left:0;top:0;width:0;height:0;will-change:transform}
+.gc-mk .gc-hit{position:absolute;left:-15px;top:-15px;width:30px;height:30px;padding:0;border:0;background:none;pointer-events:auto;cursor:pointer}
+.gc-mk .gc-nm{position:absolute;white-space:nowrap;font-size:.75rem;line-height:1;letter-spacing:.06em;text-transform:uppercase;color:var(--text);padding:1px 3px;border:1px solid transparent;pointer-events:auto;cursor:pointer;background:rgba(2,10,4,.55)}
+.gc-mk.gc-r .gc-nm{left:22px;top:-14px;transform:translateY(-50%)}
+.gc-mk.gc-l .gc-nm{right:22px;top:-14px;transform:translateY(-50%)}
+.gc-mk.gc-t .gc-nm{left:0;bottom:26px;transform:translateX(-50%)}
+.gc-mk.gc-b .gc-nm{left:0;top:26px;transform:translateX(-50%)}
+.gc-mk.gc-c .gc-nm{left:0;top:0;transform:translate(-50%,-50%)}
+.gc-mk.gc-hid .gc-nm{visibility:hidden;pointer-events:none}
+.gc-mk.gc-sel .gc-nm{color:var(--hi);border-color:var(--green);background:rgba(57,255,107,.1)}
+.gc-mk.gc-static .gc-nm{pointer-events:none;cursor:default;font-size:11px;color:var(--dim);background:none}
+.gc-mk.gc-dom .gc-nm{font-size:.75rem;color:var(--green)}
+.gc-mk.gc-ship .gc-hit{pointer-events:none}
+.gc-mk.gc-ship .gc-nm{color:var(--hi);border-color:var(--green);background:rgba(57,255,107,.28);box-shadow:0 0 8px rgba(57,255,107,.3)}
+
+/* inline controls */
+.gc-ctl{display:flex;flex-wrap:wrap;gap:.4rem;margin:.5rem 0 0}
+.gc-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:.45rem .7rem;min-height:2.3rem;cursor:pointer;letter-spacing:.04em}
+.gc-btn:hover{border-color:var(--green-dim)}
+.gc-btn:focus-visible,#gc-root input:focus-visible{outline:1px solid var(--green);outline-offset:2px}
+.gc-btn[aria-pressed="true"]{border-color:var(--green);background:rgba(57,255,107,.1);color:var(--hi)}
+.gc-btn.gc-add{border-style:dashed;border-color:var(--green-dim)}
+#gc-status{margin:.5rem 0 0;color:var(--dim);font-size:.75rem;min-height:1em}
+
+/* detail, ship, index */
+.gc-kv{display:grid;grid-template-columns:auto 1fr;gap:.15rem .9rem;margin:.4rem 0 0}
+.gc-kv dt{color:var(--dim)}
+.gc-kv dd{margin:0}
+#gc-dtext{margin:.3rem 0 0}
+.gc-fld{display:block;margin:.6rem 0 .2rem;color:var(--dim);font-size:.75rem;letter-spacing:.08em}
+#gc-root input[type=text]{width:100%;max-width:22rem;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:.4rem .5rem;caret-color:var(--green)}
+#gc-root input[type=text]::placeholder{color:var(--dim)}
+#gc-root input[type=range]{-webkit-appearance:none;appearance:none;width:100%;max-width:22rem;height:2rem;background:transparent;display:block;margin:0}
+#gc-root input[type=range]::-webkit-slider-runnable-track{height:1px;background:var(--green-dim)}
+#gc-root input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:22px;margin-top:-11px;background:var(--panel2);border:1px solid var(--green);border-radius:0;box-shadow:0 0 6px rgba(57,255,107,.3)}
+#gc-root input[type=range]::-moz-range-track{height:1px;background:var(--green-dim)}
+#gc-root input[type=range]::-moz-range-thumb{width:8px;height:20px;background:var(--panel2);border:1px solid var(--green);border-radius:0}
+.gc-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:.3rem}
+.gc-list .gc-btn{width:100%;display:flex;justify-content:space-between;align-items:baseline;gap:.8rem;text-align:left}
+.gc-list .gc-btn span:last-child{color:var(--dim);font-size:.75rem;text-align:right}
+.gc-key{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:.4rem 1.2rem}
+.gc-key li{display:flex;align-items:center;gap:.5rem}
+.gc-sw{width:1.6rem;height:1rem;border:1px solid var(--green-dim);flex:none}
+.gc-sw.gc-p0{background:repeating-linear-gradient(45deg,rgba(57,255,107,.28) 0 2px,rgba(57,255,107,.04) 2px 6px)}
+.gc-sw.gc-p1{background:rgba(57,255,107,.16)}
+.gc-sw.gc-p2{background:radial-gradient(rgba(57,255,107,.28) 1.2px,rgba(57,255,107,.04) 1.6px) 0 0/6px 6px}
+.gc-sw.gc-p3{background:linear-gradient(rgba(57,255,107,.28) 1px,transparent 1px) 0 0/6px 6px,linear-gradient(90deg,rgba(57,255,107,.28) 1px,rgba(57,255,107,.04) 1px) 0 0/6px 6px}
+
+#gc-root [hidden]{display:none!important}
+#gc-root select{-webkit-appearance:none;appearance:none;background-color:var(--panel2);border:1px solid var(--border);color:var(--text);padding:.4rem 1.6rem .4rem .5rem;min-width:0;
+  background-image:linear-gradient(45deg,transparent 50%,var(--green) 50%),linear-gradient(135deg,var(--green) 50%,transparent 50%);background-position:calc(100% - 13px) 55%,calc(100% - 8px) 55%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+#gc-root select option{background:var(--panel2);color:var(--text)}
+#gc-root select:focus-visible{outline:1px solid var(--green);outline-offset:2px}
+.gc-row{display:grid;grid-template-columns:1fr 1fr;gap:.3rem;padding:.4rem;margin:.3rem 0;border:1px solid var(--border);background:rgba(57,255,107,.04)}
+.gc-row input[type=text],#gc-edit>input[type=text]{max-width:none!important;min-width:0}
+.gc-row .gc-wide{grid-column:1/-1}
+.gc-row .gc-btn{grid-column:1/-1;justify-self:start}
+/* host overrides: the tracker's global label / input rules would otherwise leak into the chart */
+#gc-root label{min-width:0;text-transform:inherit;letter-spacing:.08em}
+#gc-root input[type=range]{border:0;padding:0;box-shadow:none}
+#gc-root{margin-bottom:14px}
+.gc-ovl{align-items:center;margin-top:.8rem;padding-top:.7rem;border-top:1px dashed var(--border)}
+
+/* collapsible sections: click a heading to fold the group away */
+.group-title[role=button]{cursor:pointer;user-select:none;-webkit-user-select:none}
+.group-title[role=button]:hover{text-shadow:0 0 8px rgba(57,255,107,.9),0 0 18px rgba(57,255,107,.5)}
+.group-title span::before{content:'[ - '}
+.group.collapsed .group-title span::before{content:'[ + '}
+.group.collapsed>*:not(.group-title){display:none}
+.group.collapsed .group-title{margin-bottom:0}
+
+/* position fields that follow the starmap are read-only */
+input[readonly]{border-style:dashed;color:var(--text);cursor:default}
+input[readonly]:focus{box-shadow:none;border-color:var(--border)}
 </style>
 </head>
 <body>
@@ -405,11 +510,127 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 
 <div class="panel">
 <h2>Position</h2>
-<div class="row"><label>System</label><input id="locName" onchange="saveLocation(this)"></div>
-<div class="row"><label>Planet</label><input id="locCoords" onchange="saveLocation(this)"></div>
+<div class="row"><label>System</label><input id="locName" readonly placeholder="// from the starmap"></div>
+<div class="row"><label>Planet</label><input id="locCoords" readonly placeholder="// from the starmap"></div>
 <div class="row"><label>Date</label><input id="locDate" placeholder="6.122.008.M31" onchange="saveLocation(this)"></div>
 <div class="row"><label>Notes</label><input id="locNotes" onchange="saveLocation(this)"></div>
 </div>
+</section>
+
+<section class="group" id="gc-root">
+<h2 class="group-title"><span>Navigation</span></h2>
+
+  <div class="gc-panel">
+    <h2 class="gc-ptitle">&gt; starmap</h2>
+    <div id="gc-chart">
+      <canvas id="gc-sky" tabindex="0" aria-label="starmap. drag to turn, pinch or scroll to zoom."></canvas>
+      <canvas id="gc-ink"></canvas>
+      <div id="gc-labels" class="gc-blur"></div>
+      <div id="gc-foot">chart ref gc-31 // ring = 10k ly // to scale</div>
+      <div id="gc-nogl">// webgl unavailable // chart offline</div>
+    </div>
+    <div class="gc-ctl">
+      <button class="gc-btn" id="gc-bT0" type="button" aria-pressed="true">galaxy</button>
+      <button class="gc-btn" id="gc-bT1" type="button" aria-pressed="false">local group</button>
+      <button class="gc-btn" id="gc-bT2" type="button" aria-pressed="false">system</button>
+      <button class="gc-btn" id="gc-bZin" type="button">zoom +</button>
+      <button class="gc-btn" id="gc-bZout" type="button">zoom -</button>
+    </div>
+    <div class="gc-ctl">
+      <button class="gc-btn" id="gc-bTop" type="button" aria-pressed="false">top-down</button>
+      <button class="gc-btn" id="gc-bReset" type="button">reset view</button>
+    </div>
+    <div class="gc-ctl gc-ovl">
+      <span class="gc-dim gc-sm">overlays //</span>
+      <button class="gc-btn" id="gc-bGuides" type="button" aria-pressed="true">guides</button>
+      <button class="gc-btn" id="gc-bDom" type="button" aria-pressed="true">dominions</button>
+      <button class="gc-btn" id="gc-bHw" type="button" aria-pressed="true">homeworlds</button>
+    </div>
+    <p id="gc-status">// drag: turn // pinch: zoom // 2 fingers: slide</p>
+  </div>
+
+  <div class="gc-panel gc-blur" aria-live="polite">
+    <h2 class="gc-ptitle" id="gc-dtitle">&gt; target</h2>
+    <div id="gc-dnone" class="gc-dim">// no target selected</div>
+    <div id="gc-dbody" hidden>
+      <div class="gc-dim" id="gc-dsub"></div>
+      <p id="gc-dtext"></p>
+      <dl class="gc-kv">
+        <dt>region</dt><dd id="gc-dreg"></dd>
+        <dt>from sol</dt><dd id="gc-dsol"></dd>
+        <dt>from core</dt><dd id="gc-dcore"></dd>
+        <dt>from ship</dt><dd id="gc-dship"></dd>
+      </dl>
+      <div class="gc-ctl">
+        <button class="gc-btn" id="gc-bFly" type="button">view</button>
+        <button class="gc-btn gc-add" id="gc-bMove" type="button">move ship here</button>
+      </div>
+      <div class="gc-ctl" id="gc-sysctl" hidden>
+        <button class="gc-btn gc-add" id="gc-bGen" type="button">generate system</button>
+        <button class="gc-btn gc-add" id="gc-bCfg" type="button">configure</button>
+        <button class="gc-btn" id="gc-bErase" type="button">erase record</button>
+      </div>
+    </div>
+    <div id="gc-edit" hidden>
+      <h3 class="gc-gtitle" id="gc-etitle">[ record ]</h3>
+      <label class="gc-fld" for="gc-estar">star</label>
+      <input type="text" id="gc-estar" maxlength="40" autocomplete="off">
+      <label class="gc-fld" for="gc-ecls">class</label>
+      <input type="text" id="gc-ecls" maxlength="60" autocomplete="off">
+      <label class="gc-fld" for="gc-enote">system notes</label>
+      <input type="text" id="gc-enote" maxlength="140" autocomplete="off">
+      <label class="gc-fld">bodies // inner to outer</label>
+      <div id="gc-erows"></div>
+      <div class="gc-ctl">
+        <button class="gc-btn gc-add" id="gc-eAdd" type="button">+ add body</button>
+        <button class="gc-btn gc-add" id="gc-eRand" type="button">randomise</button>
+      </div>
+      <div class="gc-ctl">
+        <button class="gc-btn" id="gc-eSave" type="button">save record</button>
+        <button class="gc-btn" id="gc-eCancel" type="button">cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="gc-panel gc-blur">
+    <h2 class="gc-ptitle">&gt; voidship position</h2>
+    <div id="gc-sstat"></div>
+    <dl class="gc-kv">
+      <dt>from sol</dt><dd id="gc-ssol"></dd>
+      <dt>plane offset</dt><dd id="gc-soff"></dd>
+    </dl>
+    <label class="gc-fld" for="gc-sname">designation</label>
+    <input type="text" id="gc-sname" maxlength="40" autocomplete="off" placeholder="our ship">
+    <label class="gc-fld" for="gc-sheight">plane offset</label>
+    <input type="range" id="gc-sheight" min="-3" max="3" step="0.1">
+    <div class="gc-ctl">
+      <button class="gc-btn gc-add" id="gc-bPlace" type="button" aria-pressed="false">set position on chart</button>
+      <button class="gc-btn" id="gc-bShipFly" type="button">view ship</button>
+    </div>
+  </div>
+
+  <div class="gc-panel gc-blur">
+    <h2 class="gc-ptitle">&gt; index</h2>
+    <h3 class="gc-gtitle">[ campaign ]</h3>
+    <ul class="gc-list" id="gc-listA"></ul>
+    <h3 class="gc-gtitle">[ legiones astartes ]</h3>
+    <ul class="gc-list" id="gc-listB"></ul>
+    <div id="gc-savedwrap" hidden>
+      <h3 class="gc-gtitle">[ surveyed systems ]</h3>
+      <ul class="gc-list" id="gc-listC"></ul>
+    </div>
+  </div>
+
+  <div class="gc-panel gc-blur">
+    <h2 class="gc-ptitle">&gt; key</h2>
+    <h3 class="gc-gtitle">[ dominions ]</h3>
+    <ul class="gc-key">
+      <li><span class="gc-sw gc-p0"></span>warmaster</li>
+      <li><span class="gc-sw gc-p1"></span>imperial</li>
+      <li><span class="gc-sw gc-p2"></span>unaligned</li>
+      <li><span class="gc-sw gc-p3"></span>xenos</li>
+    </ul>
+  </div>
 </section>
 
 <section class="group">
@@ -675,6 +896,7 @@ db.ref('hangar').on('value', s=>renderList('hangar','hangarList',s.val(),[
   {key:'qty',type:'number',placeholder:'qty',width:'55px'}
 ]));
 db.ref('log').on('value', s=>renderLog(s.val()));
+window.__astroReady = true; if(typeof startChartSync === 'function') startChartSync();   // navigation: ship + surveyed systems
 }
 
 // ---- hull damage: the display degrades as hull falls, brutally so under 25% ----
@@ -1335,6 +1557,1272 @@ d.innerHTML = `${dateLine}${e.text}`;
 el.appendChild(d);
 });
 }
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* GALACTIC CHART */
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var chart = $('gc-chart'), canvas = $('gc-sky'), ink = $('gc-ink'), layer = $('gc-labels'), rootEl = $('gc-root');
+  var renderer = null;
+  if (typeof THREE !== 'undefined') {
+    try { renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false }); } catch (e) { renderer = null; }
+  }
+  if (!renderer) { chart.classList.add('gc-nogl'); return; }
+  var ictx = ink.getContext('2d');
+
+  // 1 unit = 1,000 ly, origin at the core. chart east = +X, chart north = -Z, up = +Y.
+  var SUN_R = 26.0;
+  function V(e, n, u) { return new THREE.Vector3(e, u, -n); }
+  var K_ARM = Math.tan(12.5 * Math.PI / 180);
+  var ARMS = [
+    { name: 'norma arm', rs: 11.5, r0: 9, r1: 50, n: 8000, label: 13 },
+    { name: 'scutum-centaurus arm', rs: 16.5, r0: 10, r1: 50, n: 9000, label: 26 },
+    { name: 'sagittarius arm', rs: 21.5, r0: 10, r1: 48, n: 8000, label: 27 },
+    { name: 'perseus arm', rs: 32.5, r0: 9, r1: 52, n: 9000, label: 42 }
+  ];
+  function armPoint(rs, r, k) { var phi = Math.PI + Math.log(r / rs) / (k || K_ARM); return [r * Math.cos(phi), r * Math.sin(phi)]; }
+
+  var SOL = V(-SUN_R, 0, 0.02);
+  // id, name, sub, region, e, n, u, label side, text, group
+  var RAW = [
+    ['sol', 'sol', 'terra // luna // mars', 'segmentum solar', -26, 0, 0.02, 'l', 'throneworld. seat of the imperium. base of the vii legion.', 'a'],
+    ['eye', 'cygnus x-1 warp maelstrom', 'the eye of terror', 'segmentum obscurus', -34, 17, 0.3, 'l', 'great warp storm. thousands of ly across.', 'a'],
+    ['calth', 'calth', 'veridian star', 'ultramar // ultima', 36, -20, -0.12, 'l', 'jewel of ultramar. eastern fringe.', 'a'],
+    ['isstvan', 'isstvan', 'eight worlds', 'ultima // obscurus border', 5, 30, 0.15, 'r', 'far from terra. the warmaster gathers here.', 'a'],
+    ['ullanor', 'ullanor', 'site of the triumph', 'segmentum solar', -13, 8, -0.05, 'r', 'ork empire broken here. horus named warmaster.', 'a'],
+    ['nikaea', 'nikaea', 'site of the council', 'segmentum tempestus', -30, -24, 0.2, 'r', 'young volcanic world. remote from all routes.', 'a'],
+    ['core', 'galactic core', 'sagittarius a*', 'ultima', 0, 0, 0, 'b', 'black heart of the galaxy.', 'a'],
+    ['caliban', 'caliban', 'legio i // dark angels', 'segmentum obscurus', -20, 26, 0.1, 'r', 'forested death world.', 'hw'],
+    ['chemos', 'chemos', 'legio iii // emperor\'s children', 'ultima', 16, 26, -0.1, 'r', 'failing industrial world, restored by fulgrim.', 'hw'],
+    ['olympia', 'olympia', 'legio iv // iron warriors', 'ultima', 10, 17, 0.1, 'r', 'mountain city-states.', 'hw'],
+    ['chogoris', 'chogoris', 'legio v // white scars', 'ultima', 12, -10, 0.05, 'r', 'steppe world. logged as mundus planus.', 'hw'],
+    ['fenris', 'fenris', 'legio vi // space wolves', 'segmentum obscurus', -28, 15, 0.15, 'b', 'ice-bound death world. close to the eye.', 'hw'],
+    ['inwit', 'inwit', 'legio vii // imperial fists', 'segmentum solar', -20, -6, -0.1, 'r', 'frozen world. legion based on terra and the phalanx.', 'hw'],
+    ['nostramo', 'nostramo', 'legio viii // night lords', 'ultima', 36, 22, 0.1, 'l', 'sunless mining world. destroyed by its own primarch.', 'hw'],
+    ['baal', 'baal', 'legio ix // blood angels', 'ultima', 24, 14, -0.1, 'r', 'irradiated desert. two moons.', 'hw'],
+    ['medusa', 'medusa', 'legio x // iron hands', 'segmentum obscurus', -29, 22, 0.2, 'r', 'storm-wracked. roaming clans.', 'hw'],
+    ['nuceria', 'nuceria', 'legio xii // world eaters', 'ultima', 30, -13, 0.05, 'l', 'slave-world of the arenas.', 'hw'],
+    ['macragge', 'macragge', 'legio xiii // ultramarines', 'ultramar // ultima', 39, -23, -0.1, 'r', 'capital of the five hundred worlds.', 'hw'],
+    ['barbarus', 'barbarus', 'legio xiv // death guard', 'segmentum solar', -17, -12, 0.1, 'r', 'poison-fogged world.', 'hw'],
+    ['prospero', 'prospero', 'legio xv // thousand sons', 'ultima', -8, 18, 0.1, 'r', 'tizca, city of light. burned by the wolves.', 'hw'],
+    ['cthonia', 'cthonia', 'legio xvi // sons of horus', 'segmentum solar', -25.978, 0.018, 0.03, 'b', 'worked-out mine world. 30 ly from sol, in sub-light reach.', 'hw'],
+    ['colchis', 'colchis', 'legio xvii // word bearers', 'segmentum pacificus', -40, 4, 0.1, 'l', 'arid. priest-ruled.', 'hw'],
+    ['nocturne', 'nocturne', 'legio xviii // salamanders', 'ultima', 20, 3, -0.05, 'r', 'volcanic. torn by its moon.', 'hw'],
+    ['deliverance', 'deliverance', 'legio xix // raven guard', 'segmentum tempestus', -14, -24, 0.1, 'r', 'prison moon above kiavahr.', 'hw']
+  ];
+  var PLACES = RAW.map(function (r) { return { id: r[0], name: r[1], sub: r[2], region: r[3], p: V(r[4], r[5], r[6]), side: r[7], text: r[8], group: r[9] }; });
+  var byId = {}; PLACES.forEach(function (p) { byId[p.id] = p; });
+
+  // ---------------- scene ----------------
+  var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x020a04);
+  var FOV = 50, TAN = Math.tan(FOV / 2 * Math.PI / 180);
+  var camera = new THREE.PerspectiveCamera(FOV, 1, 0.05, 400000);
+  var DPR = Math.min(window.devicePixelRatio || 1, 2);
+  renderer.setPixelRatio(DPR);
+
+  var seed = 30031;
+  function rnd() { seed |= 0; seed = seed + 0x6D2B79F5 | 0; var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
+  function gauss() { var u = 0; while (u === 0) u = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rnd()); }
+
+  // one hue only: pale 0 = #39ff6b, pale 1 = #c2ffd1. brightness travels as alpha, never as colour.
+  var pos = [], col = [], siz = [], brt = [];
+  function add(x, y, z, pale, br, s) { pos.push(x, y, z); col.push(0.22 + 0.54 * pale, 1, 0.42 + 0.4 * pale); brt.push(br); siz.push(s); }
+  function addP(e, n, u, pale, br, s) { add(e, u, -n, pale, br, s); }
+
+  var BAR = (180 - 27) * Math.PI / 180, cb = Math.cos(BAR), sb = Math.sin(BAR), i;
+  for (i = 0; i < 9500; i++) {
+    var a, b, u;
+    if (rnd() < 0.42) { a = gauss() * 1.7; b = gauss() * 1.7; u = gauss() * 1.3; }
+    else { a = gauss() * 5.2; b = gauss() * 1.6; u = gauss() * Math.exp(-Math.abs(a) / 9); }
+    addP(a * cb - b * sb, a * sb + b * cb, u, 0.5 + rnd() * 0.5, 0.35 + rnd() * 0.45, 0.35 + rnd() * 0.4);
+  }
+  function arm(rs, r0, r1, n, k, w0) {
+    for (var j = 0; j < n; j++) {
+      var r = r0 + (r1 - r0) * Math.pow(rnd(), 1.3), phi = Math.PI + Math.log(r / rs) / k, w = w0 * (0.7 + r / 40);
+      var e = r * Math.cos(phi) + gauss() * w, nn = r * Math.sin(phi) + gauss() * w, fade = Math.min(1, (r1 - r) / 9 + 0.2), q = rnd();
+      if (q < 0.07) addP(e, nn, gauss() * 0.2, 0.9, (0.6 + rnd() * 0.4) * fade, 0.55 + rnd() * 0.4);
+      else addP(e, nn, gauss() * 0.28, rnd() * 0.45, (0.3 + rnd() * 0.5) * fade, 0.3 + rnd() * 0.45);
+    }
+  }
+  ARMS.forEach(function (A) { arm(A.rs, A.r0, A.r1, A.n, K_ARM, 1.0); });
+  arm(SUN_R, 23.5, 29.5, 1600, 0.36, 0.55);
+  for (i = 0; i < 14000; i++) {
+    var rr = -12 * Math.log(1 - rnd() * 0.985); if (rr > 56) continue;
+    var ph = rnd() * Math.PI * 2;
+    addP(rr * Math.cos(ph), rr * Math.sin(ph), gauss() * 0.35, 0.15, 0.12 + rnd() * 0.22, 0.3 + rnd() * 0.3);
+  }
+  var EYE = byId.eye.p;
+  for (i = 0; i < 2000; i++) {
+    var er = Math.abs(gauss()) * 2.4, ea = rnd() * Math.PI * 2 + er * 0.9;
+    add(EYE.x + er * Math.cos(ea), EYE.y + gauss() * 0.4, EYE.z + er * Math.sin(ea), 0.3 + rnd() * 0.7, 0.45 + rnd() * 0.5, 0.3 + rnd() * 0.45);
+  }
+  for (i = 0; i < 1500; i++) {
+    var x = gauss(), y = gauss(), z = gauss(), L = Math.sqrt(x * x + y * y + z * z) || 1, R = 900 + rnd() * 500;
+    add(x / L * R, y / L * R, z / L * R, 0.3, 0.2 + rnd() * 0.35, 2.5 + rnd() * 3);
+  }
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('aColor', new THREE.Float32BufferAttribute(col, 3));
+  geo.setAttribute('aSize', new THREE.Float32BufferAttribute(siz, 1));
+  geo.setAttribute('aBr', new THREE.Float32BufferAttribute(brt, 1));
+  var starMat = new THREE.ShaderMaterial({
+    uniforms: { uScale: { value: 1000 }, uMax: { value: 28 } },
+    vertexShader: 'attribute vec3 aColor; attribute float aSize; attribute float aBr; uniform float uScale; uniform float uMax; varying vec3 vC; varying float vB;' +
+      'void main(){ vC=aColor; vB=aBr; vec4 mv=modelViewMatrix*vec4(position,1.0); gl_PointSize=clamp(aSize*uScale/max(0.001,-mv.z),1.5,uMax); gl_Position=projectionMatrix*mv; }',
+    fragmentShader: 'precision mediump float; varying vec3 vC; varying float vB;' +
+      'void main(){ float d=length(gl_PointCoord-vec2(0.5)); float a=smoothstep(0.5,0.0,d); gl_FragColor=vec4(vC,a*a*vB); }',
+    blending: THREE.NormalBlending, depthWrite: false, depthTest: false, transparent: true
+  });
+  var stars = new THREE.Points(geo, starMat); stars.frustumCulled = false; scene.add(stars);
+
+  function glowTexture() {
+    var c = document.createElement('canvas'); c.width = c.height = 128;
+    var g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,.4)'); gr.addColorStop(0.6, 'rgba(255,255,255,.08)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c);
+  }
+  var gtex = glowTexture();
+  function glow(p, color, scale, op) {
+    var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: gtex, color: color, depthWrite: false, depthTest: false, transparent: true, opacity: op }));
+    sp.position.copy(p); sp.scale.set(scale, scale, 1); sp.renderOrder = -1; scene.add(sp);
+  }
+  glow(V(0, 0, 0), 0x39ff6b, 30, 0.3);
+  glow(EYE, 0x39ff6b, 14, 0.3);
+
+  function circle(R, cx, cy, cz, seg) {
+    var pts = []; for (var j = 0; j <= seg; j++) { var t = j / seg * Math.PI * 2; pts.push(new THREE.Vector3(cx + R * Math.cos(t), cy, cz + R * Math.sin(t))); }
+    return new THREE.BufferGeometry().setFromPoints(pts);
+  }
+  // guides: dashed range rings (slow drift), axes
+  var guides = new THREE.Group(), ringSpin = new THREE.Group();
+  var dashMat = new THREE.LineDashedMaterial({ color: 0x1e8f3a, dashSize: 1.25, gapSize: 1.0, transparent: true, opacity: 0.8, depthTest: false });
+  [10, 20, 30, 40].forEach(function (R) { var l = new THREE.Line(circle(R, 0, 0, 0, 180), dashMat); l.computeLineDistances(); ringSpin.add(l); });
+  guides.add(ringSpin);
+  var axisMat = new THREE.LineBasicMaterial({ color: 0x1e8f3a, transparent: true, opacity: 0.35, depthTest: false });
+  guides.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(-52, 0, 0), V(52, 0, 0)]), axisMat));
+  guides.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(0, -52, 0), V(0, 52, 0)]), axisMat));
+  scene.add(guides);
+  // the maelstrom: highlighted zone
+  var eyeZone = new THREE.Line(circle(6, EYE.x, EYE.y, EYE.z, 90), new THREE.LineDashedMaterial({ color: 0x39ff6b, dashSize: 0.5, gapSize: 0.34, depthTest: false, transparent: true }));
+  eyeZone.computeLineDistances(); scene.add(eyeZone);
+
+  // dominions: one green, told apart by hatch. 0 warmaster (diagonal), 1 imperial (flat), 2 unaligned (dots), 3 xenos (grid)
+  var DOMS = [
+    { blobs: [[5, 30, 13], [16, 26, 10], [10, 17, 9], [-8, 25, 10], [-17, 13, 6], [-40, 4, 6], [-17, -12, 5], [33, 21, 7]], labels: [[6, 36, 'warmaster']] },
+    { blobs: [[-26, 0, 13], [-20, -6, 9], [37, -21, 12], [30, -12, 8], [24, 14, 6], [20, 3, 6], [12, -10, 6], [-28, 15, 4], [-29, 22, 4], [-14, -24, 5], [-20, 26, 4]], labels: [[-27, -10, 'imperial'], [42, -28, 'imperium secundus']] },
+    { blobs: [[-43, -9, 10], [-36, -22, 9], [-22, -33, 12], [0, -36, 12], [20, -32, 9], [-44, 18, 6]], labels: [[-41, -17, 'unaligned'], [1, -41, 'unaligned']] },
+    { blobs: [[43, 28, 8], [30, -37, 7], [-30, 41, 8], [12, 46, 6], [1, -1, 7], [49, -6, 5]], labels: [[43, 32, 'ghoul stars // xenos'], [31, -41, 'charadon // orks'], [-30, 44, 'halo stars // xenos'], [1, -5, 'core wilds // xenos']] }
+  ];
+  var domMesh = (function () {
+    // each dominion is a soft field baked into one channel of a small texture; the shader finds the edge,
+    // so borders stay sharp at any zoom, and the hatch is drawn in screen pixels.
+    var N = 384, SPAN = 116, data = new Uint8Array(N * N * 4);
+    function h2(ix, iy) { var h = Math.imul(ix, 374761393) ^ Math.imul(iy, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+    function vn(x, y) { var ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy; fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
+      var a = h2(ix, iy), b = h2(ix + 1, iy), c = h2(ix, iy + 1), d = h2(ix + 1, iy + 1); return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy; }
+    function fbm(x, y) { return (vn(x, y) + 0.5 * vn(x * 2.1 + 7.3, y * 2.1 - 3.1) + 0.25 * vn(x * 4.3 - 1.7, y * 4.3 + 9.2)) / 1.75 - 0.5; }
+    for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
+      var e = (x + 0.5) / N * SPAN - SPAN / 2, n = (y + 0.5) / N * SPAN - SPAN / 2, o = (y * N + x) * 4;
+      var wx = e + 7 * fbm(e * 0.11 + 11, n * 0.11 - 4), wy = n + 7 * fbm(e * 0.11 - 23, n * 0.11 + 17);
+      for (var d = 0; d < 4; d++) {
+        var bl = DOMS[d].blobs, f = 0;
+        for (var q = 0; q < bl.length; q++) { var R = bl[q][2] * 1.75, dx = wx - bl[q][0], dy = wy - bl[q][1], dd = (dx * dx + dy * dy) / (R * R); if (dd < 1) f += (1 - dd) * (1 - dd); }
+        f += 0.3 * fbm(e * 0.23 + 31 * d, n * 0.23 - 17 * d);
+        data[o + d] = Math.round(255 * (0.5 + 0.5 * Math.tanh((f - 0.4) * 5)));
+      }
+    }
+    var tex = new THREE.DataTexture(data, N, N, THREE.RGBAFormat); tex.magFilter = tex.minFilter = THREE.LinearFilter; tex.needsUpdate = true;
+    var mat = new THREE.ShaderMaterial({
+      uniforms: { uMap: { value: tex }, uPx: { value: DPR } },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+      fragmentShader: 'precision highp float; uniform sampler2D uMap; uniform float uPx; varying vec2 vUv;' +
+        'void main(){ vec4 f=texture2D(uMap,vUv); float v=f.r; float s=0.0; float idx=0.0;' +
+        'if(f.g>v){s=v;v=f.g;idx=1.0;}else{s=max(s,f.g);} if(f.b>v){s=v;v=f.b;idx=2.0;}else{s=max(s,f.b);} if(f.a>v){s=v;v=f.a;idx=3.0;}else{s=max(s,f.a);}' +
+        'float w=max(fwidth(v),0.004); float inside=smoothstep(0.5-w,0.5+w,v); if(inside<=0.0) discard;' +
+        'vec2 p=floor(gl_FragCoord.xy/uPx); float pat;' +
+        'if(idx<0.5) pat=step(mod(p.x+p.y,7.0),1.5); else if(idx<1.5) pat=0.42; else if(idx<2.5) pat=step(mod(p.x,6.0),1.5)*step(mod(p.y,6.0),1.5); else pat=max(step(mod(p.x,8.0),0.5),step(mod(p.y,8.0),0.5));' +
+        'float a=mix(0.05,0.28,pat); float edge=1.0-smoothstep(0.0,1.6*w,abs(v-0.5));' +
+        'float w2=max(fwidth(v-s),0.004); float seam=(1.0-smoothstep(0.0,1.6*w2,v-s))*step(0.5,s);' +
+        'a=max(a,0.5*max(edge,seam)); float rad=length(vUv-0.5)*116.0; a*=inside*(1.0-smoothstep(49.0,53.0,rad));' +
+        'gl_FragColor=vec4(0.224,1.0,0.42,a); }',
+      transparent: true, depthWrite: false, depthTest: false, side: THREE.DoubleSide, extensions: { derivatives: true }
+    });
+    var mesh = new THREE.Mesh(new THREE.PlaneGeometry(SPAN, SPAN), mat);
+    mesh.rotation.x = -Math.PI / 2; mesh.renderOrder = -2; scene.add(mesh); return mesh;
+  })();
+
+  var stalkGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+  var stalk = new THREE.Line(stalkGeo, new THREE.LineBasicMaterial({ color: 0x39ff6b, depthTest: false, transparent: true }));
+  stalk.frustumCulled = false; scene.add(stalk);
+
+  // ---------------- ship ----------------
+  var STORE = 'hh-galactic-chart-ship-v2';
+  var ship = { name: 'our ship', at: null, body: null, star: null, e: 30, n: -3, u: 0 };
+  try {
+    var sv = JSON.parse(window.localStorage.getItem(STORE) || 'null');
+    if (sv && typeof sv.e === 'number' && typeof sv.n === 'number' && typeof sv.u === 'number') {
+      ship.e = sv.e; ship.n = sv.n; ship.u = sv.u; ship.at = (sv.at && byId[sv.at]) ? sv.at : null;
+      ship.star = (!ship.at && typeof sv.star === 'string') ? sv.star.slice(0, 80) : null;
+      ship.body = ((ship.at || ship.star) && typeof sv.body === 'string') ? sv.body : null;
+      if (typeof sv.name === 'string' && sv.name.trim()) ship.name = sv.name.slice(0, 40);
+    }
+  } catch (e) { /* storage unavailable */ }
+  var shipP = V(ship.e, ship.n, ship.u);
+  var api = { onShipChange: null };
+  function saveShip(silent) {
+    try { window.localStorage.setItem(STORE, JSON.stringify(ship)); } catch (e) { /* ignore */ }
+    if (!silent && typeof api.onShipChange === 'function') { try { api.onShipChange({ name: ship.name, at: ship.at, body: ship.body, star: ship.star, e: ship.e, n: ship.n, u: ship.u }); } catch (e) { /* ignore */ } }
+  }
+
+  // ---------------- markers ----------------
+  var items = [];
+  function makeItem(o) {
+    var el = document.createElement('div');
+    el.className = 'gc-mk gc-' + o.side + (o.cls ? ' ' + o.cls : '');
+    var nm = document.createElement('span'); nm.className = 'gc-nm'; nm.textContent = o.name;
+    if (o.onTap) {
+      var hit = document.createElement('button'); hit.type = 'button'; hit.className = 'gc-hit'; hit.setAttribute('aria-label', o.name);
+      hit.addEventListener('click', o.onTap); nm.addEventListener('click', o.onTap); el.appendChild(hit);
+    }
+    el.appendChild(nm); layer.appendChild(el);
+    var it = { el: el, nm: nm, p: o.p, side: o.side, on: true, w: 60, h: 14, shown: true, hid: false, id: o.id || null, group: o.group || null, lead: !!o.lead, tier: o.tier || 0, ship: !!o.ship, keep: false };
+    it.w = nm.offsetWidth || 60; it.h = nm.offsetHeight || 14;
+    items.push(it); return it;
+  }
+  var shipItem = makeItem({ name: ship.name, side: 't', cls: 'gc-ship', p: shipP, id: 'ship', ship: true, lead: true, onTap: function () { flyTo(shipP, 60); } });
+  PLACES.forEach(function (pl) { makeItem({ name: pl.name, side: pl.side, p: pl.p, id: pl.id, group: pl.group, lead: true, onTap: function () { openPlace(pl.id, false); } }); });
+  DOMS.forEach(function (D) { D.labels.forEach(function (Lb) { makeItem({ name: Lb[2], side: 'c', cls: 'gc-static gc-dom', p: V(Lb[0], Lb[1], 0), group: 'dom' }); }); });
+  ARMS.forEach(function (A) { var q = armPoint(A.rs, A.label); makeItem({ name: A.name, side: 'c', cls: 'gc-static', p: V(q[0], q[1], 0), group: 'guides' }); });
+  (function () {
+    var q = armPoint(11.5, 46); makeItem({ name: 'outer arm', side: 'c', cls: 'gc-static', p: V(q[0], q[1], 0), group: 'guides' });
+    q = armPoint(SUN_R, 28.3, 0.36); makeItem({ name: 'orion spur', side: 'c', cls: 'gc-static', p: V(q[0], q[1] - 1.2, 0), group: 'guides' });
+    [10, 20, 30, 40].forEach(function (R) { makeItem({ name: R + 'k ly', side: 'c', cls: 'gc-static', p: V(0, -R, 0), group: 'guides' }); });
+  })();
+  function measure() { items.forEach(function (it) { it.w = it.nm.offsetWidth || it.w; it.h = it.nm.offsetHeight || it.h; }); }
+  function setGroup(name, on) { items.forEach(function (it) { if (it.group === name) it.on = on; }); }
+
+  // ---------------- camera ----------------
+  var W = 1, H = 1, fitR = 130;
+  var cur = { theta: 0, phi: 0.92, radius: 130, target: new THREE.Vector3() };
+  var goal = { theta: 0, phi: 0.92, radius: 130, target: new THREE.Vector3() };
+  function clampGoal() {
+    goal.phi = Math.max(0.02, Math.min(Math.PI - 0.02, goal.phi));
+    tierLimits();
+  }
+  function resize() {
+    var r = chart.getBoundingClientRect(); W = Math.max(1, Math.round(r.width)); H = Math.max(1, Math.round(r.height));
+    renderer.setSize(W, H, false);
+    ink.width = Math.round(W * DPR); ink.height = Math.round(H * DPR);
+    camera.aspect = W / H; camera.updateProjectionMatrix();
+    starMat.uniforms.uScale.value = H * DPR * 0.5 / TAN; starMat.uniforms.uMax.value = 13 * DPR;
+    fitR = 58 / (Math.min(1, W / H) * TAN);
+    measure();
+  }
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(chart); else window.addEventListener('resize', resize);
+  resize();
+  var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  goal.radius = fitR; cur.radius = calm ? fitR : fitR * 1.7;
+  if (!calm) { cur.theta = -0.5; cur.phi = 0.5; }
+
+  var pointers = new Map(), moved = 0, downAt = 0, pinchD = 0, mid = { x: 0, y: 0 }, panning = false;
+  var camRight = new THREE.Vector3(), camUp = new THREE.Vector3();
+  function pan(dx, dy) {
+    var s = cur.radius * 2 * TAN / H;
+    camRight.setFromMatrixColumn(camera.matrixWorld, 0); camUp.setFromMatrixColumn(camera.matrixWorld, 1);
+    goal.target.addScaledVector(camRight, -dx * s).addScaledVector(camUp, dy * s);
+  }
+  canvas.addEventListener('pointerdown', function (ev) {
+    try { canvas.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+    pointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+    if (pointers.size === 1) { moved = 0; downAt = performance.now(); panning = ev.button === 2 || ev.button === 1 || ev.shiftKey; }
+    if (pointers.size === 2) { var a = Array.from(pointers.values()); pinchD = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y); mid.x = (a[0].x + a[1].x) / 2; mid.y = (a[0].y + a[1].y) / 2; moved = 99; }
+  });
+  canvas.addEventListener('pointermove', function (ev) {
+    var p = pointers.get(ev.pointerId); if (!p) return;
+    var dx = ev.clientX - p.x, dy = ev.clientY - p.y; p.x = ev.clientX; p.y = ev.clientY;
+    if (pointers.size === 1) {
+      moved += Math.abs(dx) + Math.abs(dy); if (moved < 6) return;
+      if (panning) pan(dx, dy); else { goal.theta -= dx * 0.0055; goal.phi -= dy * 0.0055; setTop(false); }
+    } else if (pointers.size === 2) {
+      var a = Array.from(pointers.values()), dNow = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y), mx = (a[0].x + a[1].x) / 2, my = (a[0].y + a[1].y) / 2;
+      if (pinchD > 0 && dNow > 0) goal.radius *= pinchD / dNow;
+      pan(mx - mid.x, my - mid.y); pinchD = dNow; mid.x = mx; mid.y = my;
+    }
+    clampGoal();
+  });
+  function pointerEnd(ev) {
+    var had = pointers.has(ev.pointerId); pointers.delete(ev.pointerId);
+    if (pointers.size === 1) moved = 99;
+    if (had && pointers.size === 0 && ev.type === 'pointerup' && moved < 8 && performance.now() - downAt < 500) {
+      var r = canvas.getBoundingClientRect(); tap(ev.clientX - r.left, ev.clientY - r.top);
+    }
+  }
+  canvas.addEventListener('pointerup', pointerEnd);
+  canvas.addEventListener('pointercancel', pointerEnd);
+  canvas.addEventListener('wheel', function (ev) { ev.preventDefault(); goal.radius *= Math.exp((ev.deltaMode === 1 ? ev.deltaY * 30 : ev.deltaY) * 0.0013); clampGoal(); }, { passive: false });
+  canvas.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+  ['gesturestart', 'gesturechange'].forEach(function (t) { chart.addEventListener(t, function (ev) { ev.preventDefault(); }, { passive: false }); });
+  canvas.addEventListener('keydown', function (ev) {
+    var k = ev.key, used = true;
+    if (k === 'ArrowLeft') goal.theta += 0.12; else if (k === 'ArrowRight') goal.theta -= 0.12;
+    else if (k === 'ArrowUp') goal.phi -= 0.1; else if (k === 'ArrowDown') goal.phi += 0.1;
+    else if (k === '+' || k === '=') goal.radius *= 0.85; else if (k === '-' || k === '_') goal.radius *= 1.18;
+    else used = false;
+    if (used) { ev.preventDefault(); clampGoal(); }
+  });
+
+  // ---------------- panels ----------------
+  var selected = null, placing = false, HINT = '// drag: turn // pinch: zoom // local group: tap any star';
+  function ly(kly) { return (kly < 0.095 ? Math.round(kly * 1000) : Math.round(kly * 10) * 100).toLocaleString('en-US') + ' ly'; }
+  function status(t) { $('gc-status').textContent = t || HINT; }
+  function select(id) { selected = id; items.forEach(function (it) { if (it.id) it.el.classList.toggle('gc-sel', it.id === id); }); }
+  function flyTo(p, radius) { goal.target.copy(p); goal.radius = Math.min(cur.radius, radius); clampGoal(); }
+  function resetView() { goal.target.set(0, 0, 0); goal.radius = tier === 0 ? fitR : (tier === 1 ? 400 : sysMax * 0.6); goal.theta = Math.round(cur.theta / (Math.PI * 2)) * Math.PI * 2; goal.phi = 0.92; setTop(false); }
+
+  function refreshTarget() {
+    sysControls(null);
+    if (bodyTarget() || starTarget()) return;
+    var pl = selected && byId[selected];
+    $('gc-dnone').hidden = !!pl; $('gc-dbody').hidden = !pl;
+    $('gc-dtitle').textContent = pl ? '> target: ' + pl.name : '> target';
+    if (!pl) return;
+    $('gc-dsub').textContent = '// ' + pl.sub;
+    $('gc-dtext').textContent = pl.text + (SYS[pl.id] ? ' star: ' + placeStar(pl.id) + '.' : '');
+    $('gc-dreg').textContent = pl.region;
+    $('gc-dsol').textContent = pl.id === 'sol' ? '--' : ly(pl.p.distanceTo(SOL));
+    $('gc-dcore').textContent = pl.id === 'core' ? '--' : ly(pl.p.length());
+    $('gc-dship').textContent = ship.at === pl.id ? 'ship on station' : ly(pl.p.distanceTo(shipP));
+    $('gc-bMove').hidden = ship.at === pl.id; $('gc-bFly').textContent = 'view';
+    sysControls(SYS[pl.id] ? 'p:' + pl.id : null);
+  }
+  function openPlace(id, fly) {
+    var pl = byId[id]; if (!pl) return;
+    if (pl.group === 'hw' && !hwOn) setHw(true);
+    selBody = null; setSelStar(null); select(id); refreshTarget();
+    if (fly) { flyPlace(pl); if (chart.scrollIntoView) chart.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' }); }
+  }
+  function clearTarget() { selBody = null; setSelStar(null); select(null); refreshTarget(); }
+  $('gc-bFly').addEventListener('click', function () { viewTarget(); });
+  $('gc-bMove').addEventListener('click', function () { moveShipToTarget(); });
+
+  function refreshShip() {
+    var st;
+    if (ship.at && byId[ship.at]) st = (ship.body ? 'in orbit // ' + ship.body + ' // ' : 'on station // ') + byId[ship.at].name;
+    else if (ship.star) st = (ship.body ? 'in orbit // ' + ship.body + ' // ' : 'on station // ') + starLabel(ship.star);
+    else { var best = null, bd = 1e9; PLACES.forEach(function (pl) { var d = pl.p.distanceTo(shipP); if (d < bd) { bd = d; best = pl; } }); st = 'in transit // ' + ly(bd) + ' from ' + best.name; }
+    $('gc-sstat').textContent = st;
+    $('gc-ssol').textContent = ship.at === 'sol' ? '--' : ly(shipP.distanceTo(SOL));
+    var hv = Math.round(ship.u * 10) * 100;
+    $('gc-soff').textContent = hv === 0 ? 'in plane' : (hv > 0 ? '+' : '-') + Math.abs(hv).toLocaleString('en-US') + ' ly';
+    var hIn = $('gc-sheight'); if (document.activeElement !== hIn) hIn.value = String(ship.u);
+    var nIn = $('gc-sname'); if (document.activeElement !== nIn) nIn.value = ship.name;
+    shipItem.nm.textContent = ship.name; shipItem.w = shipItem.nm.offsetWidth || shipItem.w;
+    refreshTarget();
+  }
+  function setShip(e, n, u, at, silent, body, star) {
+    ship.star = (!at && star) ? star : null; ship.body = ((at || ship.star) && body) ? body : null;
+    ship.e = e; ship.n = n; ship.u = u; ship.at = at; shipP.copy(V(e, n, u));
+    var a = stalkGeo.attributes.position; a.setXYZ(0, shipP.x, shipP.y, shipP.z); a.setXYZ(1, shipP.x, 0, shipP.z); a.needsUpdate = true;
+    stalk.visible = Math.abs(u) > 0.06;
+    saveShip(silent); refreshTierShip(); refreshShip();
+  }
+  $('gc-sname').addEventListener('input', function () { ship.name = this.value.trim().slice(0, 40) || 'our ship'; saveShip(); refreshShip(); });
+  $('gc-sheight').addEventListener('input', function () { setShip(ship.e, ship.n, parseFloat(this.value) || 0, null); });
+  $('gc-bShipFly').addEventListener('click', function () { flyShip(); if (chart.scrollIntoView) chart.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' }); });
+  var bPlace = $('gc-bPlace');
+  function setPlacing(on) {
+    if (on && tier !== 0) goGalaxy();
+    placing = on; bPlace.setAttribute('aria-pressed', on ? 'true' : 'false'); bPlace.textContent = on ? 'cancel' : 'set position on chart';
+    status(on ? '// tap chart to set position' : '');
+    if (on && chart.scrollIntoView) chart.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+  }
+  bPlace.addEventListener('click', function () { setPlacing(!placing); });
+
+  var ray = new THREE.Raycaster(), plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitP = new THREE.Vector3(), tmp = new THREE.Vector3();
+  function tap(x, y) {
+    if (!placing) { if (tier === 1 && pickStar(x, y)) return; clearTarget(); return; }
+    var snap = null, sd = 22;
+    PLACES.forEach(function (pl) {
+      if (pl.group === 'hw' && !hwOn) return;
+      tmp.copy(pl.p).project(camera);
+      var d = Math.hypot((tmp.x * 0.5 + 0.5) * W - x, (-tmp.y * 0.5 + 0.5) * H - y);
+      if (tmp.z < 1 && d < sd) { sd = d; snap = pl; }
+    });
+    if (snap) setShip(snap.p.x, -snap.p.z, snap.p.y, snap.id);
+    else {
+      ray.setFromCamera({ x: x / W * 2 - 1, y: -(y / H * 2 - 1) }, camera);
+      if (!ray.ray.intersectPlane(plane, hitP)) return;
+      if (hitP.length() > 62) hitP.setLength(62);
+      setShip(hitP.x, -hitP.z, Math.abs(ship.u) > 0.06 ? ship.u : 0, null);
+    }
+    setPlacing(false); status('// position logged');
+  }
+
+  // index
+  PLACES.forEach(function (pl) {
+    var li = document.createElement('li'), b = document.createElement('button'), s1 = document.createElement('span'), s2 = document.createElement('span');
+    b.type = 'button'; b.className = 'gc-btn'; s1.textContent = pl.name; s2.textContent = pl.group === 'hw' ? pl.sub : pl.region;
+    b.appendChild(s1); b.appendChild(s2); li.appendChild(b);
+    b.addEventListener('click', function () { openPlace(pl.id, true); });
+    $(pl.group === 'hw' ? 'gc-listB' : 'gc-listA').appendChild(li);
+  });
+
+  // inline controls
+  var bTop = $('gc-bTop'), hwOn = true;
+  function setTop(v) { bTop.setAttribute('aria-pressed', v ? 'true' : 'false'); }
+  function toggle(btn) { var on = btn.getAttribute('aria-pressed') !== 'true'; btn.setAttribute('aria-pressed', on ? 'true' : 'false'); return on; }
+  function setHw(on) { hwOn = on; $('gc-bHw').setAttribute('aria-pressed', on ? 'true' : 'false'); setGroup('hw', on); if (!on && selected && byId[selected] && byId[selected].group === 'hw') clearTarget(); }
+  bTop.addEventListener('click', function () { var on = toggle(bTop); if (on) { goal.phi = 0.02; goal.theta = Math.round(cur.theta / (Math.PI * 2)) * Math.PI * 2; } else goal.phi = 0.92; });
+  $('gc-bGuides').addEventListener('click', function () { var on = toggle(this); guides.visible = on; setGroup('guides', on); guidesOn = on; if (guidesL) guidesL.visible = on; });
+  $('gc-bDom').addEventListener('click', function () { var on = toggle(this); domMesh.visible = on; setGroup('dom', on); });
+  $('gc-bHw').addEventListener('click', function () { setHw(!hwOn); });
+  $('gc-bReset').addEventListener('click', resetView);
+
+  // ---------------- overlay: ruler, leaders, marks ----------------
+  var v3 = new THREE.Vector3(), placed = [], CARD = { 0: 'NORTH', 90: 'EAST', 180: 'SOUTH', 270: 'WEST' };
+  function drawRuler() {
+    var bearing = -cur.theta * 180 / Math.PI, ppd = W / 100, first = Math.floor((bearing - 55) / 10) * 10;
+    ictx.strokeStyle = '#1e8f3a'; ictx.fillStyle = '#3f8a52'; ictx.lineWidth = 1;
+    ictx.font = '11px VT323, monospace'; ictx.textAlign = 'center'; ictx.textBaseline = 'top';
+    ictx.beginPath(); ictx.moveTo(0, 4.5); ictx.lineTo(W, 4.5);
+    for (var b = first; b <= bearing + 55; b += 10) {
+      var x = Math.round(W / 2 + (b - bearing) * ppd) + 0.5, major = ((b % 30) + 30) % 30 === 0;
+      ictx.moveTo(x, 4.5); ictx.lineTo(x, major ? 12 : 8);
+      if (major) { var n = ((b % 360) + 360) % 360; ictx.fillText(CARD[n] || ('00' + n).slice(-3), x, 14); }
+    }
+    ictx.stroke();
+    ictx.fillStyle = '#39ff6b'; ictx.beginPath(); ictx.moveTo(W / 2 - 4, 0); ictx.lineTo(W / 2 + 4, 0); ictx.lineTo(W / 2, 5); ictx.closePath(); ictx.fill();
+  }
+  function leader(sx, sy, tx, ty) {
+    var dx = tx - sx, dy = ty - sy, L = Math.hypot(dx, dy); if (L < 9) return;
+    var ux = dx / L, uy = dy / L, ex = tx - ux * 3, ey = ty - uy * 3, bx = ex - ux * 6, by = ey - uy * 6;
+    ictx.strokeStyle = '#1e8f3a'; ictx.lineWidth = 0.75; ictx.beginPath(); ictx.moveTo(sx, sy); ictx.lineTo(bx, by); ictx.stroke();
+    ictx.fillStyle = '#39ff6b'; ictx.beginPath(); ictx.moveTo(ex, ey); ictx.lineTo(bx - uy * 2.5, by + ux * 2.5); ictx.lineTo(bx + uy * 2.5, by - ux * 2.5); ictx.closePath(); ictx.fill();
+  }
+  function layout(now) {
+    ictx.setTransform(DPR, 0, 0, DPR, 0, 0); ictx.clearRect(0, 0, W, H);
+    placed.length = 0; placed.push([0, 0, W, 26]);
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i], vis = it.on && it.tier === tier;
+      if (vis) {
+        v3.copy(it.p).applyMatrix4(camera.matrixWorldInverse);
+        if (v3.z > -0.05) vis = false;
+        else { v3.applyMatrix4(camera.projectionMatrix); if (Math.abs(v3.x) > 1.15 || Math.abs(v3.y) > 1.15) vis = false; }
+      }
+      if (vis !== it.shown) { it.el.style.display = vis ? '' : 'none'; it.shown = vis; if (vis) { it.w = it.nm.offsetWidth || it.w; it.h = it.nm.offsetHeight || it.h; } }
+      if (!vis) continue;
+      var x = (v3.x * 0.5 + 0.5) * W, y = (-v3.y * 0.5 + 0.5) * H, w = it.w, h = it.h, rx, ry, sx, sy;
+      it.el.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px)';
+      if (it.side === 'r') { rx = x + 22; ry = y - 14 - h / 2; sx = rx - 1; sy = ry + h / 2; }
+      else if (it.side === 'l') { rx = x - 22 - w; ry = y - 14 - h / 2; sx = rx + w + 1; sy = ry + h / 2; }
+      else if (it.side === 't') { rx = x - w / 2; ry = y - 26 - h; sx = x; sy = ry + h + 1; }
+      else if (it.side === 'b') { rx = x - w / 2; ry = y + 26; sx = x; sy = ry - 1; }
+      else { rx = x - w / 2; ry = y - h / 2; }
+      var clash = false;
+      if (!(it.id && it.id === selected)) {
+        for (var j = 0; j < placed.length; j++) { var q = placed[j]; if (rx < q[0] + q[2] + 4 && rx + w + 4 > q[0] && ry < q[1] + q[3] + 2 && ry + h + 2 > q[1]) { clash = true; break; } }
+      }
+      if (clash !== it.hid) { it.el.classList.toggle('gc-hid', clash); it.hid = clash; }
+      if (!clash) placed.push([rx, ry, w, h]);
+      if (!it.lead) continue;
+      if (it.ship) {
+        ictx.globalAlpha = calm ? 1 : 0.55 + 0.45 * Math.sin(now / 260);
+        ictx.strokeStyle = '#39ff6b'; ictx.lineWidth = 1.2; var s = 8, c = 3;
+        ictx.beginPath();
+        ictx.moveTo(x - s, y - s + c); ictx.lineTo(x - s, y - s); ictx.lineTo(x - s + c, y - s);
+        ictx.moveTo(x + s - c, y - s); ictx.lineTo(x + s, y - s); ictx.lineTo(x + s, y - s + c);
+        ictx.moveTo(x + s, y + s - c); ictx.lineTo(x + s, y + s); ictx.lineTo(x + s - c, y + s);
+        ictx.moveTo(x - s + c, y + s); ictx.lineTo(x - s, y + s); ictx.lineTo(x - s, y + s - c);
+        ictx.stroke(); ictx.globalAlpha = 1;
+        if (!clash) { ictx.strokeStyle = '#1e8f3a'; ictx.lineWidth = 0.75; ictx.beginPath(); ictx.moveTo(sx, sy); ictx.lineTo(x, y - s - 2); ictx.stroke(); }
+      } else {
+        ictx.fillStyle = clash ? '#1e8f3a' : '#39ff6b'; ictx.fillRect(x - 1.5, y - 1.5, 3, 3);
+        if (!clash) leader(sx, sy, x, y);
+      }
+    }
+    drawRuler();
+  }
+
+  // ---------------- zoom tiers ----------------
+  // 0 galaxy (1 unit = 1,000 ly) / 1 local group (1 unit = 1 ly, centred on the focus) / 2 system (schematic units).
+  // each tier has its own scene and its own origin, so precision never runs out.
+  // charted systems: [star (null = named by the survey generator), bodies]. body: 'name', 'name|g' gas giant, 'name|b' belt, 'name|r|moon,moon'
+  var SYS = {
+    sol: ['sol', ['mercury', 'venus', 'terra|r|luna', 'mars|r|phobos,deimos', 'asteroid belt|b', 'jupiter|g|io,europa,ganymede,callisto', 'saturn|g|titan', 'uranus|g', 'neptune|g|triton', 'pluto']],
+    calth: ['veridia', ['veridia i', 'veridius maxim', 'calth', 'veridia iv|g', 'asteroid belt|b', 'veridia vi|g']],
+    isstvan: ['isstvan', ['isstvan i', 'isstvan ii', 'isstvan iii|r|the white moon', 'isstvan iv', 'isstvan v', 'isstvan vi|g', 'isstvan vii|g', 'isstvan extremis']],
+    ullanor: ['ullanor', ['ullanor minor', 'ullanor prime', 'asteroid belt|b', 'ullanor iv|g']],
+    nikaea: ['caph novum', ['nikaea i', 'nikaea', 'nikaea iii|g']],
+    caliban: ['chara major', ['caliban i', 'caliban', 'caliban iii|g', 'caliban iv|g']],
+    chemos: ['ignenor', ['chemos', 'chemos ii', 'chemos iii|g']],
+    olympia: ['pi andromedae', ['olympia i', 'olympia', 'olympia iii|g']],
+    chogoris: ['gamma draconis', ['chogoris i', 'chogoris', 'chogoris iii|g']],
+    fenris: ['the wolf\'s eye', ['midgardia', 'fenris|r|valdrmani', 'frostheim', 'svellgard']],
+    inwit: ['nu aurigae', ['inwit i|g', 'inwit', 'asteroid belt|b']],
+    nostramo: ['serundax', ['nostramo|r|tenebor', 'nostramo ii|g', 'asteroid belt|b']],
+    baal: ['balor', ['baal i', 'baal|r|baal primus,baal secundus', 'baal iii|g']],
+    medusa: ['sthenelus', ['medusa|r|telstarax', 'sthenelus ii|g', 'sthenelus iii|g']],
+    nuceria: ['velarion', ['nuceria i', 'nuceria', 'nuceria iii|g']],
+    macragge: ['delta persei', ['mortendar', 'thulium', 'macragge', 'ardium', 'laphis', 'asteroid belt|b', 'macragge vii|g']],
+    barbarus: ['mordeth', ['barbarus', 'barbarus ii|g']],
+    prospero: ['forzare', ['prospero i', 'prospero', 'prospero iii|g', 'prospero iv|g']],
+    cthonia: ['malaeyx', ['cthonia i', 'cthonia', 'asteroid belt|b', 'cthonia iv|g']],
+    colchis: ['aurex', ['colchis', 'colchis ii', 'colchis iii|g']],
+    nocturne: ['thraxun', ['nocturne|r|prometheus', 'nocturne ii|g', 'asteroid belt|b']],
+    deliverance: ['corvane', ['kiavahr i', 'kiavahr|r|deliverance', 'kiavahr iii|g']]
+  };
+  var HOME = { terra: 'throneworld', mars: 'forge world', venus: 'dead world', pluto: 'ice world', uranus: 'ice giant', neptune: 'ice giant', calth: 'civilised world', 'isstvan iii': 'civilised world', 'isstvan v': 'dead world', 'isstvan extremis': 'ice world',
+    'ullanor prime': 'war world', nikaea: 'lava world', caliban: 'death world', chemos: 'mining world', olympia: 'civilised world', chogoris: 'feral world', fenris: 'death world', midgardia: 'death world', frostheim: 'ice world', svellgard: 'ocean world',
+    inwit: 'death world', nostramo: 'hive world', baal: 'desert world', medusa: 'death world', nuceria: 'civilised world', macragge: 'civilised world', ardium: 'hive world', barbarus: 'death world', prospero: 'civilised world', cthonia: 'mining world',
+    colchis: 'feudal world', nocturne: 'death world', kiavahr: 'forge world' };
+  var CLS = { sol: 'yellow dwarf', calth: 'blue star', baal: 'red star', nostramo: 'dying star', inwit: 'dying star', medusa: 'red giant' };
+  // real neighbours of sol: name, galactic longitude, latitude, distance in ly
+  var NEAR = [['alpha centauri', 315.7, -0.7, 4.4], ['barnard\'s star', 31.0, 14.1, 6.0], ['sirius', 227.2, -8.9, 8.6], ['procyon', 213.7, 13.0, 11.5], ['vega', 67.4, 19.2, 25], ['arcturus', 15.1, 69.1, 37],
+    ['capella', 162.6, 4.6, 43], ['aldebaran', 181.0, -20.2, 65], ['canopus', 261.2, -25.3, 310], ['polaris', 123.3, 26.5, 430], ['pleiades', 166.6, -23.5, 440], ['betelgeuse', 199.8, -9.0, 550], ['antares', 351.9, 15.1, 550], ['rigel', 209.2, -25.2, 860]];
+
+  // ---------------- survey generator: star names, classes, worlds ----------------
+  function mkRnd(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function pick(R, a) { return a[Math.floor(R() * a.length)]; }
+  function wpick(R, t) { var s = 0, i; for (i = 0; i < t.length; i += 2) s += t[i + 1]; s *= R(); for (i = 0; i < t.length; i += 2) { s -= t[i + 1]; if (s <= 0) return t[i]; } return t[0]; }
+  function LST(s) { return s.split('|'); }
+  function hashStr(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h | 0; }
+  var PROPER = LST('achernar|acamar|acrux|adhara|albireo|alcor|alcyone|aldhibah|alfirk|algedi|algenib|algieba|algol|alhena|alioth|alkaid|alkes|almach|alnair|alnilam|alnitak|alphard|alphecca|alpheratz|alrescha|alshain|altair|aludra|ankaa|arneb|ascella|asterope|atria|avior|bellatrix|caph|castor|cebalrai|celaeno|chara|chertan|cor caroli|cursa|dabih|deneb|denebola|diphda|dschubba|dubhe|edasich|electra|elnath|eltanin|enif|errai|fomalhaut|furud|gacrux|giausar|gienah|gomeisa|hadar|hamal|homam|izar|kaus australis|kitalpha|kochab|kornephoros|lesath|maia|markab|matar|mebsuta|megrez|meissa|menkalinan|menkar|menkent|merak|merope|mesarthim|miaplacidus|mimosa|minkar|mintaka|mira|mirach|mirfak|mirzam|mizar|muphrid|naos|nashira|nekkar|nihal|nunki|nusakan|peacock|phact|phecda|pherkad|pollux|porrima|rasalgethi|rasalhague|rastaban|regulus|rotanev|ruchbah|sabik|sadalmelik|sadalsuud|sadr|saiph|sargas|scheat|schedar|segin|seginus|shaula|sheliak|sheratan|spica|sualocin|sulafat|syrma|tarazed|taygeta|thuban|unukalhai|vindemiatrix|wasat|wezen|yed prior|zaniah|zaurak|zavijava|zosma|zubenelgenubi|zubeneschamali');
+  var GREEK = LST('alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|omicron|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega');
+  var CONST = LST('andromedae|aquilae|arae|carinae|cassiopeiae|centauri|ceti|corvi|crucis|cygni|draconis|eridani|hydrae|leonis|lupi|lyrae|ophiuchi|orionis|pavonis|persei|phoenicis|sagittarii|scorpii|serpentis|tauri|tucanae|velorum|virginis|vulpeculae|aurigae|bootis|geminorum|librae|monocerotis|puppis|sculptoris');
+  var SUF = LST('secundus|tertius|minor|major|australis|borealis|prime|ultima|magna|novum|extremis|b');
+  var CAT = LST('kv|hx|mv|ds|sr|tk|ob|vx|gn|lc|pz|qr|zt|aux|sol|fgh|crux|survey|grid|mark|ember|vigil');
+  var PRE = LST('vor|kal|tyr|mor|sar|hel|dra|ax|bel|cor|dol|er|fen|gal|hy|ix|jor|kor|lu|mal|ner|or|per|qua|ras|tar|ul|ves|xan|yr|zan|aur|cad|dem|ob|thra|gor|vel|an|cy|mord|sep|tal|nem|luc|ign|umb|stri|pha|oct|ser|vand|har|bry|esk|thul|zor|quin|ard|mel');
+  var MID = LST('a|e|i|o|u|ae|ia|an|ar|en|or|ul|ith|ax|em|os|und|all|est|ir|ad|ov|ek|ium|ant|il');
+  var END = LST('is|us|a|on|ar|ium|ax|or|ia|eth|os|un|ex|ane|yx|ath|ora|eus|im|ant|is|us|ion|heim|gard|mund|ica|ara');
+  var TITLE = LST('saint |lord |captain |magos |old |||');
+  var SNOUN = LST('star|light|lantern|vigil|reach|folly|rest|hope|watch|beacon|grave|promise|sorrow|oath|lamp|claim|debt');
+  var ADJ = LST('the pale|the red|old|far|dim|iron|ash|cold|black|silent|the weeping|the blind|hollow|the burning|the last|the lost|the drowned|bitter|the patient|grey');
+  var DNOUN = LST('lantern|eye|hearth|candle|crown|widow|sentinel|coin|wound|gate|pilgrim|ember|mirror|tooth|anvil|herald|shepherd|judge|orphan|furnace');
+  var ROMAN = LST('i|ii|iii|iv|v|vi|vii|viii|ix|x|xi|xii|xiii|xiv|xv|xvi');
+  var MYTH = LST('erebus|nyx|thanatos|hypnos|lethe|styx|acheron|tartarus|moros|eris|nemesis|hecate|charon|orcus|februus|laverna|mors|ymir|surtr|nidhogg|garm|skoll|hati|mimir|tiamat|apsu|kingu|ereshkigal|nergal|pazuzu|lamashtu|enlil|marduk|apep|sekhmet|anubis|ammit|sobek|nephthys|morrigan|cernunnos|arawn|crom|chernobog|veles|morana|perun|kali|yama|rahu|ketu|ravana|izanami|susanoo|raijin|orochi|pele|maui|kanaloa|mictlan|xolotl|camazotz|xibalba|anansi|mawu|ogun|eshu|gilgamesh|enkidu|humbaba|scylla|charybdis|typhon|echidna|geryon|antaeus|procrustes|tantalus|sisyphus|ixion|niobe|cassandra|hecuba|priam|agamemnon|ajax|lycaon|actaeon|pentheus|baldr|hodr|vidar|vali|sleipnir|fafnir|grendel|taliesin|bran|lir|nuada|ogma|dagda|svarog|stribog|koschei|vritra|garuda|naga|oni|tengu|hine|rangi|tane|quetzal|tlaloc|ixchel|nyame|oya');
+  var LOWG = LST("hope's end|last light|penance|grudge|mercy|the anvil|bleak|tithe|widow's walk|ashfall|ironhold|salt|perdition|providence|vigil|cinder|the wound|gallows|threnody|lament|redemption|stillwater|forlorn|hollow|verdance|harrow|dusk|old faithful|ruin|thirst|concord|patience|obedience|sacrifice|duty's end|no return|blindside|mother's tears|the long dark|godsreach|pyre|rust|bountiful|drown|quietus|cold comfort|second chance|debtor's rock|silence|plenty|the furnace|hunger|landfall|far harbour|lastwater|the crucible|pilgrim's rest|brand|sorrow's gate|unity|compliance|the remnant|blacksand|whitefall|red harvest|deep well|tallow|slag|marrow|gravel|the ossuary|sump|haven|bitterwater|gloam|candlemas");
+  var LOST = LST('nova hibernia|new byzant|thule|lyonesse|avalon|hy-brasil|ultima thule|cathay|ophir|zipangu|lemuria|hyperborea|cibola|el dorado|shambhala|xanadu|ys|mu|atlantis|new albion|nova terra|carthago|ninevah|ur|akkad|tyre|sidon|petra|samarkand|karakorum|tenoch|cuzco|great zimbabwe|timbuktu|angkor|nova roma|ilium|mycenae|knossos|thebes|memphis|heliopolis|babylon secundus|new jericho|nova prussia|merica|hy-yndon|franc|albyon|gyptus|nordafrik|ursh|achaemenia|jermani|panpacific');
+  var WNOUN = LST('rest|world|landing|folly|hope|claim|reach|stand|bounty|grave|gift|price|mistake');
+  var BELTN = LST('shoals|rosary|necklace|grinder|scatter|reef|teeth|gravel road|bone orchard|shards|veil|crown of stones|chain|spill|long wreck');
+  var HULKN = LST('wanderer|the drowned saint|silent cathedral|harbinger of woe|ninth sorrow|rust requiem|tithe unpaid|lost pilgrim|cold verdict|grave of iron|mother of wrecks|the long fall|unanswered|pale leviathan|sin of ages');
+  var STATN = LST('port|station|anchorage|waypoint|bastion|dock|watch|relay|platform|halt');
+  var CLASSES = ['red dwarf', 30, 'orange dwarf', 16, 'yellow dwarf', 12, 'yellow-white star', 8, 'white star', 6, 'blue-white star', 4, 'blue giant', 2, 'red giant', 7, 'orange giant', 4, 'red supergiant', 1.5, 'white dwarf', 4, 'brown dwarf', 2,
+    'neutron star', 1, 'pulsar', 0.7, 'carbon star', 0.8, 'variable star', 1.5, 'close binary', 5, 'trinary', 1, 'wolf-rayet star', 0.4, 'protostar', 1, 'black hole', 0.4];
+  var INNER = ['lava world', 5, 'dead world', 6, 'desert world', 4, 'mining world', 4, 'forge world', 2, 'rock world', 5, 'penal world', 1, 'shattered world', 1, 'void station', 1, 'tomb world', 0.5, 'quarantined world', 0.5, 'debris field', 0.7];
+  var MID2 = ['civilised world', 5, 'hive world', 4, 'agri-world', 5, 'feral world', 4, 'feudal world', 4, 'death world', 4, 'jungle world', 3, 'ocean world', 3, 'desert world', 3, 'shrine world', 2, 'fortress world', 2, 'forge world', 3, 'mining world', 3,
+    'knight world', 1.5, 'cemetery world', 1, 'pleasure world', 1, 'war world', 1.5, 'penal world', 1, 'quarantined world', 1, 'xenos world', 1.5, 'tomb world', 0.7, 'maiden world', 0.7, 'daemon world', 0.3, 'dead world', 3, 'rock world', 2, 'ice world', 2,
+    'asteroid belt', 2, 'debris field', 1, 'space hulk', 0.3, 'void station', 1, 'gas giant', 1.5];
+  var OUTER = ['gas giant', 8, 'ice giant', 5, 'ringed giant', 3, 'ice world', 5, 'dead world', 3, 'rock world', 2, 'asteroid belt', 2, 'ice belt', 3, 'debris field', 1, 'mining world', 1.5, 'penal world', 0.7, 'void station', 1, 'brown dwarf', 0.5, 'space hulk', 0.5,
+    'tomb world', 0.5, 'quarantined world', 0.5];
+  var TYPES = LST('rock world|dead world|desert world|ice world|ocean world|lava world|jungle world|death world|agri-world|hive world|forge world|feral world|feudal world|civilised world|mining world|shrine world|fortress world|penal world|knight world|cemetery world|pleasure world|war world|quarantined world|xenos world|tomb world|maiden world|daemon world|shattered world|void station|space hulk|gas giant|ice giant|ringed giant|brown dwarf|asteroid belt|debris field|ice belt');
+  var POP = { 'hive world': [1, 90, 'billion'], 'civilised world': [0.2, 9, 'billion'], 'agri-world': [5, 900, 'million'], 'feral world': [1, 400, 'million'], 'feudal world': [5, 600, 'million'], 'forge world': [1, 40, 'billion'], 'mining world': [0.1, 80, 'million'],
+    'shrine world': [10, 900, 'million'], 'fortress world': [20, 800, 'million'], 'penal world': [1, 60, 'million'], 'knight world': [5, 200, 'million'], 'pleasure world': [1, 90, 'million'], 'cemetery world': [1, 50, 'million'], 'void station': [2, 400, 'thousand'],
+    'death world': [0.01, 20, 'million'], 'ocean world': [1, 300, 'million'], 'jungle world': [0.1, 90, 'million'], 'desert world': [0.1, 60, 'million'] };
+  var HOOK = LST("compliance|not yet brought to compliance|iterators dispatched|remembrancer colony|legion recruiting ground|imperial army muster world|rogue trader charter disputed|astropathic relay|choir silent since isstvan|declared for the warmaster|holds for the throne|loyalty unknown|vox silent|ghost signals on all bands|old night ruins|dark age vault, sealed|iron men graveyard|abominable intelligence purged|xenos ruins under interdict|aeldari webway gate, dormant|ork spoor detected|ork rok swarm in orbit|hrud migration path|khrave nest burned out|void whales winter here|promethium seas|adamantium lodes|plasma storms|no dawn for 600 years|tidally locked|retrograde orbit|rings of ice|orbital docks derelict|titan legion forge-fane|navigator house enclave|black ship anchorage|mechanicum explorators missing|skitarii garrison|sealed by custodian edict|plague quarantine|famine tithe waived|rebellion suppressed|governor in exile|pirate haven|cold trade port|wreck of a crusade fleet|mass graves|lectitio divinitatus spreading|warp echoes at the mandeville point|geller field anomalies|time runs slow here|something answers hails in dead tongues|two moons where charts show one|atmosphere burned off in living memory|census refused|last contact 40 years ago|standard template fragment rumoured|uncharted until this survey");
+  var TYPEHOOK = {
+    'hive world': LST('underhive in revolt|spires above the cloud line|gang wars sanctioned|tithe: regiments|one hive, continent-wide'), 'forge world': LST('titan legion forge-fane|skitarii garrison|sworn to mars|sworn to the dark mechanicum|macro-cannon foundries|ordinatus yard'),
+    'death world': LST('apex predators unclassified|flora carnivorous|legion recruiting ground|no settlement survives a year|the weather is the predator'), 'agri-world': LST('feeds nine systems|harvest tithe overdue|grain fleets inbound|blight in the southern belt'),
+    'feral world': LST('tribes worship the sky-ships|legion recruiting ground|stone age|totem cults'), 'feudal world': LST('knightly orders|black powder age|ruled by warring houses|witch-burnings common'),
+    'knight world': LST('knight house holdfast|oathsworn to a titan legion|household in mourning|house split by the heresy'), 'shrine world': LST('pilgrim trail|relic vaults|banned cult persists|imperial truth enforced, badly'),
+    'tomb world': LST('necrontyr ruins, dormant|do not wake|geometric structures under the ice|survey team lost'), 'maiden world': LST('aeldari claim, enforced|exodite clans|too perfect to be natural'),
+    'daemon world': LST('purged from all charts|the sky screams|do not approach'), 'xenos world': LST('ork held|hrud warrens|khrave nest|unknown species, hostile|tarellian colony|client species of old night|nephilim remnant|slaugth sighting unconfirmed'),
+    'gas giant': LST('fuel skimming rights leased|storm older than the imperium|void whales winter here|cloud-mining platforms'), 'ringed giant': LST('rings mined for ice|shipbreakers in the rings|shepherd moons fortified'),
+    'ice giant': LST('helium harvest|no survey below the cloud tops'), 'brown dwarf': LST('failed star|radiation belts lethal'), 'asteroid belt': LST('belt miners, lawless|pirate haven|dense: navigation hazard|void-clan territory'),
+    'debris field': LST('wreck of a crusade fleet|a world died here|salvage claims disputed'), 'ice belt': LST('comet harvesters|dark and unsurveyed'), 'space hulk': LST('boarding forbidden|drifts in and out of the warp|life signs, intermittent'),
+    'void station': LST('cold trade port|navigator house enclave|orbital docks|listening post|ark mechanicus refit yard'), 'penal world': LST('no guards below orbit|penal auxilia raised here'), 'mining world': LST('adamantium lodes|promethium seas|worked out, almost|the deep shafts are sealed'),
+    'war world': LST('front line static for a decade|both sides claim the throne|atomics used|legion on legion'), 'quarantined world': LST('plague quarantine|sealed by custodian edict|reason for interdict redacted'),
+    'cemetery world': LST("a war's dead, all of them|mausoleum continents"), 'pleasure world': LST('governor in exile here|vice tithe paid in full'), 'shattered world': LST('broken in the age of strife|core exposed'),
+    'lava world': LST('forge-shrines on the dark side|crust remelts each century'), 'ocean world': LST('hive-rafts|something large in the deeps|no land at all'), 'dead world': LST('old night ruins|killed by its own people|exterminatus, old|cities intact, no bodies'),
+    'ice world': LST('cities under the glaciers|thaw every 900 years'), 'jungle world': LST('canopy three miles deep|spore season lethal'), 'desert world': LST('glassed in the age of strife|water tithe'), 'fortress world': LST('void shields continent-wide|garrison outnumbers the people') };
+  var SYSNOTE = LST('warp storm season|mandeville point mined|stable warp route|no astropath in range|navigator beacon lit|ion storms|system defence monitors active|jump point contested|crusade fleet staging ground|empty since old night|charted once, never revisited|ruinstorm shadow|pharos echo detected|comet swarm inbound|traffic: none logged');
+  function word(R) { return pick(R, PRE) + (R() < 0.55 ? pick(R, MID) : '') + pick(R, END); }
+  function genStarName(h) {
+    var R = mkRnd(h), r = R();
+    if (r < 0.05) return pick(R, PROPER);
+    if (r < 0.16) return pick(R, PROPER) + ' ' + pick(R, SUF);
+    if (r < 0.36) return pick(R, GREEK) + ' ' + pick(R, CONST);
+    if (r < 0.58) return pick(R, CAT) + (R() < 0.5 ? '-' : ' ') + (100 + Math.floor(R() * 9900));
+    if (r < 0.80) return word(R);
+    if (r < 0.90) return pick(R, TITLE) + word(R) + '\'s ' + pick(R, SNOUN);
+    return pick(R, ADJ) + ' ' + pick(R, DNOUN);
+  }
+  function genClass(h) { return wpick(mkRnd(h ^ 0x9e3779b9), CLASSES); }
+  function kindOf(t) { return /giant|brown dwarf/.test(t) ? 'g' : (/belt|field/.test(t) ? 'b' : 'r'); }
+  function worldName(R, stem, i) {
+    var r = R();
+    if (r < 0.28) return stem + ' ' + ROMAN[i];
+    if (r < 0.46) return pick(R, MYTH);
+    if (r < 0.60) return pick(R, LOWG);
+    if (r < 0.70) return pick(R, LOST);
+    if (r < 0.80) return word(R);
+    if (r < 0.86) return R() < 0.5 ? 'saint ' + word(R) : word(R) + '\'s ' + pick(R, WNOUN);
+    if (r < 0.92) return R() < 0.5 ? pick(R, CAT) + '-' + (10 + Math.floor(R() * 990)) : (1 + Math.floor(R() * 98)) + '-' + pick(R, GREEK);
+    return word(R) + ' ' + pick(R, SUF);
+  }
+  function bodyNote(R, type) {
+    var p = POP[type], s = '', v, hk;
+    if (p) { v = p[0] * Math.pow(p[1] / p[0], R()); s = 'pop ' + (v < 10 ? v.toFixed(1) : Math.round(v)) + ' ' + p[2]; }
+    hk = (TYPEHOOK[type] && R() < 0.6) ? pick(R, TYPEHOOK[type]) : pick(R, HOOK);
+    if (hk === 'compliance') hk = 'compliance ' + (800 + Math.floor(R() * 200)) + '.m30';
+    return (s ? s + ' // ' : '') + hk;
+  }
+  function genSystem(star, cls, sd) {
+    var R = mkRnd(sd), odd = /hole|neutron|pulsar|wolf|proto/.test(cls), n = odd ? Math.floor(R() * 4) : 1 + Math.floor((R() + R()) * 5), used = {}, bodies = [];
+    if (!odd && R() < 0.07) n += 3;
+    var stem = star.replace(/^the /, '').replace(/^(saint|lord|captain|magos|old) /, '').split('\'s')[0];
+    function uniq(f) { var s, k = 0; do { s = f(); } while (used[s] && ++k < 8); used[s] = 1; return s; }
+    function one(i) {
+      var z = n > 1 ? i / (n - 1) : 0.5, type = wpick(R, z < 0.3 ? INNER : (z < 0.68 ? MID2 : OUTER)), k = kindOf(type), name, moons = [], m = 0, j;
+      if (k === 'b') name = uniq(function () { return R() < 0.4 ? stem + ' belt' : 'the ' + pick(R, BELTN); });
+      else if (type === 'space hulk') name = uniq(function () { return pick(R, HULKN); });
+      else if (type === 'void station') name = uniq(function () { return pick(R, STATN) + ' ' + word(R); });
+      else name = uniq(function () { return worldName(R, stem, i); });
+      if (k === 'g') m = Math.min(4, Math.floor(R() * R() * 7)); else if (k === 'r' && type !== 'space hulk' && type !== 'void station') m = R() < 0.3 ? 1 : (R() < 0.08 ? 2 : 0);
+      for (j = 0; j < m; j++) moons.push(uniq(function () { var r = R(); return r < 0.45 ? name.split(' ')[0] + ' ' + GREEK[j] : (r < 0.7 ? pick(R, MYTH) : (r < 0.85 ? pick(R, LOWG) : word(R))); }));
+      bodies.push({ name: name, type: type, moons: moons, note: bodyNote(R, type) });
+    }
+    for (var i = 0; i < n; i++) one(i);
+    return { star: star, cls: cls, note: R() < 0.4 ? pick(R, SYSNOTE) : '', bodies: bodies };
+  }
+
+  // ---------------- saved systems (this browser; hooks at the bottom for firebase) ----------------
+  var SSTORE = 'hh-galactic-chart-systems-v1', saved = {}, canon = {};
+  function str(v, n) { return typeof v === 'string' ? v.trim().toLowerCase().slice(0, n) : ''; }
+  function cleanDef(o) {
+    if (!o || typeof o !== 'object') return null;
+    var st = str(o.star, 40); if (!st) return null;
+    var b = (Array.isArray(o.bodies) ? o.bodies : []).slice(0, 14).map(function (x) {
+      x = x || {};
+      return { name: str(x.name, 40), type: str(x.type, 30) || 'rock world', moons: (Array.isArray(x.moons) ? x.moons : []).slice(0, 8).map(function (m) { return str(m, 30); }).filter(Boolean), note: str(x.note, 140) };
+    }).filter(function (x) { return x.name; });
+    return { star: st, cls: str(o.cls, 60), note: str(o.note, 140), bodies: b };
+  }
+  function loadSystems(obj) {
+    var out = {}; if (obj && typeof obj === 'object') Object.keys(obj).slice(0, 2000).forEach(function (k) { var d = cleanDef(obj[k]); if (d && k.length < 80) out[k] = d; });
+    return out;
+  }
+  try { saved = loadSystems(JSON.parse(window.localStorage.getItem(SSTORE) || 'null')); } catch (e) { saved = {}; }
+  function saveSystems(silent) {
+    try { window.localStorage.setItem(SSTORE, JSON.stringify(saved)); } catch (e) { /* ignore */ }
+    if (!silent && typeof api.onSystemsChange === 'function') { try { api.onSystemsChange(JSON.parse(JSON.stringify(saved))); } catch (e) { /* ignore */ } }
+    refreshSavedList();
+  }
+  function parseBody(s) { var q = s.split('|'), k = q[1] || 'r'; return { name: q[0], type: HOME[q[0]] || (k === 'g' ? 'gas giant' : (k === 'b' ? 'asteroid belt' : 'rock world')), moons: q[2] ? q[2].split(',') : [], note: '' }; }
+  function placeStar(id) { return saved['p:' + id] ? saved['p:' + id].star : (SYS[id][0] || genStarName(hashStr('p:' + id))); }
+  function sysDef(key) {
+    if (saved[key]) return saved[key];
+    if (key.slice(0, 2) !== 'p:') return null;
+    var id = key.slice(2), d = SYS[id]; if (!d) return null;
+    return canon[id] || (canon[id] = { star: d[0] || genStarName(hashStr(key)), cls: CLS[id] || genClass(hashStr(key)), note: '', bodies: d[1].map(parseBody) });
+  }
+  function starName(s) { if (s.place) return SYS[s.place] ? placeStar(s.place) : byId[s.place].name; return saved[s.key] ? saved[s.key].star : (s.name || genStarName(hashStr(s.key))); }
+  function starLabel(key) { return saved[key] ? saved[key].star : (key.slice(0, 2) === 'n:' ? key.slice(2) : genStarName(hashStr(key))); }
+  function hasItem(s) { return !s.place && (s.key.slice(0, 2) === 'n:' || !!saved[s.key]); }
+
+  var tier = 0, focus = null, sceneL = null, sceneS = null, spinL = null, spinS = null, guidesL = null, guidesOn = true,
+      sysCtx = null, sysMax = 60, sysBodies = [], selBody = null, selStar = null, LS = [], LSmap = {}, fieldN = 0, lastFoot = '', ORIGIN = new THREE.Vector3();
+  var shipItemL = makeItem({ name: ship.name, side: 't', cls: 'gc-ship', p: new THREE.Vector3(), ship: true, lead: true, tier: 1 });
+  var shipItemS = makeItem({ name: ship.name, side: 't', cls: 'gc-ship', p: new THREE.Vector3(), ship: true, lead: true, tier: 2 });
+  var selItem = makeItem({ name: '-', side: 'r', p: new THREE.Vector3(), lead: true, tier: 1, id: 'selstar' });
+  shipItemL.keep = shipItemS.keep = selItem.keep = true; shipItemL.on = shipItemS.on = selItem.on = false;
+
+  function Cloud() { this.pos = []; this.col = []; this.siz = []; this.brt = []; }
+  Cloud.prototype.add = function (x, y, z, pale, br, s) { this.pos.push(x, y, z); this.col.push(0.22 + 0.54 * pale, 1, 0.42 + 0.4 * pale); this.brt.push(br); this.siz.push(s); };
+  Cloud.prototype.mesh = function () {
+    var g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(this.pos, 3)); g.setAttribute('aColor', new THREE.Float32BufferAttribute(this.col, 3));
+    g.setAttribute('aSize', new THREE.Float32BufferAttribute(this.siz, 1)); g.setAttribute('aBr', new THREE.Float32BufferAttribute(this.brt, 1));
+    var m = new THREE.Points(g, starMat); m.frustumCulled = false; return m;
+  };
+  function shell(c, R0, R1, s0, s1, n) {
+    for (var i = 0; i < n; i++) { var x = gauss(), y = gauss(), z = gauss(), L = Math.sqrt(x * x + y * y + z * z) || 1, R = R0 + rnd() * (R1 - R0); c.add(x / L * R, y / L * R, z / L * R, 0.3, 0.2 + rnd() * 0.35, s0 + rnd() * (s1 - s0)); }
+  }
+  function glowIn(sc, p, scale, op) {
+    var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: gtex, color: 0x39ff6b, depthWrite: false, depthTest: false, transparent: true, opacity: op }));
+    sp.position.copy(p); sp.scale.set(scale, scale, 1); sp.renderOrder = -1; sc.add(sp);
+  }
+  function dropScene(s) { if (s) s.traverse(function (o) { if (o.geometry) o.geometry.dispose(); }); }
+  function dropItems(t) {
+    items = items.filter(function (it) { if (it.tier === t && !it.keep) { if (it.el.parentNode) it.el.parentNode.removeChild(it.el); return false; } return true; });
+  }
+  var bodyTex = (function () {
+    var c = document.createElement('canvas'); c.width = c.height = 64; var g = c.getContext('2d');
+    g.beginPath(); g.arc(32, 32, 26, 0, Math.PI * 2); g.fillStyle = 'rgba(255,255,255,.14)'; g.fill(); g.lineWidth = 4; g.strokeStyle = 'rgba(255,255,255,1)'; g.stroke();
+    return new THREE.CanvasTexture(c);
+  })();
+  var orbitMat = new THREE.LineDashedMaterial({ color: 0x1e8f3a, dashSize: 1.0, gapSize: 0.8, depthTest: false, transparent: true });
+
+  // ---- focus: what a local group is centred on ----
+  function placeFocus(pl) { return { key: pl.id, id: pl.id, p: pl.p, name: pl.name, place: pl }; }
+  function freeFocus(e, n, u) {
+    var ee = +e.toFixed(2), nn = +n.toFixed(2), uu = +u.toFixed(2);
+    return { key: 'v:' + ee + ':' + nn + ':' + uu, id: 'free', p: V(ee, nn, uu), name: 'grid ' + ee.toFixed(1) + ' / ' + nn.toFixed(1), place: null };
+  }
+  function focusFromKey(k) {
+    if (byId[k]) return placeFocus(byId[k]);
+    if (k.slice(0, 2) === 'n:') return placeFocus(byId.sol);
+    if (k.slice(0, 2) === 'v:') { var q = k.split(':').map(parseFloat); if (isFinite(q[1]) && isFinite(q[2]) && isFinite(q[3])) return freeFocus(q[1], q[2], q[3]); }
+    return null;
+  }
+  function shipFocus() {
+    if (ship.at && byId[ship.at]) return placeFocus(byId[ship.at]);
+    if (ship.star) { var f = focusFromKey(ship.star.split('#')[0]); if (f) return f; }
+    var best = null, bd = 2.0;
+    PLACES.forEach(function (pl) { var d = pl.p.distanceTo(shipP); if (d < bd) { bd = d; best = pl; } });
+    return best ? placeFocus(best) : freeFocus(ship.e, ship.n, ship.u);
+  }
+  function findFocus() {
+    var t = goal.target, sel = selected ? byId[selected] : null;
+    if (sel && sel.p.distanceTo(t) < 4) return placeFocus(sel);
+    var best = null, bd = 2.5;
+    PLACES.forEach(function (pl) { if (pl.group === 'hw' && !hwOn) return; var d = pl.p.distanceTo(t); if (d < bd) { bd = d; best = pl; } });
+    if (best) return placeFocus(best);
+    if (shipP.distanceTo(t) < 2.5) return shipFocus();
+    return null;
+  }
+  function worldOf(s) { return s.place ? byId[s.place].p.clone() : focus.p.clone().addScaledVector(s.p, 0.001); }
+  function starByKey(key) {
+    if (LSmap[key]) return LSmap[key];
+    var m = key.lastIndexOf('#'); if (m < 1 || !focus || key.slice(0, m) !== focus.key) return null;
+    var i = parseInt(key.slice(m + 1), 10); return (i >= 0 && i < fieldN) ? LS[i] : null;
+  }
+  function nearestStar(t, maxD) { var best = null, bd = maxD * maxD, i, d; for (i = 0; i < LS.length; i++) { d = LS[i].p.distanceToSquared(t); if (d < bd) { bd = d; best = LS[i]; } } return best; }
+
+  function buildLocal(f) {
+    dropScene(sceneL); dropItems(1);
+    sceneL = new THREE.Scene(); sceneL.background = scene.background;
+    LS = []; LSmap = {};
+    seed = hashStr('L' + f.key);
+    var c = new Cloud(), i, dense = f.id === 'core' ? 3 : 1, r, a, x, y, z, L, special = [];
+    function field(px, py, pz, pale, br, s) { c.add(px, py, pz, pale, br, s); LS.push({ p: new THREE.Vector3(px, py, pz), key: f.key + '#' + LS.length, name: null, place: null }); }
+    for (i = 0; i < 5200 * dense; i++) { r = 2300 * Math.sqrt(rnd()); a = rnd() * 6.2832; field(r * Math.cos(a), gauss() * 330, r * Math.sin(a), rnd() * 0.6, 0.25 + rnd() * 0.6, 1.2 + rnd() * 2.2); }
+    for (i = 0; i < 260 * dense; i++) { r = 4 + 120 * Math.pow(rnd(), 0.6); x = gauss(); y = gauss(); z = gauss(); L = Math.sqrt(x * x + y * y + z * z) || 1; field(x / L * r, y / L * r * 0.8, z / L * r, rnd() * 0.6, 0.35 + rnd() * 0.5, 0.25 + rnd() * 0.5); }
+    fieldN = LS.length;
+    function spec(s) { special.push(s); LSmap[s.key] = s; return s; }
+    if (f.id === 'eye') {
+      for (i = 0; i < 3200; i++) { r = Math.abs(gauss()) * 620; a = rnd() * 6.2832 + r * 0.004; c.add(r * Math.cos(a), gauss() * 110, r * Math.sin(a), 0.3 + rnd() * 0.7, 0.45 + rnd() * 0.5, 2 + rnd() * 3); }
+      glowIn(sceneL, ORIGIN, 1800, 0.3);
+      makeItem({ name: f.name, side: 'c', cls: 'gc-static gc-dom', p: new THREE.Vector3(), tier: 1 });
+    } else if (f.place) {
+      c.add(0, 0, 0, 1, 1, 1.6); glowIn(sceneL, ORIGIN, f.id === 'core' ? 90 : 6, 0.45);
+      var cs = spec({ p: new THREE.Vector3(), key: 'p:' + f.id, name: null, place: f.id });
+      makeItem({ name: starName(cs), side: 'r', p: cs.p, lead: true, tier: 1, id: f.id, onTap: function () { openPlace(f.id, false); } });
+    }
+    if (f.id === 'sol' || f.id === 'cthonia') NEAR.forEach(function (s, k) {
+      var l = s[1] * Math.PI / 180, b = s[2] * Math.PI / 180, d = s[3];
+      var p = new THREE.Vector3(d * Math.cos(b) * Math.cos(l), d * Math.sin(b), -d * Math.cos(b) * Math.sin(l)).add(SOL.clone().sub(f.p).multiplyScalar(1000));
+      c.add(p.x, p.y, p.z, 1, 0.95, Math.min(9, 0.5 + d * 0.02));
+      var ns = spec({ p: p, key: 'n:' + s[0], name: s[0], place: null });
+      makeItem({ name: s[0], side: k % 2 ? 'l' : 'r', p: p, lead: true, tier: 1, id: 'star:' + ns.key, onTap: function () { selectStar(ns); } });
+    });
+    PLACES.forEach(function (pl) {
+      if (pl.id === f.id) return;
+      var d = pl.p.clone().sub(f.p).multiplyScalar(1000), far = d.length(); if (far > 2200) return;
+      c.add(d.x, d.y, d.z, 1, 1, far < 200 ? 1.6 : 7);
+      spec({ p: d, key: 'p:' + pl.id, name: null, place: pl.id });
+      makeItem({ name: pl.name, side: 'l', p: d, lead: true, tier: 1, id: pl.id, onTap: function () { openPlace(pl.id, false); } });
+    });
+    LS = LS.concat(special);
+    shell(c, 30000, 45000, 80, 180, 1200);
+    guidesL = new THREE.Group(); spinL = new THREE.Group();
+    [10, 100, 1000].forEach(function (R) {
+      var ln = new THREE.Line(circle(R, 0, 0, 0, 160), new THREE.LineDashedMaterial({ color: 0x1e8f3a, dashSize: R * 0.05, gapSize: R * 0.04, transparent: true, opacity: 0.8, depthTest: false }));
+      ln.computeLineDistances(); spinL.add(ln);
+      var it = makeItem({ name: R.toLocaleString('en-US') + ' ly', side: 'c', cls: 'gc-static', p: new THREE.Vector3(0, 0, R), tier: 1, group: 'guides' }); it.on = guidesOn;
+    });
+    guidesL.add(spinL); guidesL.visible = guidesOn; sceneL.add(guidesL); sceneL.add(c.mesh());
+    syncStarItems();
+  }
+  // labels for every surveyed star in the current local group
+  function syncStarItems() {
+    if (!focus) return;
+    items = items.filter(function (it) { if (it.dyn) { if (it.el.parentNode) it.el.parentNode.removeChild(it.el); return false; } return true; });
+    Object.keys(saved).forEach(function (k) {
+      if (k.slice(0, 2) === 'p:' || k.slice(0, 2) === 'n:') return;
+      var s = starByKey(k); if (!s) return;
+      var it = makeItem({ name: saved[k].star, side: 'r', p: s.p, lead: true, tier: 1, id: 'star:' + k, onTap: function () { selectStar(s); } }); it.dyn = true;
+    });
+  }
+
+  function buildSystem(ctx) {
+    dropScene(sceneS); dropItems(2);
+    sceneS = new THREE.Scene(); sceneS.background = scene.background;
+    seed = hashStr('S' + ctx.key);
+    var def = ctx.def, c = new Cloud(), n = def.bodies.length; sysBodies = []; spinS = new THREE.Group();
+    c.add(0, 0, 0, 1, 1, 3.2); glowIn(sceneS, ORIGIN, 9, 0.5);
+    makeItem({ name: def.star, side: 't', p: new THREE.Vector3(), lead: true, tier: 2 });
+    def.bodies.forEach(function (b, i) {
+      var kind = kindOf(b.type), R = 8 + i * 5.5, a = rnd() * 6.2832, j, small = /station|hulk/.test(b.type);
+      var ln = new THREE.Line(circle(R, 0, 0, 0, 140), orbitMat); ln.computeLineDistances(); spinS.add(ln);
+      var p = new THREE.Vector3(R * Math.cos(a), 0, R * Math.sin(a));
+      if (kind === 'b') {
+        for (j = 0; j < 420; j++) { var aa = rnd() * 6.2832, rr = R + gauss() * 0.5; c.add(rr * Math.cos(aa), gauss() * 0.12, rr * Math.sin(aa), 0.2, 0.3 + rnd() * 0.4, 0.22); }
+      } else {
+        var sc = kind === 'g' ? 2.6 : (small ? 0.8 : 1.4), sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: bodyTex, color: 0x39ff6b, depthWrite: false, depthTest: false, transparent: true }));
+        sp.scale.set(sc, sc, 1); sp.position.copy(p); sceneS.add(sp);
+        (b.moons || []).forEach(function (m, k) { var ma = rnd() * 6.2832, mr = sc * 0.5 + 0.7 + k * 0.55; c.add(p.x + mr * Math.cos(ma), 0, p.z + mr * Math.sin(ma), 0.8, 0.9, 0.5); });
+      }
+      sysBodies.push({ name: b.name, kind: kind, type: b.type, moons: b.moons || [], note: b.note || '', p: p, orbit: i + 1 });
+      makeItem({ name: b.name, side: i % 2 ? 'l' : 'r', p: p, lead: true, tier: 2, id: 'body:' + b.name, onTap: function () { selectBody(b.name); } });
+    });
+    sysMax = (8 + Math.max(n, 1) * 5.5) * 2.8;
+    shell(c, 900, 1400, 2.5, 5.5, 1200);
+    sceneS.add(spinS); sceneS.add(c.mesh());
+  }
+
+  function shipInSys() { return !!sysCtx && ((ship.at && sysCtx.key === 'p:' + ship.at) || (!!ship.star && sysCtx.key === ship.star)); }
+  function refreshTierShip() {
+    [shipItemL, shipItemS].forEach(function (it) { it.nm.textContent = ship.name; it.on = false; });
+    if (!focus) return;
+    var d = shipP.clone().sub(focus.p).multiplyScalar(1000);
+    if (d.length() < 2300) { shipItemL.p.copy(d); shipItemL.on = true; }
+    if (shipInSys()) {
+      var b = null; sysBodies.forEach(function (x) { if (x.name === ship.body) b = x; });
+      var outer = sysMax / 2.8;
+      if (b) shipItemS.p.copy(b.p); else shipItemS.p.set(outer * 0.8, 0, outer * 0.75);
+      shipItemS.on = true;
+    }
+  }
+
+  // ---- moving between tiers ----
+  function tierChanged(from) {
+    cur.target.copy(goal.target); cur.radius = goal.radius;
+    if (from === 2 && tier !== 2) { selBody = null; if (selected && selected.indexOf('body:') === 0) select(null); }
+    if (tier !== 1 && selStar) { setSelStar(null); if (selected && (selected === 'selstar' || selected.indexOf('star:') === 0)) select(null); }
+    ['gc-bT0', 'gc-bT1', 'gc-bT2'].forEach(function (id, i) { $(id).setAttribute('aria-pressed', i === tier ? 'true' : 'false'); });
+    refreshTierShip(); refreshTarget(); status('');
+    if (!calm) { chart.classList.add('gc-retune'); setTimeout(function () { chart.classList.remove('gc-retune'); }, 110); }
+  }
+  function goGalaxy(r) {
+    var from = tier; if (from === 0) return;
+    tier = 0;
+    if (focus) { goal.target.copy(focus.p); if (from === 1) goal.target.addScaledVector(cur.target, 0.001); }
+    goal.radius = r || 2.05; tierChanged(from);
+  }
+  function goLocal(f, r, tgt) {
+    if (!f) return;
+    var from = tier;
+    if (!focus || focus.key !== f.key || !sceneL) { focus = f; sysCtx = null; buildLocal(f); }
+    tier = 1;
+    if (tgt) goal.target.copy(tgt); else goal.target.set(0, 0, 0);
+    goal.radius = r || 300; tierChanged(from);
+    if (from === 2 && sysCtx && !sysCtx.star.place && sysDef(sysCtx.key)) selectStar(sysCtx.star);
+  }
+  function goSystem(s) {
+    var def = s ? sysDef(s.key) : null;
+    if (!def) { status(s ? '// uncharted // generate system first' : '// select a star first'); return false; }
+    var from = tier;
+    sysCtx = { key: s.key, star: s, def: def }; buildSystem(sysCtx);
+    tier = 2; selBody = null; setSelStar(null); select(s.place || null);
+    goal.target.set(0, 0, 0); goal.radius = sysMax * 0.6; tierChanged(from);
+    return true;
+  }
+  function tierLimits() {
+    if (tier === 0) {
+      if (goal.radius < 2) { var f = findFocus(); if (f) { goLocal(f, 1950); return; } goal.radius = 2; status('// no survey data // view a charted system or the ship first'); }
+      if (goal.radius > 520) goal.radius = 520;
+      if (goal.target.length() > 70) goal.target.setLength(70);
+    } else if (tier === 1) {
+      if (goal.radius > 2000) { goGalaxy(); return; }
+      if (goal.radius < 3) {
+        var s = nearestStar(goal.target, 2.5);
+        if (s && sysDef(s.key)) { goSystem(s); return; }
+        goal.radius = 3; status(s ? '// uncharted star // generate system first' : '// no star in focus // tap a star, then view');
+      }
+      if (goal.target.length() > 2300) goal.target.setLength(2300);
+    } else {
+      if (goal.radius > sysMax) { goLocal(focus, 3.3, sysCtx.star.p); return; }
+      if (goal.radius < 5) goal.radius = 5;
+      if (goal.target.length() > sysMax * 0.5) goal.target.setLength(sysMax * 0.5);
+    }
+  }
+  function zoomBy(f) { goal.radius *= f; clampGoal(); }
+  [['gc-bZin', 0.7], ['gc-bZout', 1 / 0.7]].forEach(function (z) {
+    var b = $(z[0]), t1 = null, t2 = null;
+    function stop() { clearTimeout(t1); clearInterval(t2); t1 = t2 = null; }
+    b.addEventListener('pointerdown', function () { stop(); zoomBy(z[1]); t1 = setTimeout(function () { t2 = setInterval(function () { zoomBy(Math.sqrt(z[1])); }, 110); }, 380); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (e) { b.addEventListener(e, stop); });
+    b.addEventListener('click', function (ev) { if (ev.detail === 0) zoomBy(z[1]); });
+  });
+  function flyPlace(pl) {
+    if (tier === 2 && sysCtx && sysCtx.key === 'p:' + pl.id) { goal.target.set(0, 0, 0); return; }
+    if (tier === 1 && LSmap['p:' + pl.id]) { goal.target.copy(LSmap['p:' + pl.id].p); goal.radius = Math.min(goal.radius, 80); return; }
+    if (tier !== 0) { goGalaxy(); cur.radius = goal.radius = 20; }
+    flyTo(pl.p, 20);
+  }
+  function flyShip() {
+    if (tier === 1 && shipItemL.on) { goal.target.copy(shipItemL.p); goal.radius = Math.min(goal.radius, 80); return; }
+    if (tier === 2 && shipItemS.on) { goal.target.copy(shipItemS.p); return; }
+    if (tier !== 0) { goGalaxy(); cur.radius = goal.radius = 20; }
+    flyTo(shipP, 20);
+  }
+
+  // ---- selection: stars and bodies ----
+  function setSelStar(s) {
+    selStar = s; if (!s) { selItem.on = false; return; }
+    var own = hasItem(s); selItem.on = !own;
+    if (!own) { selItem.p.copy(s.p); selItem.nm.textContent = starName(s); selItem.w = selItem.nm.offsetWidth || selItem.w; }
+    select(own ? 'star:' + s.key : 'selstar');
+  }
+  function selectStar(s) { if (s.place) { openPlace(s.place, false); return; } selBody = null; setSelStar(s); refreshTarget(); }
+  function pickStar(x, y) {
+    var best = null, bd = 18 * 18, i, d, dx, dy;
+    for (i = 0; i < LS.length; i++) {
+      tmp.copy(LS[i].p).project(camera); if (tmp.z >= 1 || tmp.z <= -1) continue;
+      dx = (tmp.x * 0.5 + 0.5) * W - x; dy = (-tmp.y * 0.5 + 0.5) * H - y; d = dx * dx + dy * dy;
+      if (d < bd) { bd = d; best = LS[i]; }
+    }
+    if (!best) return false;
+    selectStar(best); return true;
+  }
+  function selectBody(name) { selBody = name; select('body:' + name); refreshTarget(); }
+  function currentStar() {
+    if (selStar) return selStar;
+    var pl = selected ? byId[selected] : null;
+    if (tier === 2 && sysCtx && (selBody || !pl)) return sysCtx.star;
+    if (pl && SYS[pl.id]) return LSmap['p:' + pl.id] || { key: 'p:' + pl.id, place: pl.id, p: new THREE.Vector3() };
+    return null;
+  }
+  var armed = null, armT = null;
+  function confirmArm(id) {
+    if (armed === id) { armed = null; clearTimeout(armT); return true; }
+    armed = id; $(id).textContent = 'confirm?'; clearTimeout(armT);
+    armT = setTimeout(function () { armed = null; refreshTarget(); }, 3000); return false;
+  }
+  function sysControls(key) {
+    var row = $('gc-sysctl'); if (!key) { row.hidden = true; return; }
+    var isPlace = key.slice(0, 2) === 'p:', has = !!saved[key];
+    row.hidden = false;
+    $('gc-bGen').hidden = isPlace; if (armed !== 'gc-bGen') $('gc-bGen').textContent = has ? 'regenerate' : 'generate system';
+    $('gc-bCfg').textContent = (has || isPlace) ? 'edit record' : 'configure';
+    $('gc-bErase').hidden = !has; if (armed !== 'gc-bErase') $('gc-bErase').textContent = isPlace ? 'restore record' : 'erase record';
+  }
+  function fillTarget(title, sub, text, reg, w, shipTxt, hideMove, viewTxt) {
+    $('gc-dnone').hidden = true; $('gc-dbody').hidden = false;
+    $('gc-dtitle').textContent = '> target: ' + title; $('gc-dsub').textContent = '// ' + sub; $('gc-dtext').textContent = text;
+    $('gc-dreg').textContent = reg; $('gc-dsol').textContent = ly(w.distanceTo(SOL)); $('gc-dcore').textContent = ly(w.length());
+    $('gc-dship').textContent = shipTxt; $('gc-bMove').hidden = hideMove; $('gc-bFly').textContent = viewTxt;
+  }
+  function regionOf() { return focus && focus.place ? REG[focus.place.id] || focus.place.region : 'uncharted'; }
+  var REG = {};
+  function bodyTarget() {
+    if (tier !== 2 || !selBody || !sysCtx) return false;
+    var b = null; sysBodies.forEach(function (x) { if (!b && x.name === selBody) b = x; }); if (!b) return false;
+    var w = worldOf(sysCtx.star), here = shipInSys() && ship.body === b.name;
+    fillTarget(b.name, sysCtx.def.star + ' system // orbit ' + b.orbit + ' // ' + b.type, [b.note, b.moons.length ? 'in orbit: ' + b.moons.join(', ') : ''].filter(Boolean).join(' // '),
+      regionOf(), w, here ? 'ship in orbit' : (shipInSys() ? 'ship in system' : ly(w.distanceTo(shipP))), here, 'view');
+    sysControls(sysCtx.key); return true;
+  }
+  function starTarget() {
+    var pl = selected ? byId[selected] : null, s = selStar || (tier === 2 && sysCtx && !sysCtx.star.place && !pl ? sysCtx.star : null); if (!s) return false;
+    var def = sysDef(s.key), w = worldOf(s), on = ship.star === s.key;
+    fillTarget(starName(s), def ? 'surveyed // ' + def.cls : 'uncharted star // ' + genClass(hashStr(s.key)),
+      def ? (def.bodies.length + (def.bodies.length === 1 ? ' body' : ' bodies') + ' on record' + (def.note ? ' // ' + def.note : '')) : 'no survey on record.',
+      'local group: ' + focus.name, w, on ? (ship.body ? 'ship in system' : 'ship on station') : ly(w.distanceTo(shipP)), on && !ship.body, def && tier === 1 ? 'view system' : 'view');
+    sysControls(s.key); return true;
+  }
+  function viewTarget() {
+    if (tier === 2 && selBody) { sysBodies.forEach(function (x) { if (x.name === selBody) { goal.target.copy(x.p); goal.radius = Math.min(cur.radius, 14); } }); return; }
+    if (selStar) { goal.target.copy(selStar.p); if (!goSystem(selStar)) { goal.radius = Math.min(goal.radius, 40); status('// uncharted star // generate or configure a system'); } return; }
+    if (selected && byId[selected]) flyPlace(byId[selected]);
+  }
+  function moveShipToTarget() {
+    var s = selStar || (tier === 2 && sysCtx && (selBody || !sysCtx.star.place) ? sysCtx.star : null), w;
+    if (s) { w = worldOf(s); setShip(w.x, -w.z, w.y, s.place || null, false, tier === 2 ? selBody : null, s.place ? null : s.key); return; }
+    var mp = selected ? byId[selected] : null; if (mp) setShip(mp.p.x, -mp.p.z, mp.p.y, mp.id);
+  }
+
+  // ---- generate / configure / erase ----
+  function afterSystemChange(s) {
+    syncStarItems();
+    if (tier === 2 && sysCtx && s && sysCtx.key === s.key) {
+      var def = sysDef(s.key);
+      if (!def) { goLocal(focus, 40, sysCtx.star.p); sysCtx = null; return; }
+      sysCtx.def = def; selBody = null; if (selected && selected.indexOf('body:') === 0) select(null);
+      buildSystem(sysCtx); goal.target.set(0, 0, 0); cur.radius = goal.radius = sysMax * 0.6;
+    }
+    if (selStar) setSelStar(selStar);
+    refreshTierShip(); refreshTarget();
+  }
+  $('gc-bGen').addEventListener('click', function () {
+    var s = currentStar(); if (!s || s.place) return;
+    if (saved[s.key] && !confirmArm('gc-bGen')) return;
+    saved[s.key] = genSystem(starName(s), saved[s.key] ? saved[s.key].cls : genClass(hashStr(s.key)), (Math.random() * 4294967296) | 0);
+    saveSystems(); afterSystemChange(s); status('// survey logged // ' + saved[s.key].bodies.length + ' bodies');
+  });
+  $('gc-bErase').addEventListener('click', function () {
+    var s = currentStar(); if (!s || !saved[s.key]) return;
+    if (!confirmArm('gc-bErase')) return;
+    delete saved[s.key]; saveSystems(); afterSystemChange(s); status('// record struck');
+  });
+  var editStar = null;
+  function addRow(b) {
+    var rows = $('gc-erows'); if (rows.children.length >= 14) return;
+    var d = document.createElement('div'); d.className = 'gc-row';
+    function inp(ph, val, max, cls) { var x = document.createElement('input'); x.type = 'text'; x.placeholder = ph; x.maxLength = max; x.value = val || ''; x.setAttribute('autocomplete', 'off'); x.setAttribute('aria-label', ph); if (cls) x.className = cls; d.appendChild(x); return x; }
+    inp('name', b && b.name, 40);
+    var sel = document.createElement('select'); sel.setAttribute('aria-label', 'type');
+    var cur0 = (b && b.type) || 'rock world';
+    (TYPES.indexOf(cur0) < 0 ? [cur0].concat(TYPES) : TYPES).forEach(function (t) { var o = document.createElement('option'); o.value = t; o.textContent = t; if (t === cur0) o.selected = true; sel.appendChild(o); });
+    d.appendChild(sel);
+    inp('moons, comma separated', b && b.moons ? b.moons.join(', ') : '', 120, 'gc-wide');
+    inp('notes', b && b.note, 140, 'gc-wide');
+    var rm = document.createElement('button'); rm.type = 'button'; rm.className = 'gc-btn gc-add'; rm.textContent = 'remove body'; rm.addEventListener('click', function () { rows.removeChild(d); }); d.appendChild(rm);
+    rows.appendChild(d);
+  }
+  function fillEdit(def) { $('gc-estar').value = def.star; $('gc-ecls').value = def.cls || ''; $('gc-enote').value = def.note || ''; $('gc-erows').textContent = ''; def.bodies.forEach(addRow); }
+  function closeEdit() { editStar = null; $('gc-edit').hidden = true; }
+  $('gc-bCfg').addEventListener('click', function () {
+    var s = currentStar(); if (!s) return;
+    editStar = s; var def = sysDef(s.key) || { star: starName(s), cls: genClass(hashStr(s.key)), note: '', bodies: [] };
+    fillEdit(def); $('gc-etitle').textContent = '[ record: ' + def.star + ' ]'; $('gc-eRand').hidden = !!s.place; $('gc-edit').hidden = false;
+    if ($('gc-edit').scrollIntoView) $('gc-edit').scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'nearest' });
+  });
+  $('gc-eAdd').addEventListener('click', function () { addRow(null); });
+  $('gc-eRand').addEventListener('click', function () { fillEdit(genSystem(str($('gc-estar').value, 40) || 'unnamed', str($('gc-ecls').value, 60) || genClass((Math.random() * 1e9) | 0), (Math.random() * 4294967296) | 0)); });
+  $('gc-eCancel').addEventListener('click', closeEdit);
+  $('gc-eSave').addEventListener('click', function () {
+    if (!editStar) return;
+    var bodies = [].map.call($('gc-erows').children, function (d) { var f = d.querySelectorAll('input'); return { name: f[0].value, type: d.querySelector('select').value, moons: f[1].value.split(','), note: f[2].value }; });
+    var def = cleanDef({ star: $('gc-estar').value, cls: $('gc-ecls').value, note: $('gc-enote').value, bodies: bodies });
+    if (!def) { status('// star needs a designation'); return; }
+    var s = editStar; saved[s.key] = def; closeEdit(); saveSystems(); afterSystemChange(s); status('// record saved');
+  });
+  function gotoStar(key) {
+    var f = focusFromKey(key.slice(0, 2) === 'n:' ? 'sol' : key.split('#')[0]); if (!f) return;
+    goLocal(f, 120); var s = starByKey(key); if (!s) return;
+    selectStar(s); goal.target.copy(s.p); cur.target.copy(s.p);
+    if (chart.scrollIntoView) chart.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+  }
+  function refreshSavedList() {
+    var ul = $('gc-listC'), keys = Object.keys(saved).filter(function (k) { return k.slice(0, 2) !== 'p:'; });
+    ul.textContent = ''; $('gc-savedwrap').hidden = !keys.length;
+    keys.sort(function (a, b) { return saved[a].star < saved[b].star ? -1 : 1; }).forEach(function (k) {
+      var li = document.createElement('li'), b = document.createElement('button'), s1 = document.createElement('span'), s2 = document.createElement('span'), f = focusFromKey(k.slice(0, 2) === 'n:' ? 'sol' : k.split('#')[0]);
+      b.type = 'button'; b.className = 'gc-btn'; s1.textContent = saved[k].star; s2.textContent = (f ? f.name + ' // ' : '') + saved[k].bodies.length + ' bodies';
+      b.appendChild(s1); b.appendChild(s2); li.appendChild(b); b.addEventListener('click', function () { gotoStar(k); }); ul.appendChild(li);
+    });
+  }
+  refreshSavedList();
+
+  function footer() {
+    var t;
+    if (tier === 0) t = 'gc-31 // galaxy // range ' + ly(cur.radius);
+    else if (tier === 1) t = 'gc-31 // local: ' + focus.name + ' // range ' + (cur.radius < 20 ? cur.radius.toFixed(1) : Math.round(cur.radius).toLocaleString('en-US')) + ' ly';
+    else t = 'gc-31 // system: ' + sysCtx.def.star + ' // schematic';
+    if (t !== lastFoot) { $('gc-foot').textContent = t; lastFoot = t; }
+  }
+  function tierTarget() { if (tier > 0 && focus) return focus; var sel = selected ? byId[selected] : null; return sel ? placeFocus(sel) : shipFocus(); }
+  $('gc-bT0').addEventListener('click', function () { goGalaxy(); });
+  $('gc-bT1').addEventListener('click', function () { if (tier === 2) goLocal(focus, 60, sysCtx.star.p); else if (tier === 0) goLocal(tierTarget()); });
+  $('gc-bT2').addEventListener('click', function () {
+    if (tier === 2) return;
+    var pl = selected ? byId[selected] : null, s = null;
+    if (tier === 0) { goLocal(tierTarget()); s = pl ? LSmap['p:' + pl.id] : (ship.at ? LSmap['p:' + ship.at] : (ship.star ? starByKey(ship.star) : null)); }
+    else s = selStar || (pl ? LSmap['p:' + pl.id] : null) || nearestStar(goal.target, 2.5);
+    if (!s && focus) s = LSmap['p:' + focus.id];
+    if (s) goal.target.copy(s.p);
+    goSystem(s || null);
+  });
+
+  // ---------------- run ----------------
+  setShip(ship.e, ship.n, ship.u, ship.at, true, ship.body, ship.star);
+  measure();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { measure(); });
+  var last = performance.now();
+  // draw only while the chart is on screen: it sits inside a hidden app until sign-in, and below the fold on a phone
+  var onScreen = true;
+  if (window.IntersectionObserver) new IntersectionObserver(function (es) { onScreen = es[es.length - 1].isIntersecting; }).observe(chart);
+  function frame(now) {
+    if (!onScreen) { last = now; requestAnimationFrame(frame); return; }
+    var dt = Math.min(0.05, (now - last) / 1000); last = now;
+    var k = 1 - Math.exp(-dt * (calm ? 60 : 7));
+    cur.theta += (goal.theta - cur.theta) * k; cur.phi += (goal.phi - cur.phi) * k; cur.radius += (goal.radius - cur.radius) * k; cur.target.lerp(goal.target, k);
+    if (!calm) { ringSpin.rotation.y += dt * 0.012; if (spinL) spinL.rotation.y += dt * 0.012; if (spinS) spinS.rotation.y += dt * 0.02; }
+    var sp = Math.sin(cur.phi);
+    camera.position.set(cur.target.x + cur.radius * sp * Math.sin(cur.theta), cur.target.y + cur.radius * Math.cos(cur.phi), cur.target.z + cur.radius * sp * Math.cos(cur.theta));
+    camera.lookAt(cur.target);
+    renderer.render(tier === 0 ? scene : (tier === 1 ? sceneL : sceneS), camera);
+    footer();
+    layout(now);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // public hooks for the host page (firebase sync)
+  api.getShip = function () { return { name: ship.name, at: ship.at, body: ship.body, star: ship.star, e: ship.e, n: ship.n, u: ship.u }; };
+  api.setShip = function (o) {
+    if (!o) return;
+    if (typeof o.name === 'string' && o.name.trim()) ship.name = o.name.slice(0, 40);
+    setShip(typeof o.e === 'number' ? o.e : ship.e, typeof o.n === 'number' ? o.n : ship.n, typeof o.u === 'number' ? o.u : ship.u, (o.at && byId[o.at]) ? o.at : null, true, typeof o.body === 'string' ? o.body : null, typeof o.star === 'string' ? o.star.slice(0, 80) : null);
+  };
+  // where the ship is, in the words of the tracker's Position panel: system + planet (planet is blank when there isn't one)
+  api.getPosition = function () {
+    var sys, pl = '';
+    if (ship.at && byId[ship.at]) {
+      var P = byId[ship.at];
+      if (SYS[ship.at]) { sys = placeStar(ship.at); pl = ship.body || (P.name !== sys ? P.name : ''); }
+      else { sys = P.name; pl = ship.body || ''; }
+    } else if (ship.star) { sys = starLabel(ship.star); pl = ship.body || ''; }
+    else sys = 'in transit';
+    return { system: sys, planet: pl };
+  };
+  api.flyTo = function (id) { if (byId[id]) openPlace(id, true); };
+  api.getSystems = function () { return JSON.parse(JSON.stringify(saved)); };
+  api.setSystems = function (o) { saved = loadSystems(o); saveSystems(true); afterSystemChange(sysCtx ? sysCtx.star : null); };
+  window.GalChart = api;
+})();
+</script>
+
+<script>
+/* NAVIGATION SYNC // starmap <-> firebase
+   chart/ship               the voidship: {name, at, body, star, e, n, u}
+   chart/systems/<key>      surveyed systems, one child per system (keys escaped: firebase bans . # $ / [ ] in keys)
+   started from boot() once the crew is signed in, same as the tracker's own listeners. */
+(function () {
+  'use strict';
+  var started = false;
+
+  function enc(k) { return k.replace(/[.#$\/\[\]%]/g, function (c) { return '%' + ('0' + c.charCodeAt(0).toString(16).toUpperCase()).slice(-2); }); }
+  function dec(k) { try { return decodeURIComponent(k); } catch (e) { return k; } }
+
+  // firebase drops empty arrays and null, so compare everything in one normal form
+  function normDef(d) {
+    return { star: d.star || '', cls: d.cls || '', note: d.note || '', bodies: (d.bodies || []).map(function (b) {
+      b = b || {};
+      return { name: b.name || '', type: b.type || '', moons: b.moons || [], note: b.note || '' };
+    }) };
+  }
+  function normSet(o) {
+    var out = {};
+    Object.keys(o || {}).sort().forEach(function (k) { if (o[k]) out[k] = normDef(o[k]); });
+    return JSON.stringify(out);
+  }
+  function shipOut(s) {
+    return { name: s.name || 'our ship', at: s.at || null, body: s.body || null, star: s.star || null, e: s.e, n: s.n, u: s.u };
+  }
+  function sameShip(a, b) {
+    return (a.name || '') === (b.name || '') && (a.at || null) === (b.at || null) && (a.body || null) === (b.body || null) &&
+      (a.star || null) === (b.star || null) && a.e === b.e && a.n === b.n && a.u === b.u;
+  }
+  function warn(err) { if (window.console) console.warn('navigation sync:', err && err.message ? err.message : err); }
+
+  window.startChartSync = function () {
+    if (started || !window.GalChart || typeof db === 'undefined') return;
+    started = true;
+    var G = window.GalChart;
+    var shipRef = db.ref('chart/ship'), sysRef = db.ref('chart/systems');
+
+    // ---- ship ----
+    var shipTimer = null, shipSeen = false;
+    // The Position panel's system and planet always mirror the ship (those two fields are read-only). Any signed-in
+    // browser that sees them disagree writes the fix, which is harmless because they all compute the same answer.
+    var loc = null;   // location as held in firebase
+    function ensureLoc() {
+      if (!loc || !shipSeen || shipTimer) return;   // wait until the ship itself has loaded, and until a local move is sent
+      var p = G.getPosition();
+      if ((loc.name || '') !== p.system || (loc.coords || '') !== p.planet) db.ref('location').update({ name: p.system, coords: p.planet }).catch(warn);
+    }
+    db.ref('location').on('value', function (s) { loc = s.val() || {}; ensureLoc(); }, warn);
+
+    G.onShipChange = function () {
+      clearTimeout(shipTimer);   // the plane-offset slider fires constantly: send the last value only
+      shipTimer = setTimeout(function () {
+        shipTimer = null;
+        shipRef.set(shipOut(G.getShip())).catch(warn);
+        ensureLoc();
+      }, 350);
+    };
+    shipRef.on('value', function (snap) {
+      var v = snap.val();
+      if (!v) {
+        if (!shipSeen) { shipSeen = true; shipRef.set(shipOut(G.getShip())).catch(warn); ensureLoc(); }   // first run: publish this browser's ship
+        return;
+      }
+      shipSeen = true;
+      if (shipTimer) return;   // a local change is waiting to be sent, it wins
+      if (typeof v.e === 'number' && typeof v.n === 'number' && typeof v.u === 'number' && !sameShip(G.getShip(), shipOut(v))) G.setShip(v);
+      ensureLoc();
+    }, warn);
+
+    // ---- surveyed systems ----
+    var known = {}, sysSeen = false, pending = null, retry = null;   // known: raw key -> normalised json, as held in firebase
+    function indexKnown(set) {
+      known = {};
+      Object.keys(set).forEach(function (k) { if (set[k]) known[k] = JSON.stringify(normDef(set[k])); });
+    }
+    function pushDiff(set) {
+      var upd = {}, any = false;
+      Object.keys(set).forEach(function (k) {
+        var j = JSON.stringify(normDef(set[k]));
+        if (known[k] !== j) { upd[enc(k)] = set[k]; any = true; }
+      });
+      Object.keys(known).forEach(function (k) { if (!Object.prototype.hasOwnProperty.call(set, k)) { upd[enc(k)] = null; any = true; } });
+      indexKnown(set);
+      if (any) sysRef.update(upd).catch(warn);
+    }
+    G.onSystemsChange = pushDiff;
+
+    function editing() { var e = document.getElementById('gc-edit'); return !!(e && !e.hidden); }
+    function applyRemote(remote) {
+      if (normSet(remote) === normSet(G.getSystems())) { indexKnown(remote); return; }
+      if (editing()) {   // never pull the form out from under someone typing: try again shortly
+        pending = remote;
+        if (!retry) retry = setInterval(function () {
+          if (editing()) return;
+          clearInterval(retry); retry = null;
+          var p = pending; pending = null;
+          if (p) { G.setSystems(p); indexKnown(p); }
+        }, 1500);
+        return;
+      }
+      pending = null;
+      G.setSystems(remote);
+      indexKnown(remote);
+    }
+    sysRef.on('value', function (snap) {
+      var v = snap.val(), remote = {};
+      if (v) Object.keys(v).forEach(function (k) { remote[dec(k)] = v[k]; });
+      if (!v && !sysSeen) {   // first run: publish whatever this browser has already surveyed
+        sysSeen = true;
+        var local = G.getSystems();
+        if (Object.keys(local).length) pushDiff(local);
+        return;
+      }
+      sysSeen = true;
+      applyRemote(remote);
+    }, warn);
+  };
+
+  if (window.__astroReady) window.startChartSync();   // signed in before this script loaded
+})();
+</script>
+
+<script>
+/* collapsible sections: every group heading folds its group; the choice is remembered on this device */
+(function () {
+  'use strict';
+  var KEY = 'vt_collapsed', st = {};
+  try { st = JSON.parse(window.localStorage.getItem(KEY) || '{}') || {}; } catch (e) { st = {}; }
+  document.querySelectorAll('.group').forEach(function (g) {
+    var h = g.querySelector('.group-title');
+    if (!h) return;
+    var id = h.textContent.trim().toLowerCase();
+    h.setAttribute('role', 'button'); h.tabIndex = 0;
+    function set(c) { g.classList.toggle('collapsed', c); h.setAttribute('aria-expanded', String(!c)); }
+    function flip() {
+      var c = !g.classList.contains('collapsed'); set(c); st[id] = c;
+      try { window.localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { /* ignore */ }
+    }
+    set(!!st[id]);
+    h.addEventListener('click', flip);
+    h.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); flip(); } });
+  });
+})();
 </script>
 </body>
 </html>
