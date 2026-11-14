@@ -1667,6 +1667,14 @@ el.appendChild(d);
     ['isstvan', 'isstvan', 'eight worlds', 'ultima // obscurus border', 5, 30, 0.15, 'r', 'system with two habitable worlds, isstvan iii and isstvan v, on the segmentum obscurus side of the galaxy. horus staged the first betrayals of the heresy here.', 'a'],
     ['ullanor', 'ullanor', 'site of the triumph', 'segmentum solar', -13, 8, -0.05, 'r', 'system of the ork world ullanor, centre of the empire broken in the ullanor crusade. site of the triumph of ullanor, where horus was named warmaster.', 'o'],
     ['nikaea', 'nikaea', 'site of the council', 'segmentum tempestus', -30, -24, 0.2, 'r', 'system of the volcanic world nikaea, where the council of nikaea was held.', 'o'],
+    // other locations added later. positions are estimates (lore gives a segmentum at most); 'position unrecorded' = lore gives no region at all
+    ['davin', 'davin', 'the serpent lodge', 'ultima', 17, 21, 0.05, 'l', 'system of the feral world davin. horus was struck down on its moon and given to the serpent lodge.', 'o'],
+    ['laeran', 'laeran', 'cleansing of laeran', 'position unrecorded', 26, 35, 0.1, 'r', 'system of the xenos laer, exterminated by the emperor\'s children in a single month.', 'o'],
+    ['murder', 'murder', 'urisarach // 140-20', 'position unrecorded', 37, 11, -0.05, 'r', 'system of the death world murder, twentieth world found by the 140th expedition. home of the megarachnid.', 'o'],
+    ['sn6319', 'sixty-three nineteen', 'the false emperor', 'position unrecorded', 31, 24, 0.1, 'r', 'nineteenth world brought to compliance by the 63rd expedition, under horus. its ruler called himself emperor of mankind.', 'o'],
+    ['betagarmon', 'beta-garmon', 'the titandeath', 'segmentum solar', -20, -3, 0.05, 'b', 'star cluster in segmentum solar on the road to terra. the war for it broke whole titan legions.', 'o'],
+    ['phall', 'phall', 'battle of phall', 'ultima', 3, 15, -0.05, 'r', 'system of two agri worlds. the imperial fists retribution fleet was caught here by perturabo\'s iron warriors.', 'o'],
+    ['sotha', 'sotha', 'the pharos', 'ultramar // ultima', 43, -18, -0.1, 'r', 'system of the world sotha, on the eastern fringe of ultramar. mount pharos holds the pharos beacon.', 'o'],
     ['caliban', 'caliban', 'legio i // dark angels', 'segmentum obscurus', -20, 26, 0.1, 'r', 'system of the world caliban, homeworld of the dark angels.', 'hw'],
     ['chemos', 'chemos', 'legio iii // emperor\'s children', 'ultima', 16, 26, -0.1, 'r', 'system of the world chemos, homeworld of the emperor\'s children.', 'hw'],
     ['olympia', 'olympia', 'legio iv // iron warriors', 'ultima', 10, 17, 0.1, 'r', 'system of the world olympia, homeworld of the iron warriors.', 'hw'],
@@ -2250,12 +2258,35 @@ el.appendChild(d);
     cthonia: ['malaeyx', ['malaeyx i', 'cthonia', 'asteroid belt|b', 'ostrava|g']],
     colchis: ['aurex', ['colchis', 'aurex ii', 'yukon|g']],
     nocturne: ['thraxun', ['nocturne|r|prometheus', 'thraxun ii|g', 'asteroid belt|b']],
-    deliverance: ['corvane', ['corvane i', 'kiavahr|r|deliverance', 'vesk|g']]
+    deliverance: ['corvane', ['corvane i', 'kiavahr|r|deliverance', 'vesk|g']],
+    // other locations: only worlds named in lore are listed; GEN adds seeded filler bodies round them. lore names none of these stars: each takes its system's name or expedition number
+    davin: ['davin', ['davin|r|davin\'s moon']],
+    laeran: ['laeran', ['laeran']],
+    murder: ['140-20', ['murder']],
+    sn6319: ['63-19', ['sixty-three nineteen']],
+    betagarmon: ['beta-garmon', ['beta-garmon ii', 'beta-garmon iii']],
+    phall: ['phall', ['phall i', 'phall ii']],
+    sotha: ['sotha', ['sotha']]
   };
+  // generated bodies to add [inside, outside] the charted ones. seeded from the place id, so every device sees the same ones. their notes start 'generated //'
+  var GEN = { davin: [0, 2], laeran: [1, 2], murder: [1, 1], sn6319: [2, 6], betagarmon: [1, 2], phall: [0, 2], sotha: [1, 2] };
+  function fillDef(id, def) {
+    var g = GEN[id], used = {}, pool = [], h, k;
+    if (!g) return def;
+    def.bodies.forEach(function (b) { used[b.name] = 1; });
+    for (h = hashStr('gen:' + id), k = 0; k < 80; k++) {
+      pool = genSystem(def.star, def.cls, h + k).bodies.filter(function (b) { return !used[b.name] && b.name.indexOf(def.star) < 0; });
+      if (pool.length >= g[0] + g[1]) break;
+    }
+    pool.forEach(function (b) { b.note = 'generated // ' + b.note; });
+    def.bodies = pool.slice(0, g[0]).concat(def.bodies, g[1] ? pool.slice(-g[1]) : []);
+    return def;
+  }
   var HOME = { terra: 'throneworld', mars: 'forge world', venus: 'dead world', pluto: 'ice world', uranus: 'ice giant', neptune: 'ice giant', calth: 'civilised world', mycifur: 'mining world', 'isstvan iii': 'civilised world', 'isstvan v': 'dead world', 'isstvan extremis': 'ice world',
     'ullanor prime': 'war world', nikaea: 'lava world', caliban: 'death world', chemos: 'mining world', olympia: 'civilised world', chogoris: 'feral world', fenris: 'death world', midgardia: 'death world', frostheim: 'ice world', svellgard: 'ocean world',
     inwit: 'death world', nostramo: 'debris field', tenebor: 'dead world', baal: 'desert world', medusa: 'death world', nuceria: 'civilised world', macragge: 'civilised world', ardium: 'hive world', barbarus: 'death world', prospero: 'civilised world', cthonia: 'mining world',
-    colchis: 'feudal world', nocturne: 'death world', kiavahr: 'forge world' };
+    colchis: 'feudal world', nocturne: 'death world', kiavahr: 'forge world',
+    davin: 'feral world', laeran: 'ocean world', murder: 'death world', 'sixty-three nineteen': 'civilised world', 'beta-garmon ii': 'fortress world', 'beta-garmon iii': 'hive world', 'phall i': 'agri-world', 'phall ii': 'agri-world', sotha: 'agri-world' };
   // basic canon details for planets, paraphrased, keyed by body name; shown when the planet is selected in its system
   var NOTE = {
     terra: "throneworld of the imperium and seat of the emperor. the imperial palace sprawls across the himalazian mountains, the largest and best-defended fortress in the galaxy.",
@@ -2282,9 +2313,18 @@ el.appendChild(d);
     cthonia: "mining world near sol, known for vicious gangs and slums. many early legion recruits came from its gangs, and horus was found here by the gang overlord khageddon.",
     colchis: "huge world three times the size of terra, devoted to old gods. lorgar, called the urizen, was found here by the emperor and magnus. original homeworld of the word bearers.",
     nocturne: "volcanic death world stalked by giant salamander lizards. the moon prometheus has an erratic orbit that brings seasons of tectonic upheaval and fire from the sky.",
-    kiavahr: "forge and hive world, the armoury of the raven guard. four moons: only deliverance is inhabited; psophis, mellori and nyctimus are dead worlds."
+    kiavahr: "forge and hive world, the armoury of the raven guard. four moons: only deliverance is inhabited; psophis, mellori and nyctimus are dead worlds.",
+    davin: "feral world brought to compliance by the luna wolves some sixty years before the heresy. horus, wounded on davin's moon, was carried to the temple of the serpent lodge here.",
+    laeran: "ocean world of the xenos laer, who lived on its atolls. the emperor's children exterminated them in a month. fulgrim took a silver blade from their last temple.",
+    murder: "death world of the xenos megarachnid, named from the last vox of blood angels captain khitas frome. the interex called it urisarach, a prison world for the megarachnid.",
+    'sixty-three nineteen': "third of nine worlds round a yellow sun. its ruler called himself emperor of mankind and his world terra. the luna wolves broke him; the last holdouts fell in the whisperhead mountains.",
+    'beta-garmon ii': "capital world of the beta-garmon cluster. nyrcon city stands here. the war for the cluster, the titandeath, opened the road to terra.",
+    'beta-garmon iii': "hive world of the beta-garmon cluster.",
+    'phall i': "lightly populated agri world. the imperial fists retribution fleet, held here by warp storms, was attacked by perturabo's iron warriors.",
+    'phall ii': "lightly populated agri world.",
+    sotha: "world on the eastern fringe of ultramar. mount pharos holds the pharos, a xenos beacon of blackstone found by warsmith barabas dantioch. guilliman lit it to guide loyalists through the ruinstorm to macragge. night lords under krukesh the pale came to seize it; dantioch overloaded it and died, crippling their fleet. later lore: necron work, one node of eight, driven by a shard of the c'tan zarhulash."
   };
-  var CLS = { sol: 'yellow dwarf', calth: 'blue star', baal: 'red star', nostramo: 'dying star', inwit: 'dying star', medusa: 'red giant' };
+  var CLS = { sn6319: 'yellow star', sol: 'yellow dwarf', calth: 'blue star', baal: 'red star', nostramo: 'dying star', inwit: 'dying star', medusa: 'red giant' };
   // real neighbours of sol: name, galactic longitude, latitude, distance in ly
   var NEAR = [['alpha centauri', 315.7, -0.7, 4.4], ['barnard\'s star', 31.0, 14.1, 6.0], ['sirius', 227.2, -8.9, 8.6], ['procyon', 213.7, 13.0, 11.5], ['vega', 67.4, 19.2, 25], ['arcturus', 15.1, 69.1, 37],
     ['capella', 162.6, 4.6, 43], ['aldebaran', 181.0, -20.2, 65], ['canopus', 261.2, -25.3, 310], ['polaris', 123.3, 26.5, 430], ['pleiades', 166.6, -23.5, 440], ['betelgeuse', 199.8, -9.0, 550], ['antares', 351.9, 15.1, 550], ['rigel', 209.2, -25.2, 860]];
@@ -2422,7 +2462,7 @@ el.appendChild(d);
     if (saved[key]) return saved[key];
     if (key.slice(0, 2) !== 'p:') return null;
     var id = key.slice(2), d = SYS[id]; if (!d) return null;
-    return canon[id] || (canon[id] = { star: d[0] || genStarName(hashStr(key)), cls: CLS[id] || genClass(hashStr(key)), note: '', bodies: d[1].map(parseBody) });
+    return canon[id] || (canon[id] = fillDef(id, { star: d[0] || genStarName(hashStr(key)), cls: CLS[id] || genClass(hashStr(key)), note: '', bodies: d[1].map(parseBody) }));
   }
   function starName(s) { if (s.place) return SYS[s.place] ? placeStar(s.place) : byId[s.place].name; return saved[s.key] ? saved[s.key].star : (s.name || genStarName(hashStr(s.key))); }
   function starLabel(key) { return saved[key] ? saved[key].star : (key.slice(0, 2) === 'n:' ? key.slice(2) : genStarName(hashStr(key))); }
@@ -2891,7 +2931,8 @@ el.appendChild(d);
   var VFEAT = { terra: ['imperial palace', 'fort', 28], mars: ['olympus mons', 'volcano', 18], jupiter: ['great red spot', 'storm', -22], prospero: ['tizca', 'city', 20], fenris: ['the fang', 'spire', 35], baal: ['arx angelicum', 'fort', 10, 'i'],
     macragge: ['fortress of hera', 'fort', 40], caliban: ['aldurukh', 'fort', 30], nikaea: ['council volcano', 'volcano', -10], 'isstvan iii': ['choral city', 'ruin', 15], 'isstvan v': ['urgall depression', 'basin', 25], olympia: ['lochos', 'city', 35],
     chemos: ['callax', 'city', 5], nuceria: ['desh\'ea', 'city', -15], medusa: ['karaashi ice pinnacle', 'spire', 60], colchis: ['vharadesh', 'city', 20], nocturne: ['mount deathfire', 'volcano', 5],
-    calth: ['numinus city', 'city', 30], 'ullanor prime': ['triumph ground', 'basin', 10], mercury: null, venus: null, saturn: null, uranus: null, neptune: null, pluto: null };
+    calth: ['numinus city', 'city', 30], davin: ['serpent lodge', 'dome', 15], laeran: ['temple of the laer', 'spire', -10], 'sixty-three nineteen': ['whisperhead mountains', 'mount', 40], 'beta-garmon ii': ['nyrcon city', 'hive', 20],
+    sotha: ['the pharos', 'mount', 25], murder: null, 'beta-garmon iii': null, 'phall i': null, 'phall ii': null, 'ullanor prime': ['triumph ground', 'basin', 10], mercury: null, venus: null, saturn: null, uranus: null, neptune: null, pluto: null };
   // generated features by world type: 'name:kind'. rolled for about 1 body in 7.
   var VGEN = { giant: ['great storm:storm'], rock: ['old night ruin:ruin', 'impact basin:basin', 'heresy scar:scar'],
     'hive world': ['hive spire:hive'], 'forge world': ['forge-fane:forge'], 'fortress world': ['void shield dome:dome'], 'shrine world': ['pilgrim spire:spire'], 'civilised world': ['hive spire:hive', 'void shield dome:dome'],
