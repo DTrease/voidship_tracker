@@ -382,7 +382,10 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 #gc-root{margin-bottom:14px}
 .gc-ovl{align-items:center;margin-top:.8rem;padding-top:.7rem;border-top:1px dashed var(--border)}
 
-#gc-root #locDate{text-transform:none}   /* the imperial date keeps its capital M */
+#gc-root #locDate{text-transform:none;max-width:12rem}
+.gc-sec span::before{content:'[ '}
+.gc-sec span::after{content:' ]'}
+#gc-index{margin-top:.8rem;padding-top:.7rem;border-top:1px dashed var(--border)}   /* the imperial date keeps its capital M */
 .gc-keybox{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1rem;margin-top:.7rem}
 .gc-keybox .gc-key{gap:.3rem 1rem}
 #gc-index>summary{cursor:pointer;list-style:none;user-select:none;-webkit-user-select:none}
@@ -454,12 +457,11 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 <section class="group" id="gc-root">
 <h2 class="group-title"><span>Navigation</span></h2>
   <div class="gc-panel">
-    <h2 class="gc-ptitle">&gt; date</h2>
-    <input id="locDate" aria-label="imperial date" placeholder="6.122.008.M31" onchange="saveLocation(this)">
-  </div>
-
-  <div class="gc-panel">
     <h2 class="gc-ptitle">&gt; starmap</h2>
+    <div class="gc-ctl gc-lab">
+      <span class="gc-dim gc-sm">date //</span>
+      <input id="locDate" aria-label="imperial date" placeholder="6.122.008.M31" onchange="saveLocation(this)">
+    </div>
     <div id="gc-chart">
       <canvas id="gc-sky" tabindex="0" aria-label="starmap. drag to turn, pinch or scroll to zoom."></canvas>
       <canvas id="gc-ink"></canvas>
@@ -509,10 +511,26 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
       </ul>
     </div>
     <p id="gc-status">// drag: turn // pinch: zoom // 2 fingers: slide</p>
+
+    <details id="gc-index">
+    <summary class="gc-ptitle">&gt; index</summary>
+    <h3 class="gc-gtitle">[ campaign ]</h3>
+    <ul class="gc-list" id="gc-listA"></ul>
+    <h3 class="gc-gtitle">[ other locations ]</h3>
+    <ul class="gc-list" id="gc-listD"></ul>
+    <h3 class="gc-gtitle">[ legiones astartes ]</h3>
+    <ul class="gc-list" id="gc-listB"></ul>
+    <div id="gc-savedwrap" hidden>
+      <h3 class="gc-gtitle">[ surveyed systems ]</h3>
+      <ul class="gc-list" id="gc-listC"></ul>
+    </div>
+    </details>
   </div>
 
-  <div class="gc-panel gc-blur" aria-live="polite">
-    <h2 class="gc-ptitle" id="gc-dtitle">&gt; selected system</h2>
+  <div class="gc-panel">
+    <h2 class="gc-ptitle">&gt; navigation data</h2>
+    <div aria-live="polite">
+    <h3 class="gc-gtitle gc-sec"><span id="gc-dtitle">selected system</span></h3>
     <div id="gc-dnone" class="gc-dim">// nothing selected</div>
     <div id="gc-dbody" hidden>
       <div class="gc-dim" id="gc-dsub"></div>
@@ -550,10 +568,10 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
         <button class="gc-btn" id="gc-eCancel" type="button">cancel</button>
       </div>
     </div>
-  </div>
+    </div>
 
-  <div class="gc-panel gc-blur" id="gc-opanel" aria-live="polite" hidden>
-    <h2 class="gc-ptitle" id="gc-otitle">&gt; selected object</h2>
+    <div id="gc-opanel" aria-live="polite" hidden>
+    <h3 class="gc-gtitle gc-sec"><span id="gc-otitle">selected object</span></h3>
     <div id="gc-onone" class="gc-dim">// nothing selected</div>
     <div id="gc-obody" hidden>
       <div class="gc-dim" id="gc-osub"></div>
@@ -570,10 +588,10 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
         <button class="gc-btn gc-add" id="gc-bOMove" type="button">move ship here</button>
       </div>
     </div>
-  </div>
+    </div>
 
-  <div class="gc-panel gc-blur">
-    <h2 class="gc-ptitle">&gt; voidship position</h2>
+    <div>
+    <h3 class="gc-gtitle gc-sec"><span>voidship</span></h3>
     <div id="gc-sstat"></div>
     <dl class="gc-kv">
       <dt>plane offset</dt><dd id="gc-soff"></dd>
@@ -586,21 +604,8 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
       <button class="gc-btn gc-add" id="gc-bPlace" type="button" aria-pressed="false">set position on chart</button>
       <button class="gc-btn" id="gc-bShipFly" type="button">view ship</button>
     </div>
-  </div>
-
-  <details class="gc-panel" id="gc-index">
-    <summary class="gc-ptitle">&gt; index</summary>
-    <h3 class="gc-gtitle">[ campaign ]</h3>
-    <ul class="gc-list" id="gc-listA"></ul>
-    <h3 class="gc-gtitle">[ other locations ]</h3>
-    <ul class="gc-list" id="gc-listD"></ul>
-    <h3 class="gc-gtitle">[ legiones astartes ]</h3>
-    <ul class="gc-list" id="gc-listB"></ul>
-    <div id="gc-savedwrap" hidden>
-      <h3 class="gc-gtitle">[ surveyed systems ]</h3>
-      <ul class="gc-list" id="gc-listC"></ul>
     </div>
-  </details>
+  </div>
 </section>
 
 <section class="group">
@@ -2009,7 +2014,7 @@ el.appendChild(d);
     var s = sysPanelStar(), pl = s ? null : sysPanelPlace();
     $('gc-dnone').hidden = !!(s || pl); $('gc-dbody').hidden = !(s || pl);
     if (s) { starTarget(s); return; }
-    $('gc-dtitle').textContent = pl ? (SYS[pl.id] ? '> selected system: ' : '> selected location: ') + pl.name : '> selected system';
+    $('gc-dtitle').textContent = pl ? (SYS[pl.id] ? 'selected system: ' : 'selected location: ') + pl.name : 'selected system';
     if (!pl) return;
     $('gc-dsub').textContent = '// ' + pl.sub;
     $('gc-dtext').textContent = pl.text + (SYS[pl.id] ? ' star: ' + placeStar(pl.id) + '.' : '');
@@ -2025,18 +2030,18 @@ el.appendChild(d);
     var b = null; if (selBody) sysBodies.forEach(function (x) { if (!b && x.name === selBody) b = x; });
     var st = !b && selSysStar;
     $('gc-onone').hidden = !!(b || st); $('gc-obody').hidden = !(b || st);
-    if (!b && !st) { $('gc-otitle').textContent = '> selected object'; if (viz) viz.show(null); return; }
+    if (!b && !st) { $('gc-otitle').textContent = 'selected object'; if (viz) viz.show(null); return; }
     if (viz) viz.show(b ? { sys: sysCtx.key, name: b.name, type: b.type || '', moons: b.moons || [] } : { sys: sysCtx.key, name: sysCtx.def.star, type: 'star', cls: sysCtx.def.cls || '', star: true, moons: [] });
     var w = worldOf(sysCtx.star), here = shipInSys() && (b ? ship.body === b.name : !ship.body);
     if (b) {
-      $('gc-otitle').textContent = '> selected object: ' + b.name;
+      $('gc-otitle').textContent = 'selected object: ' + b.name;
       $('gc-osub').textContent = '// orbit ' + b.orbit + ' // ' + b.type;
       $('gc-otext').textContent = [b.note, b.moons.length ? 'in orbit: ' + b.moons.join(', ') : ''].filter(Boolean).join(' // ');
       $('gc-oship').textContent = here ? 'ship in orbit' : (shipInSys() ? 'ship in system' : ly(w.distanceTo(shipP)));
       $('gc-bOMove').hidden = here;
     } else {
       var n = sysCtx.def.bodies.length;
-      $('gc-otitle').textContent = '> selected object: ' + sysCtx.def.star;
+      $('gc-otitle').textContent = 'selected object: ' + sysCtx.def.star;
       $('gc-osub').textContent = '// central star // ' + (sysCtx.def.cls || 'star');
       $('gc-otext').textContent = 'star of the ' + sysCtx.def.star + ' system, with ' + n + (n === 1 ? ' body' : ' bodies') + ' in orbit.';
       $('gc-oship').textContent = shipInSys() ? 'ship in system' : ly(w.distanceTo(shipP));
@@ -2792,7 +2797,7 @@ el.appendChild(d);
     $('gc-bErase').hidden = !has; if (armed !== 'gc-bErase') $('gc-bErase').textContent = isPlace ? 'restore record' : 'erase record';
   }
   function fillTarget(title, sub, text, reg, shipTxt, hideMove, viewTxt) {
-    $('gc-dtitle').textContent = '> selected system: ' + title; $('gc-dsub').textContent = '// ' + sub; $('gc-dtext').textContent = text;
+    $('gc-dtitle').textContent = 'selected system: ' + title; $('gc-dsub').textContent = '// ' + sub; $('gc-dtext').textContent = text;
     $('gc-dreg').textContent = reg; $('gc-dship').textContent = shipTxt; $('gc-bMove').hidden = hideMove; $('gc-bFly').textContent = viewTxt;
   }
   function regionOf() { return focus && focus.place ? REG[focus.place.id] || focus.place.region : 'uncharted'; }
