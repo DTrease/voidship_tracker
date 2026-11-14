@@ -121,10 +121,8 @@ html.hull-hurt .dmg-scan,html.hull-hurt .dmg-roll{display:block}
 .logout-inline{display:none;width:100%;margin-top:4px;background:none;
   color:var(--dim);border:1px solid var(--border);padding:10px;font-family:var(--term);
   font-size:var(--fs-m);letter-spacing:.1em;cursor:pointer;text-transform:uppercase}
-/* app check: google's floating badge is hidden, so its notice is shown inline instead (required by google) */
+/* app check: google's floating badge is hidden. its terms ask for a visible recaptcha notice instead; left out at the user's request */
 .grecaptcha-badge{visibility:hidden}
-#captchaNote{display:none;margin-top:8px;font-size:.75rem;color:var(--dim);text-align:center}
-#captchaNote a{color:inherit}
 .logout-inline:hover{color:var(--green);border-color:var(--green-dim);box-shadow:0 0 8px rgba(57,255,107,.3)}
 
 h1,h2{font-family:var(--term);font-weight:400;margin:0;text-transform:uppercase}
@@ -769,9 +767,7 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 </div>
 </section>
 
-<button id="logoutBtn" class="logout-inline" onclick="logout()">log out</button>
-<div id="captchaNote">// protected by recaptcha. google <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">privacy policy</a> and <a href="https://policies.google.com/terms" target="_blank" rel="noopener">terms of service</a> apply</div>
-</div>
+<button id="logoutBtn" class="logout-inline" onclick="logout()">log out</button></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -803,9 +799,7 @@ if(APPCHECK_SITE_KEY){
   // local testing: prints a debug token in the console, to register in the firebase console
   if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
   try {
-    firebase.appCheck().activate(new firebase.appCheck.ReCaptchaEnterpriseProvider(APPCHECK_SITE_KEY), true);
-    document.getElementById('captchaNote').style.display = 'block';
-  } catch(e){ if(window.console) console.warn('app check:', e && e.message ? e.message : e); }
+    firebase.appCheck().activate(new firebase.appCheck.ReCaptchaEnterpriseProvider(APPCHECK_SITE_KEY), true);  } catch(e){ if(window.console) console.warn('app check:', e && e.message ? e.message : e); }
 }
 const db = firebase.database();
 
