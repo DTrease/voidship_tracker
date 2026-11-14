@@ -2264,14 +2264,14 @@ el.appendChild(d);
     colchis: ['aurex', ['colchis', 'aurex ii', 'yukon|g']],
     nocturne: ['thraxun', ['nocturne|r|prometheus', 'thraxun ii|g', 'asteroid belt|b']],
     deliverance: ['corvane', ['corvane i', 'kiavahr|r|deliverance', 'vesk|g']],
-    // other locations: only worlds named in lore are listed; GEN adds seeded filler bodies round them. lore names none of these stars: each takes its system's name or expedition number
-    davin: ['davin', ['davin|r|davin\'s moon']],
-    laeran: ['laeran', ['laeran']],
+    // other locations: only worlds named in lore are listed; GEN adds seeded filler bodies round them. lore names none of these stars: davin, laeran and sotha get invented names (tier 4) so star and world differ; murder and 63-19 keep their expedition designations
+    davin: ['arkhelon', ['davin|r|davin\'s moon']],
+    laeran: ['kaelith', ['laeran']],
     murder: ['140-20', ['murder']],
     sn6319: ['63-19', ['sixty-three nineteen']],
     betagarmon: ['beta-garmon', ['beta-garmon ii', 'beta-garmon iii']],
     phall: ['phall', ['phall i', 'phall ii']],
-    sotha: ['sotha', ['sotha']]
+    sotha: ['valkenhel', ['sotha']]
   };
   // generated bodies to add [inside, outside] the charted ones. seeded from the place id, so every device sees the same ones. their notes start 'generated //'
   var GEN = { davin: [0, 2], laeran: [1, 2], murder: [1, 1], sn6319: [2, 6], betagarmon: [1, 2], phall: [0, 2], sotha: [1, 2] };
@@ -2280,7 +2280,7 @@ el.appendChild(d);
     if (!g) return def;
     def.bodies.forEach(function (b) { used[b.name] = 1; });
     for (h = hashStr('gen:' + id), k = 0; k < 80; k++) {
-      pool = genSystem(def.star, def.cls, h + k).bodies.filter(function (b) { return !used[b.name] && b.name.indexOf(def.star) < 0; });
+      pool = genSystem(def.star, def.cls, h + k).bodies.filter(function (b) { return !used[b.name]; });
       if (pool.length >= g[0] + g[1]) break;
     }
     pool.forEach(function (b) { b.note = 'generated // ' + b.note; });
