@@ -1623,11 +1623,11 @@ el.appendChild(d);
   var RAW = [
     ['rattigon', 'rattigon', 'mycifur', 'ultima', 30, -3, 0, 'r', 'one inhabited planet.', 'a'],
     ['a34', 'a3.4 waystation', 'deep space object', 'ultima', 28.6, -4.2, 0, 'l', 'adeptus astra telepathica repeater waystation.', 'a'],
-    ['sol', 'sol', 'terra // luna // mars', 'segmentum solar', -26, 0, 0.02, 'l', 'throneworld. seat of the imperium. base of the vii legion.', 'a'],
-    ['eye', 'cygnus x-1 warp maelstrom', 'the eye of terror', 'segmentum obscurus', -34, 17, 0.3, 'l', 'great warp storm. thousands of ly across.', 'o'],
+    ['sol', 'sol', 'terra // luna // mars', 'segmentum solar', -26, 0, 0.02, 'l', 'home system of humanity and seat of the imperium, in segmentum solar. the most heavily defended system in the galaxy.', 'a'],
+    ['eye', 'cygnus x-1 warp maelstrom', 'the eye of terror', 'segmentum obscurus', -34, 17, 0.3, 'l', 'vast warp rift in segmentum obscurus, charted by imperial scholars as cygnus x-1.', 'o'],
     ['calth', 'calth', 'veridian star', 'ultramar // ultima', 36, -20, -0.12, 'l', 'jewel of ultramar. eastern fringe.', 'a'],
-    ['isstvan', 'isstvan', 'eight worlds', 'ultima // obscurus border', 5, 30, 0.15, 'r', 'far from terra. the warmaster gathers here.', 'a'],
-    ['ullanor', 'ullanor', 'site of the triumph', 'segmentum solar', -13, 8, -0.05, 'r', 'ork empire broken here. horus named warmaster.', 'o'],
+    ['isstvan', 'isstvan', 'eight worlds', 'ultima // obscurus border', 5, 30, 0.15, 'r', 'system with two habitable worlds, isstvan iii and isstvan v, on the segmentum obscurus side of the galaxy. horus staged the first betrayals of the heresy here.', 'a'],
+    ['ullanor', 'ullanor', 'site of the triumph', 'segmentum solar', -13, 8, -0.05, 'r', 'ork world and centre of the empire broken in the ullanor crusade. the victory was marked by the triumph of ullanor, where horus was named warmaster.', 'o'],
     ['nikaea', 'nikaea', 'site of the council', 'segmentum tempestus', -30, -24, 0.2, 'r', 'young volcanic world. remote from all routes.', 'o'],
     ['caliban', 'caliban', 'legio i // dark angels', 'segmentum obscurus', -20, 26, 0.1, 'r', 'forested death world.', 'hw'],
     ['chemos', 'chemos', 'legio iii // emperor\'s children', 'ultima', 16, 26, -0.1, 'r', 'failing industrial world, restored by fulgrim.', 'hw'],
@@ -1645,7 +1645,7 @@ el.appendChild(d);
     ['cthonia', 'cthonia', 'legio xvi // sons of horus', 'segmentum solar', -25.978, 0.018, 0.03, 'b', 'worked-out mine world. 30 ly from sol, in sub-light reach.', 'hw'],
     ['colchis', 'colchis', 'legio xvii // word bearers', 'segmentum pacificus', -40, 4, 0.1, 'l', 'arid. priest-ruled.', 'hw'],
     ['nocturne', 'nocturne', 'legio xviii // salamanders', 'ultima', 20, 3, -0.05, 'r', 'volcanic. torn by its moon.', 'hw'],
-    ['deliverance', 'deliverance', 'legio xix // raven guard', 'segmentum tempestus', -14, -24, 0.1, 'r', 'prison moon above kiavahr.', 'hw']
+    ['deliverance', 'deliverance', 'legio xix // raven guard', 'segmentum tempestus', -14, -24, 0.1, 'r', 'airless moon of kiavahr, formerly lycaeus, a prison world renamed after the revolt led by corvus corax. the ravenspire fortress-monastery stands here.', 'hw']
   ];
   var PLACES = RAW.map(function (r) { return { id: r[0], name: r[1], sub: r[2], region: r[3], p: V(r[4], r[5], r[6]), side: r[7], text: r[8], group: r[9] }; });
   var byId = {}; PLACES.forEach(function (p) { byId[p.id] = p; });
@@ -2153,6 +2153,34 @@ el.appendChild(d);
     'ullanor prime': 'war world', nikaea: 'lava world', caliban: 'death world', chemos: 'mining world', olympia: 'civilised world', chogoris: 'feral world', fenris: 'death world', midgardia: 'death world', frostheim: 'ice world', svellgard: 'ocean world',
     inwit: 'death world', nostramo: 'hive world', baal: 'desert world', medusa: 'death world', nuceria: 'civilised world', macragge: 'civilised world', ardium: 'hive world', barbarus: 'death world', prospero: 'civilised world', cthonia: 'mining world',
     colchis: 'feudal world', nocturne: 'death world', kiavahr: 'forge world' };
+  // basic canon details, paraphrased. keyed by body name (a place whose id matches also takes it as its description)
+  var NOTE = {
+    terra: "throneworld of the imperium and seat of the emperor. the imperial palace sprawls across the himalazian mountains, the largest and best-defended fortress in the galaxy.",
+    mars: "forge world and capital of the mechanicum, ruled by the fabricator-general from a forge temple on olympus mons, the largest mountain in the solar system.",
+    calth: "world of ultramar in the veridia system, lit by a blue sun. most of its people live in vast underground cavern-cities. site of the word bearers' ambush on the ultramarines.",
+    'isstvan iii': "settled world virus-bombed by horus's fleets to purge loyalists from the traitor legions. the first battle of the heresy.",
+    'isstvan v': "dead world nearest the segmentum obscurus. horus made it his base; the dropsite massacre here destroyed most of the loyalist force landed on the surface.",
+    'ullanor prime': "ork stronghold and hub of the greenskin empire destroyed in the ullanor crusade.",
+    nikaea: "young, cloud-wrapped volcanic world being terraformed by the mechanicum. the council of nikaea met in a hollowed-out stratovolcano and restricted the use of psykers.",
+    caliban: "death world of dense forests, monstrous beasts and feudal knightly orders. homeworld of the dark angels and the lion.",
+    chemos: "grim world under two small suns and a nebula's grey twilight. the emperor's children keep their fortress-monastery in the city of callax.",
+    olympia: "mountainous world divided among warring city-states. perturabo was raised here by the tyrant of lochos and learned siegecraft from its endless wars.",
+    chogoris: "steppe world of horse nomads, with green plains, tall white mountains and blue seas. jaghatai khan became its ruler. imperial name: mundus planus.",
+    fenris: "death world in an endless cycle of summer and winter, on an erratic orbit round the wolf's eye, close to the eye of terror. the fang fortress stands in the asaheim mountains.",
+    inwit: "ice world in the inwit cluster, a close group of ice worlds, and the birthplace of rogal dorn. the imperial fists are mostly based on terra.",
+    nostramo: "sunless hive world of permanent darkness and organised crime, homeworld of the night lords. the world was destroyed before the heresy.",
+    baal: "desert world with two moons, baal primus and baal secundus, which supply the legion's recruits. the arx angelicum fortress-monastery stands here.",
+    medusa: "harsh world of perpetual gloom close to the eye of terror, ruled by warring clans. ferrus manus crashed to medusa at the karaashi ice pinnacle.",
+    nuceria: "brutal world of slavemasters and gladiatorial arenas, run from the city of desh'ea. angron was held here as a gladiator before the world eaters took their name.",
+    macragge: "cold, mountainous world and capital of ultramar's five hundred worlds. homeworld of the ultramarines and seat of roboute guilliman.",
+    barbarus: "feral world under a dim yellow sun, blanketed in toxic fog. people live in the low valleys; overlords immune to the fog held grey keeps in the mountains. homeworld of the death guard.",
+    prospero: "homeworld of the thousand sons. its capital tizca, the city of light, is a gleaming city of white marble and spires. imperial forces attacked the world with planet-busting weapons.",
+    cthonia: "mining world near sol, known for vicious gangs and slums. many early legion recruits came from its gangs, and horus was found here by the gang overlord khageddon.",
+    colchis: "huge world three times the size of terra, devoted to old gods. lorgar, called the urizen, was found here by the emperor and magnus. original homeworld of the word bearers.",
+    nocturne: "volcanic death world stalked by giant salamander lizards. the moon prometheus has an erratic orbit that brings seasons of tectonic upheaval and fire from the sky.",
+    kiavahr: "forge and hive world, the armoury of the raven guard. four moons: only deliverance is inhabited; psophis, mellori and nyctimus are dead worlds."
+  };
+  PLACES.forEach(function (pl) { if (NOTE[pl.id]) pl.text = NOTE[pl.id]; });
   var CLS = { sol: 'yellow dwarf', calth: 'blue star', baal: 'red star', nostramo: 'dying star', inwit: 'dying star', medusa: 'red giant' };
   // real neighbours of sol: name, galactic longitude, latitude, distance in ly
   var NEAR = [['alpha centauri', 315.7, -0.7, 4.4], ['barnard\'s star', 31.0, 14.1, 6.0], ['sirius', 227.2, -8.9, 8.6], ['procyon', 213.7, 13.0, 11.5], ['vega', 67.4, 19.2, 25], ['arcturus', 15.1, 69.1, 37],
@@ -2271,7 +2299,7 @@ el.appendChild(d);
     var st = str(o.star, 40); if (!st) return null;
     var b = (Array.isArray(o.bodies) ? o.bodies : []).slice(0, 14).map(function (x) {
       x = x || {};
-      return { name: str(x.name, 40), type: str(x.type, 30) || 'rock world', moons: (Array.isArray(x.moons) ? x.moons : []).slice(0, 8).map(function (m) { return str(m, 30); }).filter(Boolean), note: str(x.note, 140) };
+      return { name: str(x.name, 40), type: str(x.type, 30) || 'rock world', moons: (Array.isArray(x.moons) ? x.moons : []).slice(0, 8).map(function (m) { return str(m, 30); }).filter(Boolean), note: str(x.note, 240) };
     }).filter(function (x) { return x.name; });
     return { star: st, cls: str(o.cls, 60), note: str(o.note, 140), bodies: b };
   }
@@ -2285,7 +2313,7 @@ el.appendChild(d);
     if (!silent && typeof api.onSystemsChange === 'function') { try { api.onSystemsChange(JSON.parse(JSON.stringify(saved))); } catch (e) { /* ignore */ } }
     refreshSavedList();
   }
-  function parseBody(s) { var q = s.split('|'), k = q[1] || 'r'; return { name: q[0], type: HOME[q[0]] || (k === 'g' ? 'gas giant' : (k === 'b' ? 'asteroid belt' : 'rock world')), moons: q[2] ? q[2].split(',') : [], note: q[3] || '' }; }
+  function parseBody(s) { var q = s.split('|'), k = q[1] || 'r'; return { name: q[0], type: HOME[q[0]] || (k === 'g' ? 'gas giant' : (k === 'b' ? 'asteroid belt' : 'rock world')), moons: q[2] ? q[2].split(',') : [], note: q[3] || NOTE[q[0]] || '' }; }
   function placeStar(id) { return saved['p:' + id] ? saved['p:' + id].star : (SYS[id][0] || genStarName(hashStr('p:' + id))); }
   function sysDef(key) {
     if (saved[key]) return saved[key];
@@ -2687,7 +2715,7 @@ el.appendChild(d);
     (TYPES.indexOf(cur0) < 0 ? [cur0].concat(TYPES) : TYPES).forEach(function (t) { var o = document.createElement('option'); o.value = t; o.textContent = t; if (t === cur0) o.selected = true; sel.appendChild(o); });
     d.appendChild(sel);
     inp('moons, comma separated', b && b.moons ? b.moons.join(', ') : '', 120, 'gc-wide');
-    inp('notes', b && b.note, 140, 'gc-wide');
+    inp('notes', b && b.note, 240, 'gc-wide');
     var rm = document.createElement('button'); rm.type = 'button'; rm.className = 'gc-btn gc-add'; rm.textContent = 'remove body'; rm.addEventListener('click', function () { rows.removeChild(d); }); d.appendChild(rm);
     rows.appendChild(d);
   }
