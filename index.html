@@ -311,7 +311,8 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 #gc-vbox{position:relative;height:230px;margin:.5rem 0 0;background:var(--bg);border:1px solid var(--border);overflow:hidden}
 #gc-vbox canvas{display:block;width:100%;height:100%;touch-action:pan-y;cursor:grab;outline:none}
 #gc-vmeta{margin:.3rem 0 0;white-space:pre-line}
-#gc-foot,#gc-vfoot{position:absolute;right:6px;bottom:4px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);pointer-events:none}
+#gc-vlab{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#gc-vlab span{position:absolute;left:0;top:0;white-space:nowrap;font-size:11px;line-height:1;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);background:rgba(2,10,4,.55)}#gc-foot,#gc-vfoot{position:absolute;right:6px;bottom:4px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);pointer-events:none}
 #gc-nogl{display:none;position:absolute;inset:0;place-items:center;text-align:center;padding:1rem;color:var(--dim)}
 #gc-chart.gc-nogl #gc-nogl{display:grid}
 #gc-chart.gc-retune>*{opacity:.3}
@@ -554,7 +555,7 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
     <div id="gc-obody" hidden>
       <div class="gc-dim" id="gc-osub"></div>
       <div id="gc-viz" hidden>
-        <div id="gc-vbox"><div id="gc-vfoot">vis ref wf-1 // not to scale</div></div>
+        <div id="gc-vbox"><div id="gc-vlab"></div><div id="gc-vfoot">vis ref wf-1 // not to scale</div></div>
         <div class="gc-dim gc-sm" id="gc-vmeta" hidden></div>
       </div>
       <p id="gc-otext"></p>
@@ -2222,7 +2223,7 @@ el.appendChild(d);
     chogoris: ['gamma draconis', ['gamma draconis i', 'chogoris', 'quillon|g']],
     fenris: ['the wolf\'s eye', ['midgardia', 'fenris|r|valdrmani', 'frostheim', 'svellgard']],
     inwit: ['nu aurigae', ['nu aurigae i|g', 'inwit', 'asteroid belt|b']],
-    nostramo: ['serundax', ['nostramo|r|tenebor', 'serundax ii|g', 'asteroid belt|b']],
+    nostramo: ['serundax', ['nostramo|b', 'tenebor', 'serundax ii|g', 'asteroid belt|b']],   // nostramo is rubble by the heresy. tenebor, its old moon, kept as a body of its own: invented, lore is silent on its fate
     baal: ['balor', ['balor i', 'baal|r|baal primus,baal secundus', 'umbrael|g']],
     medusa: ['sthenelus', ['medusa|r|telstarax', 'sthenelus ii|g', 'atacama|g']],
     nuceria: ['velarion', ['velarion i', 'nuceria', 'brask|g']],
@@ -2236,7 +2237,7 @@ el.appendChild(d);
   };
   var HOME = { terra: 'throneworld', mars: 'forge world', venus: 'dead world', pluto: 'ice world', uranus: 'ice giant', neptune: 'ice giant', calth: 'civilised world', mycifur: 'mining world', 'isstvan iii': 'civilised world', 'isstvan v': 'dead world', 'isstvan extremis': 'ice world',
     'ullanor prime': 'war world', nikaea: 'lava world', caliban: 'death world', chemos: 'mining world', olympia: 'civilised world', chogoris: 'feral world', fenris: 'death world', midgardia: 'death world', frostheim: 'ice world', svellgard: 'ocean world',
-    inwit: 'death world', nostramo: 'hive world', baal: 'desert world', medusa: 'death world', nuceria: 'civilised world', macragge: 'civilised world', ardium: 'hive world', barbarus: 'death world', prospero: 'civilised world', cthonia: 'mining world',
+    inwit: 'death world', nostramo: 'debris field', tenebor: 'dead world', baal: 'desert world', medusa: 'death world', nuceria: 'civilised world', macragge: 'civilised world', ardium: 'hive world', barbarus: 'death world', prospero: 'civilised world', cthonia: 'mining world',
     colchis: 'feudal world', nocturne: 'death world', kiavahr: 'forge world' };
   // basic canon details for planets, paraphrased, keyed by body name; shown when the planet is selected in its system
   var NOTE = {
@@ -2253,7 +2254,8 @@ el.appendChild(d);
     chogoris: "steppe world of horse nomads, with green plains, tall white mountains and blue seas. jaghatai khan became its ruler. imperial name: mundus planus.",
     fenris: "death world in an endless cycle of summer and winter, on an erratic orbit round the wolf's eye, close to the eye of terror. the fang fortress stands in the asaheim mountains.",
     inwit: "ice world in the inwit cluster, a close group of ice worlds, and the birthplace of rogal dorn. the imperial fists are mostly based on terra.",
-    nostramo: "sunless hive world of permanent darkness and organised crime, homeworld of the night lords. the world was destroyed before the heresy.",
+    nostramo: "wreck of the sunless hive world that was home to the night lords. konrad curze had his own fleet break the planet apart before the heresy. only rubble remains.",
+    tenebor: "former moon of nostramo, left adrift when the planet was destroyed.",
     baal: "desert world with two moons, baal primus and baal secundus, which supply the legion's recruits. the arx angelicum fortress-monastery stands here.",
     medusa: "harsh world of perpetual gloom close to the eye of terror, ruled by warring clans. ferrus manus crashed to medusa at the karaashi ice pinnacle.",
     nuceria: "brutal world of slavemasters and gladiatorial arenas, run from the city of desh'ea. angron was held here as a gladiator before the world eaters took their name.",
@@ -2869,19 +2871,20 @@ el.appendChild(d);
   var VTILT = { mercury: 0, venus: 3, terra: 23, mars: 25, jupiter: 3, saturn: 27, uranus: 82, neptune: 28, pluto: 57 };
   // known surface features: [name, kind, latitude, tag]. tag 'i' = inferred from 40k. null = known to have nothing worth marking.
   // latitudes are real for terra, mars and jupiter; the rest are placed for the drawing only.
-  var VFEAT = { terra: ['imperial palace', 'city', 28], mars: ['olympus mons', 'mount', 18], jupiter: ['great red spot', 'storm', -22], prospero: ['tizca', 'city', 20], fenris: ['the fang', 'spire', 35], baal: ['arx angelicum', 'city', 10, 'i'],
-    macragge: ['fortress of hera', 'city', 40], caliban: ['aldurukh', 'city', 30], nikaea: ['council volcano', 'mount', -10], 'isstvan iii': ['choral city', 'ruin', 15], 'isstvan v': ['urgall depression', 'basin', 25], olympia: ['lochos', 'city', 35],
-    chemos: ['callax', 'city', 5], nuceria: ['desh\'ea', 'city', -15], medusa: ['karaashi ice pinnacle', 'spire', 60], colchis: ['vharadesh', 'city', 20], nocturne: ['mount deathfire', 'mount', 5], nostramo: ['nostramo quintus', 'city', -25],
+  var VFEAT = { terra: ['imperial palace', 'fort', 28], mars: ['olympus mons', 'volcano', 18], jupiter: ['great red spot', 'storm', -22], prospero: ['tizca', 'city', 20], fenris: ['the fang', 'spire', 35], baal: ['arx angelicum', 'fort', 10, 'i'],
+    macragge: ['fortress of hera', 'fort', 40], caliban: ['aldurukh', 'fort', 30], nikaea: ['council volcano', 'volcano', -10], 'isstvan iii': ['choral city', 'ruin', 15], 'isstvan v': ['urgall depression', 'basin', 25], olympia: ['lochos', 'city', 35],
+    chemos: ['callax', 'city', 5], nuceria: ['desh\'ea', 'city', -15], medusa: ['karaashi ice pinnacle', 'spire', 60], colchis: ['vharadesh', 'city', 20], nocturne: ['mount deathfire', 'volcano', 5],
     calth: ['numinus city', 'city', 30], 'ullanor prime': ['triumph ground', 'basin', 10], mercury: null, venus: null, saturn: null, uranus: null, neptune: null, pluto: null };
   // generated features by world type: 'name:kind'. rolled for about 1 body in 7.
   var VGEN = { giant: ['great storm:storm'], rock: ['old night ruin:ruin', 'impact basin:basin', 'heresy scar:scar'],
-    'hive world': ['hive spire:spire'], 'forge world': ['forge-fane:city'], 'fortress world': ['void shield dome:dome'], 'shrine world': ['pilgrim spire:spire'], 'civilised world': ['hive spire:spire', 'void shield dome:dome'],
+    'hive world': ['hive spire:hive'], 'forge world': ['forge-fane:forge'], 'fortress world': ['void shield dome:dome'], 'shrine world': ['pilgrim spire:spire'], 'civilised world': ['hive spire:hive', 'void shield dome:dome'],
     'war world': ['heresy scar:scar', 'ruined city:ruin'], 'dead world': ['ruined city:ruin', 'heresy scar:scar', 'impact basin:basin'], 'quarantined world': ['exterminatus scar:scar'], 'tomb world': ['xenos ruin:ruin'], 'xenos world': ['xenos ruin:ruin'],
-    'cemetery world': ['mausoleum field:ruin'], 'lava world': ['great caldera:mount'], 'mining world': ['open-cast pit:basin'], 'knight world': ['knight holdfast:city'], 'penal world': ['penal bastion:city'], 'daemon world': ['warp scar:scar'] };
+    'cemetery world': ['mausoleum field:ruin'], 'lava world': ['great caldera:volcano'], 'mining world': ['open-cast pit:basin'], 'knight world': ['knight holdfast:fort'], 'penal world': ['penal bastion:fort'], 'daemon world': ['warp scar:scar'] };
 
   var viz = (function () {
-    var wrap = $('gc-viz'), box = $('gc-vbox'), meta = $('gc-vmeta');
+    var wrap = $('gc-viz'), box = $('gc-vbox'), meta = $('gc-vmeta'), lab = $('gc-vlab'), flab = null, occR = 1;
     if (!wrap || !box) return null;
+    function tag(text) { var el = document.createElement('span'); el.textContent = text; lab.appendChild(el); return el; }
     var TAU = Math.PI * 2, HP = Math.PI / 2, DEG = Math.PI / 180;
     var rdr = null, cv = null, io = null, raf = 0, seen = true, key = null, sc = null, cam = null, res = [], root = null, tiltG = null, bodyG = null, spinG = null,
         moons = [], anim = [], lastT = 0, W = 0, H = 0, ext = 1.3, vext = 0.6, rate = 0.22, yaw = 0, pitch = 0.32, drag = null, idle = 0, pr = 1, jit = mkRnd(9001), tmp = new THREE.Vector3();
@@ -3000,8 +3003,27 @@ el.appendChild(d);
       function ell(ra, rb, h, n) { for (var k = 0; k < n; k++) seg(P(ra * Math.cos(k / n * TAU), rb * Math.sin(k / n * TAU), h), P(ra * Math.cos((k + 1) / n * TAU), rb * Math.sin((k + 1) / n * TAU), h)); }
       function spokes(n, r0, r1, h0, h1) { for (var k = 0; k < n; k++) { var an = k / n * TAU; seg(P(r0 * Math.cos(an), r0 * Math.sin(an), h0), P(r1 * Math.cos(an), r1 * Math.sin(an), h1)); } }
       if (kind === 'spire') { ell(2.5 * DEG, 2.5 * DEG, 0, 12); top = 0.025; seg(P(0, 0, 0), P(0, 0, top)); }
-      else if (kind === 'city') { ell(3 * DEG, 3 * DEG, 0, 14); ell(6 * DEG, 6 * DEG, 0, 20); ell(9 * DEG, 9 * DEG, 0, 26); spokes(6, 3 * DEG, 9 * DEG, 0, 0); top = 0.014; seg(P(0, 0, 0), P(0, 0, top)); }
-      else if (kind === 'mount') { top = 0.014; ell(7 * DEG, 7 * DEG, 0, 24); ell(4.5 * DEG, 4.5 * DEG, 0.007, 18); ell(2 * DEG, 2 * DEG, top, 12); spokes(6, 7 * DEG, 2 * DEG, 0, top); }
+      else if (kind === 'city') {   // a square street grid round one tower
+        for (i = 0; i < 5; i++) for (t = 0; t < 4; t++) { a = (-6 + i * 3) * DEG; b = (-6 + t * 3) * DEG; seg(P(a, b, 0), P(a, b + 3 * DEG, 0)); seg(P(b, a, 0), P(b + 3 * DEG, a, 0)); }
+        top = 0.012; seg(P(0, 0, 0), P(0, 0, top));
+      } else if (kind === 'hive') {   // a hexagon of spires, the tallest in the middle
+        ell(5 * DEG, 5 * DEG, 0, 6); top = 0.028; seg(P(0, 0, 0), P(0, 0, top));
+        for (i = 0; i < 6; i++) { a = i / 6 * TAU + 0.5; b = 2.8 * DEG; seg(P(b * Math.cos(a), b * Math.sin(a), 0), P(b * Math.cos(a), b * Math.sin(a), 0.01 + 0.004 * (i % 3))); }
+      } else if (kind === 'fort') {   // a star-shaped curtain wall round a square keep
+        pts = []; for (i = 0; i < 16; i++) { a = i / 16 * TAU; b = (i % 2 ? 4.2 : 7) * DEG; pts.push(P(b * Math.cos(a), b * Math.sin(a), 0)); }
+        for (i = 0; i < 16; i++) seg(pts[i], pts[(i + 1) % 16]);
+        ell(2.2 * DEG, 2.2 * DEG, 0.006, 4); top = 0.006;
+      } else if (kind === 'forge') {   // the cog
+        for (i = 0; i < 24; i++) {
+          a = i / 24 * TAU; t = (i + 1) / 24 * TAU; b = (i % 2 ? 6.5 : 5) * DEG;
+          seg(P(b * Math.cos(a), b * Math.sin(a), 0), P(b * Math.cos(t), b * Math.sin(t), 0));
+          seg(P(b * Math.cos(t), b * Math.sin(t), 0), P((i % 2 ? 5 : 6.5) * DEG * Math.cos(t), (i % 2 ? 5 : 6.5) * DEG * Math.sin(t), 0));
+        }
+        ell(2.5 * DEG, 2.5 * DEG, 0, 12);
+      } else if (kind === 'mount' || kind === 'volcano') {   // rising contour rings; a volcano has a sunken crater at the top
+        top = 0.014; ell(7 * DEG, 7 * DEG, 0, 24); ell(4.5 * DEG, 4.5 * DEG, 0.007, 18); ell(2 * DEG, 2 * DEG, top, 12); spokes(6, 7 * DEG, 2 * DEG, 0, top);
+        if (kind === 'volcano') { ell(1 * DEG, 1 * DEG, top - 0.005, 8); top -= 0.005; }
+      }
       else if (kind === 'storm') { ell(15 * DEG, 7 * DEG, 0, 30); ell(10 * DEG, 4.5 * DEG, 0, 24); ell(5 * DEG, 2 * DEG, 0, 16); }
       else if (kind === 'basin') { ell(8 * DEG, 8 * DEG, 0, 24); ell(5.5 * DEG, 5.5 * DEG, -0.004, 18); spokes(8, 8 * DEG, 5.5 * DEG, 0, -0.004); }
       else if (kind === 'dome') {
@@ -3018,6 +3040,7 @@ el.appendChild(d);
         }
       }
       lines(par, out, mat(C_H, 1, 0.22)); dots(par, P(0, 0, top), mat(C_H, 1, 0.22, false, 5 * pr));
+      var o = new THREE.Object3D(); o.position.fromArray(P(0, 0, top)); par.add(o); return o;   // where the label's leader points
     }
 
     // ---- moons: record first, then lore and astronomy tables, then a seeded estimate ----
@@ -3038,6 +3061,7 @@ el.appendChild(d);
           mm = mat(C_G, 0.3, 0.4, true), gm = mat(C_G, 0.8, 0.3, true), lm = mat(C_G, 0.7, 0.35, true), ic = ico(1, one), gl = [], eg, gg;
       grid(gl, evenLats(3), 6, 24, one); eg = geo(ic.edges); gg = geo(gl);
       function part(g, o) { o.frustumCulled = false; g.add(o); }
+      var gi = 0;
       list.forEach(function (mo, i) {
         var cls = mo.size !== undefined ? mo.size : (VMSIZE[mo.name] !== undefined && mo.src !== 'g' ? VMSIZE[mo.name] : (R() < 0.2 ? 0 : (R() < 0.6 ? 1 : 2))), g = new THREE.Group(), r = r0 + i * step;
         if (/station|dock|platform/.test(mo.name)) { station(g, R, true); cls = 1; }
@@ -3048,7 +3072,8 @@ el.appendChild(d);
         }
         g.scale.setScalar([0.07, 0.1, 0.14, 0.18, 0.28][cls] * k); tiltG.add(g);
         // prograde: moons go round the way the parent spins. triton is the one real large retrograde moon.
-        moons.push({ g: g, r: r, a: R() * TAU, w: (mo.name === 'triton' && mo.src !== 'g' ? -0.5 : 0.5) / Math.pow(r, 1.5), inc: (R() - 0.5) * 0.16, ph: R() * TAU, z: 0 });
+        moons.push({ g: g, r: r, a: R() * TAU, w: (mo.name === 'triton' && mo.src !== 'g' ? -0.5 : 0.5) / Math.pow(r, 1.5), inc: (R() - 0.5) * 0.16, ph: R() * TAU, z: 0,
+          el: tag(mo.name || (mo.src === 'g' ? 'u' + (++gi) : 'companion')) });
       });
       ext = Math.max(ext, r0 + (list.length - 1) * step + 0.35);
     }
@@ -3095,6 +3120,7 @@ el.appendChild(d);
         if (n) { buildMoons(list, RM, envR + 0.3, sz * 1.6, 0.45); occ = 0.985; }
         list = [];
       }
+      occR = form === 'cluster' ? 0.4 : bodyG.scale.x;
       tiltG.rotation.z = tilt * DEG; vext = Math.sin(Math.min(1.45, tilt * DEG + 0.45));   // how tall the tilted orbit plane stands in the frame
 
       if (!s.star) {
@@ -3105,7 +3131,7 @@ el.appendChild(d);
           if (nm.length) info.push('moons // ' + (k === 'a' ? 'astro: ' : (k === 'i' ? 'inferred: ' : 'record: ')) + nm.join(', '));
         });
         n = list.filter(function (m) { return m.src === 'g'; }).length;
-        if (n) info.push('moons // ' + n + ' uncharted // generated');
+        if (n) info.push('moons // ' + (n > 1 ? 'u1-u' + n : 'u1') + ' uncharted // generated');
       }
       if (occ && (moons.length || ringOut)) { e = new THREE.Mesh(keep(new THREE.SphereGeometry(occ, 28, 18)), keep(new THREE.MeshBasicMaterial({ colorWrite: false }))); e.frustumCulled = false; bodyG.add(e); }
 
@@ -3113,13 +3139,38 @@ el.appendChild(d);
         known = canon ? VFEAT[s.name] : undefined; ft = null;
         if (known) ft = { name: known[0], kind: known[1], lat: known[2], tag: known[3] || '' };
         else if (known === undefined && RF() < 1 / 7) { pk = pick(RF, form === 'giant' ? VGEN.giant : (VGEN[t] || VGEN.rock)).split(':'); ft = { name: pk[0], kind: pk[1], lat: (RF() * 2 - 1) * 45, tag: 'g' }; }
-        if (ft) { feature(spinG, ft.kind, ft.lat * DEG, RF() * TAU, RF); info.push('feature // ' + ft.name + (ft.tag === 'g' ? ' // generated' : (ft.tag === 'i' ? ' // inferred' : ''))); }
+        if (ft) {
+          flab = { o: feature(spinG, ft.kind, ft.lat * DEG, RF() * TAU, RF), el: tag(ft.name) };
+        }
+        if (ft) { info.push('feature // ' + ft.name + (ft.tag === 'g' ? ' // generated' : (ft.tag === 'i' ? ' // inferred' : ''))); }
       }
       meta.textContent = info.join('\n'); meta.hidden = !info.length;
     }
 
     // ---- renderer: one small canvas, made when something is selected and destroyed when nothing is ----
-    function drop() { res.forEach(function (x) { x.dispose(); }); res = []; sc = null; moons = []; anim = []; }
+    function drop() { res.forEach(function (x) { x.dispose(); }); res = []; sc = null; moons = []; anim = []; flab = null; lab.textContent = ''; }
+    // name tags: one under each moon and one under the surface feature, following them round
+    function place() {
+      var ppu = H / 2 / (Math.tan(13 * DEG) * cam.position.z), used = [];
+      function clear(l, t, w) { for (var k = 0; k < used.length; k++) if (l < used[k][0] + used[k][2] + 3 && used[k][0] < l + w + 3 && t < used[k][1] + 13 && used[k][1] < t + 13) return false; return true; }
+      // a tag goes under its target (tmp = the target's position), else over it, else it waits until there is room
+      function put(o, hid, rp) {
+        var w, sx, sy, t;
+        if (!hid) {
+          tmp.project(cam); w = o.lw || (o.lw = o.el.offsetWidth) || 40; sx = (tmp.x * 0.5 + 0.5) * W - w / 2; sy = (0.5 - tmp.y * 0.5) * H;
+          t = sy + rp + 3; if (!clear(sx, t, w)) { t = sy - rp - 14; if (!clear(sx, t, w)) hid = true; }
+          if (!hid) { used.push([sx, t, w]); o.el.style.transform = 'translate(' + sx.toFixed(1) + 'px,' + t.toFixed(1) + 'px)'; }
+        }
+        o.el.style.visibility = hid ? 'hidden' : 'visible';
+      }
+      // the surface feature first (hidden while on the far side), then the moons, nearest first (hidden while behind the parent)
+      if (flab) { tmp.setFromMatrixPosition(flab.o.matrixWorld); put(flab, tmp.z < 0.12, 0.13 * occR * ppu); }
+      moons.forEach(function (m) { m.z = tmp.setFromMatrixPosition(m.g.matrixWorld).z; });
+      moons.slice().sort(function (p, q) { return q.z - p.z; }).forEach(function (m) {
+        tmp.setFromMatrixPosition(m.g.matrixWorld);
+        put(m, tmp.z < 0 && Math.sqrt(tmp.x * tmp.x + tmp.y * tmp.y) < occR, m.g.scale.x * ppu);
+      });
+    }
     function start() {
       cv = document.createElement('canvas'); cv.setAttribute('aria-label', 'object wireframe. drag to turn.');
       try { rdr = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: false }); } catch (e) { rdr = null; }
@@ -3168,8 +3219,8 @@ el.appendChild(d);
       hl = typeof hullLevels !== 'undefined' && hullLevels ? hullLevels.dmg + hullLevels.crit : 0;
       root.position.x = (!calm && hl > 0.05 && jit() < hl * 0.06) ? (jit() - 0.5) * 0.25 * Math.min(1, hl) : 0;
       sc.updateMatrixWorld();
-      if (moons.length > 1) {   // far moons first, so near ones draw over them
-        moons.forEach(function (m) { m.z = tmp.setFromMatrixPosition(m.g.matrixWorld).applyMatrix4(cam.matrixWorldInverse).z; });
+      place();
+      if (moons.length > 1) {   // far moons first, so near ones draw over them (place() has just set each moon's depth)
         moons.slice().sort(function (p, q) { return p.z - q.z; }).forEach(function (m, k) { m.g.children.forEach(function (o, j) { o.renderOrder = 10 + k * 4 + j; }); });
       }
       rdr.render(sc, cam);
