@@ -575,11 +575,13 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
     </div>
     <div class="gc-ctl gc-ovl">
       <span class="gc-dim gc-sm">overlays //</span>
-      <button class="gc-btn" id="gc-bGuides" type="button" aria-pressed="true">guides</button>
-      <button class="gc-btn" id="gc-bDom" type="button" aria-pressed="true">dominions</button>
-      <button class="gc-btn" id="gc-bHw" type="button" aria-pressed="true">homeworlds</button>
+      <button class="gc-btn" id="gc-bGuides" type="button" aria-pressed="false">guides</button>
+      <button class="gc-btn" id="gc-bDom" type="button" aria-pressed="false">dominions</button>
+      <button class="gc-btn" id="gc-bCa" type="button" aria-pressed="false">campaign</button>
+      <button class="gc-btn" id="gc-bLm" type="button" aria-pressed="false">other locations</button>
+      <button class="gc-btn" id="gc-bHw" type="button" aria-pressed="false">astartes homeworlds</button>
     </div>
-    <div class="gc-keybox" id="gc-key">
+    <div class="gc-keybox" id="gc-key" hidden>
       <span class="gc-dim gc-sm">dominions //</span>
       <ul class="gc-key">
         <li><span class="gc-sw gc-p0"></span>warmaster</li>
@@ -655,6 +657,8 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
     <summary class="gc-ptitle">&gt; index</summary>
     <h3 class="gc-gtitle">[ campaign ]</h3>
     <ul class="gc-list" id="gc-listA"></ul>
+    <h3 class="gc-gtitle">[ other locations ]</h3>
+    <ul class="gc-list" id="gc-listD"></ul>
     <h3 class="gc-gtitle">[ legiones astartes ]</h3>
     <ul class="gc-list" id="gc-listB"></ul>
     <div id="gc-savedwrap" hidden>
@@ -1618,13 +1622,13 @@ el.appendChild(d);
   // id, name, sub, region, e, n, u, label side, text, group
   var RAW = [
     ['rattigon', 'rattigon', 'mycifur', 'ultima', 30, -3, 0, 'r', 'one inhabited planet.', 'a'],
+    ['a34', 'a3.4 waystation', 'deep space object', 'ultima', 28.6, -4.2, 0, 'l', 'adeptus astra telepathica repeater waystation.', 'a'],
     ['sol', 'sol', 'terra // luna // mars', 'segmentum solar', -26, 0, 0.02, 'l', 'throneworld. seat of the imperium. base of the vii legion.', 'a'],
-    ['eye', 'cygnus x-1 warp maelstrom', 'the eye of terror', 'segmentum obscurus', -34, 17, 0.3, 'l', 'great warp storm. thousands of ly across.', 'a'],
+    ['eye', 'cygnus x-1 warp maelstrom', 'the eye of terror', 'segmentum obscurus', -34, 17, 0.3, 'l', 'great warp storm. thousands of ly across.', 'o'],
     ['calth', 'calth', 'veridian star', 'ultramar // ultima', 36, -20, -0.12, 'l', 'jewel of ultramar. eastern fringe.', 'a'],
     ['isstvan', 'isstvan', 'eight worlds', 'ultima // obscurus border', 5, 30, 0.15, 'r', 'far from terra. the warmaster gathers here.', 'a'],
-    ['ullanor', 'ullanor', 'site of the triumph', 'segmentum solar', -13, 8, -0.05, 'r', 'ork empire broken here. horus named warmaster.', 'a'],
-    ['nikaea', 'nikaea', 'site of the council', 'segmentum tempestus', -30, -24, 0.2, 'r', 'young volcanic world. remote from all routes.', 'a'],
-    ['core', 'galactic core', 'sagittarius a*', 'ultima', 0, 0, 0, 'b', 'black heart of the galaxy.', 'a'],
+    ['ullanor', 'ullanor', 'site of the triumph', 'segmentum solar', -13, 8, -0.05, 'r', 'ork empire broken here. horus named warmaster.', 'o'],
+    ['nikaea', 'nikaea', 'site of the council', 'segmentum tempestus', -30, -24, 0.2, 'r', 'young volcanic world. remote from all routes.', 'o'],
     ['caliban', 'caliban', 'legio i // dark angels', 'segmentum obscurus', -20, 26, 0.1, 'r', 'forested death world.', 'hw'],
     ['chemos', 'chemos', 'legio iii // emperor\'s children', 'ultima', 16, 26, -0.1, 'r', 'failing industrial world, restored by fulgrim.', 'hw'],
     ['olympia', 'olympia', 'legio iv // iron warriors', 'ultima', 10, 17, 0.1, 'r', 'mountain city-states.', 'hw'],
@@ -1931,7 +1935,7 @@ el.appendChild(d);
     if (bodyTarget() || starTarget()) return;
     var pl = selected && byId[selected];
     $('gc-dnone').hidden = !!pl; $('gc-dbody').hidden = !pl;
-    $('gc-dtitle').textContent = pl ? '> selected: ' + pl.name : '> selected';
+    $('gc-dtitle').textContent = pl ? '> selected: ' + pl.name + (SYS[pl.id] ? ' system' : '') : '> selected';
     if (!pl) return;
     $('gc-dsub').textContent = '// ' + pl.sub;
     $('gc-dtext').textContent = pl.text + (SYS[pl.id] ? ' star: ' + placeStar(pl.id) + '.' : '');
@@ -1944,7 +1948,7 @@ el.appendChild(d);
   }
   function openPlace(id, fly) {
     var pl = byId[id]; if (!pl) return;
-    if (pl.group === 'hw' && !hwOn) setHw(true);
+    if (!placeOn(pl)) setPlaceGroup(pl.group, true);
     selBody = null; setSelStar(null); select(id); refreshTarget();
     if (fly) { flyPlace(pl); if (chart.scrollIntoView) chart.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' }); }
   }
@@ -2004,7 +2008,7 @@ el.appendChild(d);
     if (!placing) { if (tier === 1 && pickStar(x, y)) return; clearTarget(); zoomPt = groundPoint(x, y); return; }
     var snap = null, sd = 22;
     PLACES.forEach(function (pl) {
-      if (pl.group === 'hw' && !hwOn) return;
+      if (!placeOn(pl)) return;
       tmp.copy(pl.p).project(camera);
       var d = Math.hypot((tmp.x * 0.5 + 0.5) * W - x, (-tmp.y * 0.5 + 0.5) * H - y);
       if (tmp.z < 1 && d < sd) { sd = d; snap = pl; }
@@ -2025,18 +2029,30 @@ el.appendChild(d);
     b.type = 'button'; b.className = 'gc-btn'; s1.textContent = pl.name; s2.textContent = pl.group === 'hw' ? pl.sub : pl.region;
     b.appendChild(s1); b.appendChild(s2); li.appendChild(b);
     b.addEventListener('click', function () { openPlace(pl.id, true); });
-    $(pl.group === 'hw' ? 'gc-listB' : 'gc-listA').appendChild(li);
+    $(pl.group === 'hw' ? 'gc-listB' : (pl.group === 'o' ? 'gc-listD' : 'gc-listA')).appendChild(li);
   });
 
   // inline controls
-  var bTop = $('gc-bTop'), hwOn = true;
+  var bTop = $('gc-bTop'), PG = { a: { on: false, btn: 'gc-bCa' }, o: { on: false, btn: 'gc-bLm' }, hw: { on: false, btn: 'gc-bHw' } };
   function setTop(v) { bTop.setAttribute('aria-pressed', v ? 'true' : 'false'); }
   function toggle(btn) { var on = btn.getAttribute('aria-pressed') !== 'true'; btn.setAttribute('aria-pressed', on ? 'true' : 'false'); return on; }
-  function setHw(on) { hwOn = on; $('gc-bHw').setAttribute('aria-pressed', on ? 'true' : 'false'); setGroup('hw', on); if (!on && selected && byId[selected] && byId[selected].group === 'hw') clearTarget(); }
-  bTop.addEventListener('click', function () { var on = toggle(bTop); if (on) { goal.phi = 0.02; goal.theta = Math.round(cur.theta / (Math.PI * 2)) * Math.PI * 2; } else goal.phi = 0.92; });
+  // place overlays: 'a' = campaign locations, 'o' = other locations (famous sites), 'hw' = legion homeworlds
+  function placeOn(pl) { return PG[pl.group] ? PG[pl.group].on : true; }
+  function setPlaceGroup(g, on) {
+    PG[g].on = on;
+    $(PG[g].btn).setAttribute('aria-pressed', on ? 'true' : 'false');
+    setGroup(g, on);
+    if (g === 'o') eyeZone.visible = on;   // the warp-storm outline belongs with its other-locations marker
+    if (!on && selected && byId[selected] && byId[selected].group === g) clearTarget();
+  }  bTop.addEventListener('click', function () { var on = toggle(bTop); if (on) { goal.phi = 0.02; goal.theta = Math.round(cur.theta / (Math.PI * 2)) * Math.PI * 2; } else goal.phi = 0.92; });
   $('gc-bGuides').addEventListener('click', function () { var on = toggle(this); guides.visible = on; setGroup('guides', on); guidesOn = on; if (guidesL) guidesL.visible = on; });
   $('gc-bDom').addEventListener('click', function () { var on = toggle(this); domMesh.visible = on; setGroup('dom', on); $('gc-key').hidden = !on; });
-  $('gc-bHw').addEventListener('click', function () { setHw(!hwOn); });
+  $('gc-bHw').addEventListener('click', function () { setPlaceGroup('hw', !PG.hw.on); });
+  $('gc-bCa').addEventListener('click', function () { setPlaceGroup('a', !PG.a.on); });
+  $('gc-bLm').addEventListener('click', function () { setPlaceGroup('o', !PG.o.on); });
+  // every overlay starts off
+  guides.visible = false; domMesh.visible = false; eyeZone.visible = false;
+  setGroup('guides', false); setGroup('dom', false); setGroup('hw', false); setGroup('a', false); setGroup('o', false);
   $('gc-bReset').addEventListener('click', resetView);
 
   // ---------------- overlay: ruler, leaders, marks ----------------
@@ -2281,7 +2297,7 @@ el.appendChild(d);
   function starLabel(key) { return saved[key] ? saved[key].star : (key.slice(0, 2) === 'n:' ? key.slice(2) : genStarName(hashStr(key))); }
   function hasItem(s) { return !s.place && (s.key.slice(0, 2) === 'n:' || !!saved[s.key]); }
 
-  var tier = 0, focus = null, sceneL = null, sceneS = null, spinL = null, spinS = null, guidesL = null, guidesOn = true,
+  var tier = 0, focus = null, sceneL = null, sceneS = null, spinL = null, spinS = null, guidesL = null, guidesOn = false,
       sysCtx = null, sysMax = 60, sysBodies = [], selBody = null, selStar = null, LS = [], LSmap = {}, fieldN = 0, lastFoot = '', ORIGIN = new THREE.Vector3();
   var shipItemL = makeItem({ name: ship.name, side: 't', cls: 'gc-ship', p: new THREE.Vector3(), ship: true, lead: true, tier: 1 });
   var shipItemS = makeItem({ name: ship.name, side: 't', cls: 'gc-ship', p: new THREE.Vector3(), ship: true, lead: true, tier: 2 });
@@ -2337,7 +2353,7 @@ el.appendChild(d);
     var t = goal.target, sel = selected ? byId[selected] : null;
     if (sel && sel.p.distanceTo(t) < 4) return placeFocus(sel);
     var best = null, bd = 2.5;
-    PLACES.forEach(function (pl) { if (pl.group === 'hw' && !hwOn) return; var d = pl.p.distanceTo(t); if (d < bd) { bd = d; best = pl; } });
+    PLACES.forEach(function (pl) { if (!placeOn(pl)) return; var d = pl.p.distanceTo(t); if (d < bd) { bd = d; best = pl; } });
     if (best) return placeFocus(best);
     if (shipP.distanceTo(t) < 2.5) return shipFocus();
     return null;
@@ -2621,7 +2637,7 @@ el.appendChild(d);
   function starTarget() {
     var pl = selected ? byId[selected] : null, s = selStar || (tier === 2 && sysCtx && !sysCtx.star.place && !pl ? sysCtx.star : null); if (!s) return false;
     var def = sysDef(s.key), w = worldOf(s), on = ship.star === s.key;
-    fillTarget(starName(s), def ? 'surveyed // ' + def.cls : 'uncharted star // ' + genClass(hashStr(s.key)),
+    fillTarget(starName(s) + ' system', def ? 'surveyed // ' + def.cls : 'uncharted star // ' + genClass(hashStr(s.key)),
       def ? (def.bodies.length + (def.bodies.length === 1 ? ' body' : ' bodies') + ' on record' + (def.note ? ' // ' + def.note : '')) : 'no survey on record.',
       'local group: ' + focus.name, w, on ? (ship.body ? 'ship in system' : 'ship on station') : ly(w.distanceTo(shipP)), on && !ship.body, def && tier === 1 ? 'view system' : 'view');
     sysControls(s.key); return true;
