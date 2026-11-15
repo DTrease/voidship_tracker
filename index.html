@@ -350,9 +350,9 @@ a.gc-btn{display:inline-flex;align-items:center;text-decoration:none}
 .gc-btn:focus-visible,#gc-root input:focus-visible{outline:1px solid var(--green);outline-offset:2px}
 .gc-btn[aria-pressed="true"]{border-color:var(--green);background:rgba(57,255,107,.1);color:var(--hi)}
 .gc-btn.gc-add{border-style:dashed;border-color:var(--green-dim)}
-/* quiet: a low-key secondary action (edit record), right-aligned in its row */
-.gc-btn.gc-quiet{margin-left:auto;background:none;border:1px dashed transparent;color:var(--dim);font-size:.75rem;letter-spacing:.06em}
-.gc-btn.gc-quiet:hover,.gc-btn.gc-quiet:focus-visible{border-color:var(--green-dim);color:var(--text)}
+/* one-line action rows (view / move ship here / edit record): never wrap, slightly narrower buttons */
+.gc-ctl.gc-one{flex-wrap:nowrap}
+.gc-one .gc-btn{white-space:nowrap;padding-left:.45rem;padding-right:.45rem;flex:0 1 auto;min-width:0}
 #gc-status{margin:.4rem 0 0;color:var(--dim);font-size:.75rem;min-height:1em}
 
 /* detail, ship, index */
@@ -600,14 +600,14 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
         <dt>region</dt><dd id="gc-dreg"></dd>
         <dt>from ship</dt><dd id="gc-dship"></dd>
       </dl>
-      <div class="gc-ctl">
+      <div class="gc-ctl gc-one">
         <button class="gc-btn" id="gc-bFly" type="button">view</button>
         <button class="gc-btn gc-add" id="gc-bMove" type="button">move ship here</button>
+        <button class="gc-btn gc-add" id="gc-bCfg" type="button" hidden>configure</button>
       </div>
       <div class="gc-ctl" id="gc-sysctl" hidden>
         <button class="gc-btn gc-add" id="gc-bGen" type="button">generate system</button>
         <button class="gc-btn" id="gc-bErase" type="button">erase record</button>
-        <button class="gc-btn gc-add" id="gc-bCfg" type="button">configure</button>
       </div>
     </div>
     <div id="gc-edit" hidden>
@@ -644,10 +644,10 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
       <dl class="gc-kv">
         <dt>from ship</dt><dd id="gc-oship"></dd>
       </dl>
-      <div class="gc-ctl">
+      <div class="gc-ctl gc-one">
         <button class="gc-btn" id="gc-bOFly" type="button">view</button>
         <button class="gc-btn gc-add" id="gc-bOMove" type="button">move ship here</button>
-        <button class="gc-btn gc-quiet" id="gc-bOEdit" type="button">edit record</button>
+        <button class="gc-btn gc-add" id="gc-bOEdit" type="button">edit record</button>
       </div>
     </div>
     <div id="gc-oedit" hidden>
@@ -2335,7 +2335,7 @@ el.appendChild(d);
     phall: ['phall', ['phall i', 'phall ii']],
     sotha: ['valkenhel', ['sotha']]
   };
-  // generated bodies to add [inside, outside] the charted ones. seeded from the place id, so every device sees the same ones. their notes start 'generated //'
+  // generated bodies to add [inside, outside] the charted ones. seeded from the place id, so every device sees the same ones. their notes start 'auspex return //' (in-story flag for generated)
   var GEN = { davin: [0, 2], laeran: [1, 2], murder: [1, 1], sn6319: [2, 6], betagarmon: [1, 2], phall: [0, 2], sotha: [1, 2] };
   function fillDef(id, def) {
     var g = GEN[id], used = {}, pool = [], h, k;
@@ -2345,7 +2345,7 @@ el.appendChild(d);
       pool = genSystem(def.star, def.cls, h + k).bodies.filter(function (b) { return !used[b.name]; });
       if (pool.length >= g[0] + g[1]) break;
     }
-    pool.forEach(function (b) { b.note = 'generated // ' + b.note; });
+    pool.forEach(function (b) { b.note = 'auspex return // ' + b.note; });
     def.bodies = pool.slice(0, g[0]).concat(def.bodies, g[1] ? pool.slice(-g[1]) : []);
     return def;
   }
@@ -2509,7 +2509,7 @@ el.appendChild(d);
     var st = str(o.star, 40); if (!st) return null;
     var b = (Array.isArray(o.bodies) ? o.bodies : []).slice(0, 14).map(function (x) {
       x = x || {};
-      return { name: str(x.name, 40), type: str(x.type, 30) || 'rock world', moons: (Array.isArray(x.moons) ? x.moons : []).slice(0, 8).map(function (m) { return str(m, 30); }).filter(Boolean), note: str(x.note, 240) };
+      return { name: str(x.name, 40), type: str(x.type, 30) || 'rock world', moons: (Array.isArray(x.moons) ? x.moons : []).slice(0, 8).map(function (m) { return str(m, 30); }).filter(Boolean), note: str(x.note, 240).replace(/^generated \/\/ /, 'auspex return // ') };   // older records used the out-of-story flag
     }).filter(function (x) { return x.name; });
     return { star: st, cls: str(o.cls, 60), note: str(o.note, 140), bodies: b };
   }
@@ -2851,13 +2851,12 @@ el.appendChild(d);
     armT = setTimeout(function () { armed = null; refreshTarget(); }, 3000); return false;
   }
   function sysControls(key) {
-    var row = $('gc-sysctl'); if (!key) { row.hidden = true; return; }
+    var row = $('gc-sysctl'); if (!key) { row.hidden = true; $('gc-bCfg').hidden = true; return; }
     var isPlace = key.slice(0, 2) === 'p:', has = !!saved[key];
-    row.hidden = false;
     $('gc-bGen').hidden = isPlace; if (armed !== 'gc-bGen') $('gc-bGen').textContent = has ? 'regenerate' : 'generate system';
-    var ed = has || isPlace; $('gc-bCfg').textContent = ed ? 'edit record' : 'configure';
-    $('gc-bCfg').classList.toggle('gc-quiet', ed); $('gc-bCfg').classList.toggle('gc-add', !ed);
+    $('gc-bCfg').hidden = false; $('gc-bCfg').textContent = (has || isPlace) ? 'edit record' : 'configure';   // sits on the view / move row
     $('gc-bErase').hidden = !has; if (armed !== 'gc-bErase') $('gc-bErase').textContent = isPlace ? 'restore record' : 'erase record';
+    row.hidden = isPlace && !has;   // nothing left in this row for an unedited lore system
   }
   function fillTarget(title, sub, text, reg, shipTxt, hideMove, viewTxt) {
     $('gc-dtitle').textContent = 'selected system: ' + title; $('gc-dsub').textContent = '// ' + sub; $('gc-dtext').textContent = text;
@@ -3289,10 +3288,10 @@ el.appendChild(d);
         if (list.length) buildMoons(list, RM, Math.max(form === 'cluster' ? 0.8 : 1.45, ringOut + 0.22), form === 'giant' ? 0.8 : 1, form === 'cluster' ? 0.2 : 0.26);
         ['a', 'i', 'r'].forEach(function (k) {
           var nm = list.filter(function (m) { return m.src === k; }).map(function (m) { return m.name; });
-          if (nm.length) info.push('moons // ' + (k === 'a' ? 'astro: ' : (k === 'i' ? 'inferred: ' : 'record: ')) + nm.join(', '));
+          if (nm.length) info.push('moons // ' + (k === 'a' ? 'astro: ' : '') + nm.join(', ') + (k === 'i' ? ' // archive fragment' : ''));
         });
         n = list.filter(function (m) { return m.src === 'g'; }).length;
-        if (n) info.push('moons // ' + (n > 1 ? 'u1-u' + n : 'u1') + ' uncharted // generated');
+        if (n) info.push('moons // ' + (n > 1 ? 'u1-u' + n : 'u1') + ' uncharted // auspex return');
       }
       if (occ && (moons.length || ringOut)) { e = new THREE.Mesh(keep(new THREE.SphereGeometry(occ, 28, 18)), keep(new THREE.MeshBasicMaterial({ colorWrite: false }))); e.frustumCulled = false; bodyG.add(e); }
 
@@ -3303,7 +3302,7 @@ el.appendChild(d);
         if (ft) {
           flab = { o: feature(spinG, ft.kind, ft.lat * DEG, RF() * TAU, RF), el: tag(ft.name) };
         }
-        if (ft) { info.push('feature // ' + ft.name + (ft.tag === 'g' ? ' // generated' : (ft.tag === 'i' ? ' // inferred' : ''))); }
+        if (ft) { info.push('feature // ' + ft.name + (ft.tag === 'g' ? ' // auspex return' : (ft.tag === 'i' ? ' // archive fragment' : ''))); }
       }
       meta.textContent = info.join('\n'); meta.hidden = !info.length;
     }
