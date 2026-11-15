@@ -350,6 +350,9 @@ a.gc-btn{display:inline-flex;align-items:center;text-decoration:none}
 .gc-btn:focus-visible,#gc-root input:focus-visible{outline:1px solid var(--green);outline-offset:2px}
 .gc-btn[aria-pressed="true"]{border-color:var(--green);background:rgba(57,255,107,.1);color:var(--hi)}
 .gc-btn.gc-add{border-style:dashed;border-color:var(--green-dim)}
+/* quiet: a low-key secondary action (edit record), right-aligned in its row */
+.gc-btn.gc-quiet{margin-left:auto;background:none;border:1px dashed transparent;color:var(--dim);font-size:.75rem;letter-spacing:.06em}
+.gc-btn.gc-quiet:hover,.gc-btn.gc-quiet:focus-visible{border-color:var(--green-dim);color:var(--text)}
 #gc-status{margin:.4rem 0 0;color:var(--dim);font-size:.75rem;min-height:1em}
 
 /* detail, ship, index */
@@ -603,8 +606,8 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
       </div>
       <div class="gc-ctl" id="gc-sysctl" hidden>
         <button class="gc-btn gc-add" id="gc-bGen" type="button">generate system</button>
-        <button class="gc-btn gc-add" id="gc-bCfg" type="button">configure</button>
         <button class="gc-btn" id="gc-bErase" type="button">erase record</button>
+        <button class="gc-btn gc-add" id="gc-bCfg" type="button">configure</button>
       </div>
     </div>
     <div id="gc-edit" hidden>
@@ -644,6 +647,15 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
       <div class="gc-ctl">
         <button class="gc-btn" id="gc-bOFly" type="button">view</button>
         <button class="gc-btn gc-add" id="gc-bOMove" type="button">move ship here</button>
+        <button class="gc-btn gc-quiet" id="gc-bOEdit" type="button">edit record</button>
+      </div>
+    </div>
+    <div id="gc-oedit" hidden>
+      <h3 class="gc-gtitle" id="gc-oetitle">[ record ]</h3>
+      <div id="gc-oerows"></div>
+      <div class="gc-ctl">
+        <button class="gc-btn" id="gc-oeSave" type="button">save record</button>
+        <button class="gc-btn" id="gc-oeCancel" type="button">cancel</button>
       </div>
     </div>
     </div>
@@ -2044,7 +2056,7 @@ el.appendChild(d);
   });
 
   // ---------------- panels ----------------
-  var selected = null, placing = false, HINT = '// drag: turn // pinch: zoom // local group: tap any star';
+  var selected = null, placing = false, HINT = document.documentElement.classList.contains('map-mode') ? '' : '// drag: turn // pinch: zoom // local group: tap any star';   // map view: no hint line
   function ly(kly) { return (kly < 0.095 ? Math.round(kly * 1000) : Math.round(kly * 10) * 100).toLocaleString('en-US') + ' ly'; }
   function status(t) { $('gc-status').textContent = t || HINT; }
   function select(id) { selected = id; if (id) zoomPt = null; items.forEach(function (it) { if (it.id) it.el.classList.toggle('gc-sel', it.id === id); }); }
@@ -2078,6 +2090,7 @@ el.appendChild(d);
   }
   // the "selected object" panel: a planet, belt or the central star, shown only in system view
   function refreshObject() {
+    if (oEdit && !oEditOpenFor()) closeOEdit();   // selection moved on: drop the object form
     $('gc-opanel').hidden = tier !== 2;
     if (tier !== 2 || !sysCtx) { if (viz) viz.show(null); return; }
     var b = null; if (selBody) sysBodies.forEach(function (x) { if (!b && x.name === selBody) b = x; });
@@ -2842,7 +2855,8 @@ el.appendChild(d);
     var isPlace = key.slice(0, 2) === 'p:', has = !!saved[key];
     row.hidden = false;
     $('gc-bGen').hidden = isPlace; if (armed !== 'gc-bGen') $('gc-bGen').textContent = has ? 'regenerate' : 'generate system';
-    $('gc-bCfg').textContent = (has || isPlace) ? 'edit record' : 'configure';
+    var ed = has || isPlace; $('gc-bCfg').textContent = ed ? 'edit record' : 'configure';
+    $('gc-bCfg').classList.toggle('gc-quiet', ed); $('gc-bCfg').classList.toggle('gc-add', !ed);
     $('gc-bErase').hidden = !has; if (armed !== 'gc-bErase') $('gc-bErase').textContent = isPlace ? 'restore record' : 'erase record';
   }
   function fillTarget(title, sub, text, reg, shipTxt, hideMove, viewTxt) {
@@ -2902,8 +2916,8 @@ el.appendChild(d);
     delete saved[s.key]; saveSystems(); afterSystemChange(s); status('// record struck');
   });
   var editStar = null;
-  function addRow(b) {
-    var rows = $('gc-erows'); if (rows.children.length >= 14) return;
+  function addRow(b, into) {   // into: a container for a single fixed row (object edit); default is the system form's list
+    var one = !!(into && into.nodeType), rows = one ? into : $('gc-erows'); if (!one && rows.children.length >= 14) return;
     var d = document.createElement('div'); d.className = 'gc-row';
     function inp(ph, val, max, cls) { var x = document.createElement('input'); x.type = 'text'; x.placeholder = ph; x.maxLength = max; x.value = val || ''; x.setAttribute('autocomplete', 'off'); x.setAttribute('aria-label', ph); if (cls) x.className = cls; d.appendChild(x); return x; }
     inp('name', b && b.name, 40);
@@ -2913,7 +2927,7 @@ el.appendChild(d);
     d.appendChild(sel);
     inp('moons, comma separated', b && b.moons ? b.moons.join(', ') : '', 120, 'gc-wide');
     inp('notes', b && b.note, 240, 'gc-wide');
-    var rm = document.createElement('button'); rm.type = 'button'; rm.className = 'gc-btn gc-add'; rm.textContent = 'remove body'; rm.addEventListener('click', function () { rows.removeChild(d); }); d.appendChild(rm);
+    var rm = document.createElement('button'); rm.type = 'button'; rm.className = 'gc-btn gc-add'; rm.textContent = 'remove body'; rm.addEventListener('click', function () { rows.removeChild(d); }); if (!one) d.appendChild(rm);
     rows.appendChild(d);
   }
   function fillEdit(def) { $('gc-estar').value = def.star; $('gc-ecls').value = def.cls || ''; $('gc-enote').value = def.note || ''; $('gc-erows').textContent = ''; def.bodies.forEach(addRow); }
@@ -2933,6 +2947,41 @@ el.appendChild(d);
     var def = cleanDef({ star: $('gc-estar').value, cls: $('gc-ecls').value, note: $('gc-enote').value, bodies: bodies });
     if (!def) { status('// star needs a designation'); return; }
     var s = editStar; saved[s.key] = def; closeEdit(); saveSystems(); afterSystemChange(s); status('// record saved');
+  });
+  // ---- edit the selected object (a body, or the central star) inside its system's record ----
+  var oEdit = null;   // { key, body: name | null (null = central star) }
+  function closeOEdit() { oEdit = null; $('gc-oedit').hidden = true; $('gc-oerows').textContent = ''; }
+  function oEditOpenFor() { return tier === 2 && sysCtx && oEdit && oEdit.key === sysCtx.key && (oEdit.body ? selBody === oEdit.body : selSysStar && !selBody); }
+  $('gc-bOEdit').addEventListener('click', function () {
+    if (tier !== 2 || !sysCtx || !(selBody || selSysStar)) return;
+    var def = sysDef(sysCtx.key); if (!def) return;
+    var rows = $('gc-oerows'); rows.textContent = '';
+    if (selBody) {
+      var b = null; def.bodies.forEach(function (x) { if (!b && x.name === selBody) b = x; }); if (!b) return;
+      oEdit = { key: sysCtx.key, body: b.name }; addRow(b, rows);
+    } else {
+      oEdit = { key: sysCtx.key, body: null };
+      var d = document.createElement('div'); d.className = 'gc-row';
+      [['star', def.star, 40], ['class', def.cls, 60]].forEach(function (f) { var x = document.createElement('input'); x.type = 'text'; x.placeholder = f[0]; x.setAttribute('aria-label', f[0]); x.maxLength = f[2]; x.value = f[1] || ''; x.className = 'gc-wide'; x.setAttribute('autocomplete', 'off'); d.appendChild(x); });
+      rows.appendChild(d);
+    }
+    $('gc-oetitle').textContent = '[ record: ' + (oEdit.body || def.star) + ' ]'; $('gc-oedit').hidden = false;
+    var f0 = rows.querySelector('input'); if (f0) f0.focus();
+  });
+  $('gc-oeCancel').addEventListener('click', closeOEdit);
+  $('gc-oeSave').addEventListener('click', function () {
+    if (!oEditOpenFor()) { closeOEdit(); return; }
+    var s = sysCtx.star, def = JSON.parse(JSON.stringify(sysDef(oEdit.key))), d = $('gc-oerows').firstChild, f = d.querySelectorAll('input'), name = null;
+    if (oEdit.body) {
+      name = str(f[0].value, 40); if (!name) { status('// body needs a name'); return; }
+      var clash = def.bodies.some(function (x) { return x.name === name && x.name !== oEdit.body; }); if (clash) { status('// name already on record'); return; }
+      def.bodies = def.bodies.map(function (x) { return x.name === oEdit.body ? { name: name, type: d.querySelector('select').value, moons: f[1].value.split(','), note: f[2].value } : x; });
+      if (shipInSys() && ship.body === oEdit.body && name !== oEdit.body) { ship.body = name; saveShip(); refreshShip(); }
+    } else { def.star = f[0].value; def.cls = f[1].value; }
+    def = cleanDef(def); if (!def) { status('// star needs a designation'); return; }
+    saved[oEdit.key] = def; closeOEdit(); saveSystems(); afterSystemChange(s);
+    if (name) selectBody(name); else selectSysStar();
+    status('// record saved');
   });
   function gotoStar(key) {
     var f = focusFromKey(key.slice(0, 2) === 'n:' ? 'sol' : key.split('#')[0]); if (!f) return;
@@ -3534,6 +3583,8 @@ el.appendChild(d);
   fl.id = 'gc-float';
   Array.prototype.slice.call(mp.children).forEach(function (el) { if (el.id !== 'gc-chart' && !el.classList.contains('gc-ptitle')) fl.appendChild(el); });
   mp.appendChild(fl);
+  var hint = document.getElementById('gc-status'); if (/^\/\/ drag:/.test(hint.textContent)) hint.textContent = '';
+  document.getElementById('locDate').closest('.gc-ctl').hidden = true;   // no date row in the map view
   nh.addEventListener('click', function () { fold(!nd.classList.contains('gc-fold')); });
   nh.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); fold(!nd.classList.contains('gc-fold')); } });
 })();
