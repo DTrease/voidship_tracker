@@ -224,20 +224,22 @@ text-transform:inherit;font-weight:400;color:inherit;text-shadow:inherit;text-al
 .status-dot{display:inline-block;width:7px;height:7px;background:var(--green);margin-right:6px;
 box-shadow:0 0 6px var(--green);animation:blink 1.4s infinite}
 .sub.offline .status-dot{animation:none;background:var(--dim);box-shadow:none}
-@keyframes dash{to{stroke-dashoffset:-16}}
-.schematic{width:100%;height:auto;display:block}
-.schematic .hull{fill:rgba(57,255,107,.04);stroke:var(--green);stroke-width:1.6;
-filter:drop-shadow(0 0 3px rgba(57,255,107,.5))}
-.schematic .shield-line{fill:none;stroke:var(--green-dim);stroke-width:1;stroke-dasharray:5 4;
-animation:dash 3.5s linear infinite}
-.schematic .section{fill:rgba(57,255,107,.1);stroke:var(--green);stroke-width:1;stroke-dasharray:3 2}
-.schematic .deco{fill:none;stroke:var(--green-dim);stroke-width:1}
-.schematic .leader{stroke:var(--green-dim);stroke-width:.75}
-.schematic text{fill:var(--green);font-family:var(--term);letter-spacing:.06em;
-text-shadow:0 0 4px rgba(57,255,107,.6)}
-.schematic .lbl{font-size:14px}
-.schematic .tick{stroke:var(--green-dim);stroke-width:.5}
-.schematic .ref{font-size:11px;fill:var(--dim)}
+/* ship wireframe (sv-): the 3D schematic in Voidship Status */
+#sv-box{position:relative;width:100%;aspect-ratio:920/500;min-height:250px;background:var(--bg);border:1px solid var(--border);overflow:hidden}
+#sv-box canvas{display:block;width:100%;height:100%;touch-action:pan-y;cursor:grab;outline:none}
+#sv-over{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#sv-over svg{position:absolute;inset:0;width:100%;height:100%}
+#sv-over line{stroke:var(--green-dim);stroke-width:.75}
+#sv-over .sv-tick{stroke-width:.5}
+#sv-over polygon{fill:var(--green)}
+#sv-over text{fill:var(--dim);font-family:var(--term);font-size:11px;letter-spacing:.06em}
+#sv-over span{position:absolute;left:0;top:0;white-space:nowrap;font-size:14px;line-height:1;letter-spacing:.06em;text-transform:uppercase;color:var(--green);text-shadow:0 0 4px rgba(57,255,107,.6);padding:0 2px;border:1px solid transparent;background:rgba(2,10,4,.55);pointer-events:auto;cursor:pointer}
+#sv-over span.sv-on{color:var(--hi);border-color:var(--green);background:rgba(57,255,107,.1)}
+#sv-foot{position:absolute;right:6px;bottom:3px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);pointer-events:none}
+#sv-off{display:none;position:absolute;inset:0;place-items:center;color:var(--dim)}
+#sv-box.sv-nogl #sv-off{display:grid}
+.sv-ctl{display:flex;flex-wrap:wrap;gap:.3rem;margin:6px 0 0;align-items:center}
+.sv-ctl .gc-btn{font-family:var(--term);font-size:var(--fs-m);text-transform:lowercase;text-shadow:inherit}
 
 .dice-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:4px}
 .die-btn{background:none;border:1px solid var(--green-dim);color:var(--green);cursor:pointer;
@@ -676,71 +678,16 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
 
 <div class="panel">
 <h2>Ship Schematic</h2>
-<svg class="schematic" viewBox="0 0 920 500" xmlns="http://www.w3.org/2000/svg">
-<defs>
-<marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
-<path d="M0,0 L10,5 L0,10 Z" fill="#39ff6b"/>
-</marker>
-</defs>
-
-<line class="tick" x1="20" y1="14" x2="880" y2="14"/>
-<line class="tick" x1="20" y1="10" x2="20" y2="18"/>
-<line class="tick" x1="300" y1="10" x2="300" y2="18"/>
-<line class="tick" x1="580" y1="10" x2="580" y2="18"/>
-<line class="tick" x1="860" y1="10" x2="860" y2="18"/>
-<text class="ref" x="20" y="10">STERN</text><text class="ref" x="555" y="10">MIDSHIP</text><text class="ref" x="800" y="10">BOW</text>
-<text class="ref" x="900" y="493" text-anchor="end">SCHEM REF VT-1 // HULL SCAN IMPORT // TO SCALE</text>
-
-<!-- void shield envelope — the one feature allowed outside the hull -->
-<path class="shield-line" d="M 0 143 L 0 288 L 12 301 L 41 302 L 59 314 L 77 316 L 101 346 L 132 420 L 145 435 L 165 442 L 195 442 L 226 429 L 226 332 L 284 332 L 313 324 L 335 344 L 360 345 L 382 332 L 391 317 L 419 316 L 434 300 L 459 296 L 475 284 L 502 294 L 528 295 L 569 320 L 595 319 L 615 310 L 637 329 L 659 334 L 844 325 L 883 317 L 896 303 L 897 275 L 889 260 L 842 249 L 802 249 L 696 211 L 633 171 L 622 147 L 591 122 L 526 111 L 485 140 L 398 140 L 385 136 L 377 107 L 360 97 L 332 98 L 319 120 L 307 120 L 303 66 L 264 30 L 230 30 L 210 48 L 200 25 L 162 24 L 151 35 L 150 53 L 117 89 L 102 118 L 51 119 L 31 130 L 13 131 Z"/>
-
-<!-- hull: exact traced silhouette -->
-<path class="hull" d="M 20.8 153.6 L 20.0 274.6 L 21.6 280.3 L 24.9 284.4 L 30.6 284.4 L 37.2 281.2 L 48.6 281.2 L 56.0 285.2 L 62.5 284.4 L 69.9 291.8 L 70.7 297.5 L 73.1 300.0 L 75.6 299.1 L 78.0 290.2 L 84.6 284.4 L 94.4 284.4 L 96.0 289.3 L 100.9 291.8 L 100.9 295.9 L 94.4 302.4 L 94.4 305.7 L 104.2 304.9 L 105.8 306.5 L 108.3 316.3 L 121.4 333.5 L 121.4 344.1 L 128.7 351.5 L 131.2 361.3 L 133.6 362.9 L 146.7 391.5 L 147.5 404.6 L 154.1 407.9 L 159.8 418.5 L 165.5 421.0 L 176.1 420.1 L 179.4 426.7 L 182.7 426.7 L 186.0 421.0 L 194.9 421.0 L 197.4 417.7 L 205.6 416.9 L 206.4 418.5 L 211.3 416.0 L 208.8 412.0 L 211.3 406.2 L 208.0 403.8 L 205.6 387.4 L 202.3 385.8 L 201.5 362.9 L 204.8 356.4 L 205.6 342.5 L 203.1 337.6 L 202.3 323.7 L 203.9 313.9 L 221.9 312.2 L 232.5 313.9 L 236.6 309.8 L 252.2 310.6 L 257.9 313.0 L 278.3 313.0 L 282.4 310.6 L 291.4 310.6 L 297.9 303.2 L 324.1 300.8 L 347.0 323.7 L 347.8 328.6 L 351.9 330.2 L 356.8 318.8 L 371.5 314.7 L 372.3 310.6 L 363.3 309.8 L 362.5 298.3 L 408.3 298.3 L 413.2 295.9 L 411.6 292.6 L 412.4 283.6 L 404.2 273.0 L 405.0 268.1 L 409.1 264.0 L 413.2 264.8 L 413.2 276.3 L 418.1 277.9 L 420.6 281.2 L 432.0 281.2 L 436.9 277.9 L 442.6 277.9 L 449.2 281.2 L 448.4 271.3 L 454.9 269.7 L 459.8 265.6 L 483.5 264.8 L 499.9 262.4 L 501.5 268.1 L 508.9 271.3 L 512.9 276.3 L 532.6 275.4 L 545.6 272.2 L 548.9 275.4 L 548.9 279.5 L 546.5 282.0 L 553.8 285.2 L 553.8 290.2 L 563.6 286.9 L 564.4 291.0 L 570.2 292.6 L 576.7 298.3 L 578.3 304.0 L 582.4 304.0 L 583.3 296.7 L 589.0 296.7 L 592.2 293.4 L 603.7 291.0 L 606.1 286.9 L 617.6 285.2 L 620.9 291.0 L 639.7 293.4 L 641.3 303.2 L 647.8 304.9 L 651.9 313.0 L 665.8 313.0 L 669.1 316.3 L 674.8 316.3 L 678.1 313.0 L 705.1 312.2 L 745.1 313.0 L 753.3 316.3 L 754.1 313.9 L 750.8 310.6 L 751.7 306.5 L 826.9 305.7 L 829.3 307.3 L 834.2 305.7 L 835.9 307.3 L 840.8 305.7 L 844.0 300.0 L 864.5 300.8 L 868.6 298.3 L 873.5 299.1 L 878.4 293.4 L 878.4 278.7 L 875.9 277.1 L 844.8 273.0 L 835.9 268.9 L 785.2 268.1 L 778.6 262.4 L 763.1 259.9 L 754.9 255.8 L 727.9 249.3 L 673.2 225.6 L 660.1 216.6 L 651.1 213.3 L 643.7 206.8 L 638.0 205.1 L 625.8 193.7 L 620.0 192.1 L 614.3 186.3 L 614.3 183.9 L 610.2 183.9 L 605.3 178.2 L 605.3 174.9 L 610.2 173.3 L 607.8 164.3 L 602.9 160.2 L 591.4 159.4 L 589.8 156.1 L 583.3 154.4 L 581.6 149.5 L 584.9 147.9 L 582.4 140.6 L 560.4 140.6 L 559.5 138.1 L 550.6 132.4 L 541.6 132.4 L 535.8 127.5 L 533.4 129.1 L 532.6 135.6 L 526.8 138.1 L 526.0 145.5 L 518.7 150.4 L 508.9 150.4 L 503.1 161.0 L 491.7 161.0 L 489.2 157.7 L 485.2 160.2 L 477.0 160.2 L 473.7 156.1 L 470.4 160.2 L 458.2 162.6 L 457.4 157.7 L 454.1 157.7 L 451.6 161.0 L 441.8 161.0 L 438.6 156.1 L 435.3 161.0 L 423.0 162.6 L 421.4 156.9 L 418.9 156.9 L 417.3 161.8 L 409.9 161.8 L 407.5 157.7 L 403.4 157.7 L 401.8 162.6 L 396.0 163.4 L 392.8 162.6 L 388.7 156.9 L 386.2 156.9 L 378.1 162.6 L 374.8 162.6 L 365.0 156.9 L 368.3 148.7 L 364.2 142.2 L 356.8 141.4 L 355.2 138.9 L 356.8 129.1 L 360.1 126.7 L 365.0 126.7 L 365.8 124.2 L 357.6 121.7 L 351.1 114.4 L 342.1 116.8 L 340.5 153.6 L 337.2 153.6 L 335.6 151.2 L 329.0 151.2 L 325.7 147.9 L 326.6 143.0 L 322.5 138.1 L 308.6 139.7 L 307.8 154.4 L 304.5 154.4 L 299.6 148.7 L 295.5 147.9 L 285.7 153.6 L 273.4 155.3 L 274.2 138.9 L 271.8 130.7 L 271.8 116.0 L 275.1 112.8 L 286.5 110.3 L 286.5 102.1 L 284.0 99.7 L 277.5 98.9 L 277.5 92.3 L 281.6 85.0 L 289.0 84.1 L 290.6 81.7 L 281.6 79.2 L 280.8 71.1 L 277.5 68.6 L 271.8 68.6 L 271.0 63.7 L 262.0 63.7 L 257.1 54.7 L 256.3 49.0 L 253.8 49.0 L 252.2 52.3 L 248.1 52.3 L 247.3 45.7 L 244.8 45.7 L 240.7 51.4 L 239.9 57.2 L 234.2 58.8 L 234.2 62.1 L 230.1 63.7 L 226.8 69.4 L 226.8 74.3 L 220.3 80.9 L 216.2 80.1 L 216.2 70.2 L 217.8 69.4 L 214.6 67.8 L 207.2 67.8 L 203.1 78.4 L 200.7 80.1 L 189.2 80.1 L 188.4 44.1 L 185.1 42.5 L 185.1 40.0 L 177.8 40.0 L 172.9 47.4 L 165.5 49.0 L 167.1 52.3 L 171.2 52.3 L 173.7 54.7 L 173.7 58.8 L 171.2 61.3 L 170.4 76.0 L 166.3 76.8 L 163.9 73.5 L 161.4 73.5 L 155.7 82.5 L 147.5 84.1 L 146.7 88.2 L 150.0 88.2 L 150.8 92.3 L 143.4 98.9 L 136.1 101.3 L 132.8 111.1 L 127.1 115.2 L 128.7 124.2 L 124.6 127.5 L 124.6 138.9 L 109.9 137.3 L 106.7 141.4 L 97.7 143.0 L 93.6 149.5 L 90.3 149.5 L 89.5 147.1 L 85.4 146.3 L 80.5 141.4 L 69.9 140.6 L 69.0 134.8 L 65.8 134.0 L 64.1 140.6 L 57.6 141.4 L 46.2 150.4 L 34.7 150.4 L 29.0 147.9 Z"/>
-
-<!-- turret line: defense array, all sitting on the flat deck -->
-<circle class="deco" cx="340" cy="195" r="3.5"/><circle class="deco" cx="368" cy="195" r="3.5"/>
-<circle class="deco" cx="396" cy="195" r="3.5"/><circle class="deco" cx="424" cy="195" r="3.5"/>
-<circle class="deco" cx="452" cy="195" r="3.5"/><circle class="deco" cx="480" cy="195" r="3.5"/>
-<circle class="deco" cx="508" cy="195" r="3.5"/>
-<line class="leader" x1="326" y1="195" x2="520" y2="195"/>
-
-<!-- BRIDGE: command deck, forward of the tower -->
-<rect class="section" x="141" y="105" width="123" height="56"/>
-<!-- CREW QUARTERS -->
-<rect class="section" x="114" y="168" width="209" height="50"/>
-<!-- CARGO BAYS A-D -->
-<rect class="section" x="114" y="230" width="52" height="60"/>
-<rect class="section" x="166" y="230" width="52" height="60"/>
-<rect class="section" x="218" y="230" width="52" height="60"/>
-<rect class="section" x="270" y="230" width="53" height="60"/>
-<!-- PLASMA DRIVE -->
-<rect class="section" x="27" y="161" width="83" height="113"/>
-<!-- DEFENSE ARRAY -->
-<rect class="section" x="328" y="177" width="198" height="68"/>
-<!-- HANGAR DECK -->
-<rect class="section" x="325" y="251" width="74" height="41"/>
-
-<line class="leader" x1="421" y1="34" x2="421" y2="177" marker-end="url(#arr)"/>
-<text class="lbl" x="355" y="26">DEFENSE ARRAY</text>
-
-<line class="leader" x1="360" y1="462" x2="360" y2="292" marker-end="url(#arr)"/>
-<text class="lbl" x="310" y="474">HANGAR DECK</text>
-
-<line class="leader" x1="202" y1="34" x2="202" y2="105" marker-end="url(#arr)"/>
-<text class="lbl" x="165" y="26">BRIDGE</text>
-
-<line class="leader" x1="280" y1="34" x2="280" y2="168" marker-end="url(#arr)"/>
-<text class="lbl" x="240" y="26">CREW QUARTERS</text>
-
-<line class="leader" x1="60" y1="34" x2="60" y2="161" marker-end="url(#arr)"/>
-<text class="lbl" x="5" y="26">PLASMA DRIVE</text>
-
-<line class="leader" x1="595" y1="462" x2="595" y2="319" marker-end="url(#arr)"/>
-<text class="lbl" x="540" y="474">VOID SHIELD ENVELOPE</text>
-
-<line class="leader" x1="260" y1="480" x2="260" y2="290" marker-end="url(#arr)"/>
-<text class="lbl" x="200" y="492">CARGO BAYS A–D</text>
-</svg>
+<div id="sv-box"><div id="sv-over"><svg id="sv-svg" aria-hidden="true"></svg></div><div id="sv-foot">schem ref vt-2 // wireframe // not to scale</div><div id="sv-off">// wireframe offline</div></div>
+<div class="sv-ctl"><span class="gc-dim gc-sm">view //</span>
+<button class="gc-btn" id="sv-b-side" type="button" aria-pressed="true">side</button>
+<button class="gc-btn" id="sv-b-top" type="button" aria-pressed="false">top</button>
+<button class="gc-btn" id="sv-b-front" type="button" aria-pressed="false">front</button>
+<button class="gc-btn" id="sv-b-free" type="button" aria-pressed="false">free</button>
+<button class="gc-btn gc-add" id="sv-b-pause" type="button" aria-pressed="false">pause</button>
+<span class="gc-dim gc-sm">zoom //</span>
+<button class="gc-btn" id="sv-b-zout" type="button" aria-label="zoom out">-</button>
+<button class="gc-btn" id="sv-b-zin" type="button" aria-label="zoom in">+</button></div>
 <div class="row desig"><label for="gc-sname">Designation</label>
 <input type="text" id="gc-sname" maxlength="40" autocomplete="off" placeholder="pala imperatoris"></div>
 </div>
@@ -1701,6 +1648,520 @@ el.appendChild(d);
 </script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* SHIP WIREFRAME: the voidship as a rotating 3D wireframe, built from the module table below */
+(function () {
+  'use strict';
+  var box = document.getElementById('sv-box'); if (!box) return;
+  var over = document.getElementById('sv-over'), svg = document.getElementById('sv-svg'), NS = 'http://www.w3.org/2000/svg';
+  if (typeof THREE === 'undefined') { box.classList.add('sv-nogl'); return; }
+  var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var css = window.getComputedStyle(document.documentElement);
+  function col(n, d) { return new THREE.Color((css.getPropertyValue(n) || '').trim() || d); }
+  var C_G = col('--green', '#39ff6b'), C_D = col('--green-dim', '#1e8f3a'), C_H = col('--hi', '#c2ffd1'), C_B = col('--bg', '#020a04');
+  var TAU = Math.PI * 2;
+
+  // ---------------- geometry kit ----------------
+  // builders work in the old 2D schematic's units: x 20 (stern) to 878 (bow), y down the page, z = half-widths in the same units.
+  // side proportions come from that schematic's hull path; widths from a reference model's measurements.
+  function P(x, y, z) { return [(x - 449) / 100, (230 - y) / 100, (z || 0) / 100]; }
+  // one G collects everything the builders draw. own = which section the geometry belongs to (for highlighting)
+  function G() { this.e = []; this.m = []; this.t = []; this.d = []; this.s = []; this.sd = []; this.f = []; this.eo = []; this.mo = []; this.to = []; this.dd = []; this.own = -1; }
+  function push(arr, oarr, own, a, b) { var p = P(a[0], a[1], a[2]), q = P(b[0], b[1], b[2]); arr.push(p[0], p[1], p[2], q[0], q[1], q[2]); oarr.push(own, own); }
+  G.prototype.E = function (a, b) { push(this.e, this.eo, this.own, a, b); };                 // bright edge
+  G.prototype.M = function (a, b) { push(this.m, this.mo, this.own, a, b); };                 // faint mesh line
+  G.prototype.T = function (a, b) { push(this.t, this.to, this.own, a, b); };                 // dimmer detail line (windows, seams, internals)
+  G.prototype.D = function (a) { var p = P(a[0], a[1], a[2]); this.d.push(p[0], p[1], p[2]); this.dd.push(this.own); };   // glowing dot
+  G.prototype.F = function () { for (var k = 0, p; k < 3; k++) { p = P(arguments[k][0], arguments[k][1], arguments[k][2]); this.f.push(p[0], p[1], p[2]); } };   // a solid face: never drawn, but it hides what lies behind it
+  G.prototype.Q = function (a, b, c, d) { this.F(a, b, c); this.F(a, c, d); };
+  G.prototype.fan = function (pts) { for (var k = 1; k + 1 < pts.length; k++) this.F(pts[0], pts[k], pts[k + 1]); };
+  G.prototype.sphere = function (c, r) {                                   // three hoops
+    for (var k = 0; k < 20; k++) { var a = k / 20 * TAU, b = (k + 1) / 20 * TAU, ca = r * Math.cos(a), sa = r * Math.sin(a), cb = r * Math.cos(b), sb = r * Math.sin(b);
+      this.T([c[0] + ca, c[1] + sa, c[2]], [c[0] + cb, c[1] + sb, c[2]]); this.T([c[0] + ca, c[1], c[2] + sa], [c[0] + cb, c[1], c[2] + sb]); this.T([c[0], c[1] + ca, c[2] + sa], [c[0], c[1] + cb, c[2] + sb]); }
+    this.D(c);
+  };
+  G.prototype.dome = function (c, r, n) {   // half a sphere bulging along n: [0, 1, 0] = downward, [0, 0, +-1] = outboard
+    var v = n[1] ? [0, 0, 1] : [0, 1, 0], self = this, k, a, b;
+    function pt(pu, pv, pn) { return [c[0] + pu, c[1] + v[1] * pv + n[1] * pn, c[2] + v[2] * pv + n[2] * pn]; }
+    for (k = 0; k < 16; k++) { a = k / 16 * TAU; b = (k + 1) / 16 * TAU; self.E(pt(r * Math.cos(a), r * Math.sin(a), 0), pt(r * Math.cos(b), r * Math.sin(b), 0)); self.T(pt(r * 0.7 * Math.cos(a), r * 0.7 * Math.sin(a), r * 0.71), pt(r * 0.7 * Math.cos(b), r * 0.7 * Math.sin(b), r * 0.71)); }
+    for (k = 0; k < 8; k++) { a = k / 8 * Math.PI; b = (k + 1) / 8 * Math.PI; self.E(pt(r * Math.cos(a), 0, r * Math.sin(a)), pt(r * Math.cos(b), 0, r * Math.sin(b))); self.E(pt(0, r * Math.cos(a), r * Math.sin(a)), pt(0, r * Math.cos(b), r * Math.sin(b))); }
+  };
+  G.prototype.S = function (pts, closed) {                                 // dashed polyline (the shield), with running distance
+    var d = 0, i, a, b, p, q, l, n = pts.length;
+    for (i = 0; i < (closed ? n : n - 1); i++) {
+      a = pts[i]; b = pts[(i + 1) % n]; p = P(a[0], a[1], a[2]); q = P(b[0], b[1], b[2]);
+      l = Math.sqrt((p[0] - q[0]) * (p[0] - q[0]) + (p[1] - q[1]) * (p[1] - q[1]) + (p[2] - q[2]) * (p[2] - q[2]));
+      this.s.push(p[0], p[1], p[2], q[0], q[1], q[2]); this.sd.push(d, d + l); d += l;
+    }
+  };
+  G.prototype.box = function (x0, x1, y0, y1, z0, z1, bare) {   // bare = outline only: no mesh, hides nothing
+    var c = [[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0], [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]],
+        ed = [0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7], dg = [0, 2, 4, 6, 0, 5, 3, 6, 0, 7, 1, 6], qd = [0, 1, 2, 3, 4, 5, 6, 7, 0, 1, 5, 4, 1, 2, 6, 5, 2, 3, 7, 6, 3, 0, 4, 7], i;
+    for (i = 0; i < ed.length; i += 2) this.E(c[ed[i]], c[ed[i + 1]]);
+    if (!bare) { for (i = 0; i < dg.length; i += 2) this.M(c[dg[i]], c[dg[i + 1]]); for (i = 0; i < qd.length; i += 4) this.Q(c[qd[i]], c[qd[i + 1]], c[qd[i + 2]], c[qd[i + 3]]); }
+  };
+  // st: [{ x, p: [[y, z], ...], ring }] cross-sections from stern to bow, all with the same point count
+  G.prototype.loft = function (st, dots, step) {   // step: also draw a faint frame every so many units (plating)
+    var i, j, n, a, b, x, f, q, self = this;
+    function pt(k, jj) { var s = st[k], m = s.p.length; return [s.x, s.p[jj % m][0], s.p[jj % m][1]]; }
+    for (i = 0; i < st.length; i++) for (n = st[i].p.length, j = 0; j < n; j++) {
+      a = pt(i, j);
+      if (st[i].ring) { this.E(a, pt(i, j + 1)); if (dots) this.D(a); }
+      if (i + 1 < st.length) { b = pt(i + 1, j); this.E(a, b); this.M(a, pt(i + 1, j + 1)); this.Q(a, pt(i, j + 1), pt(i + 1, j + 1), b); }
+    }
+    [0, st.length - 1].forEach(function (k) { self.fan(st[k].p.map(function (p) { return [st[k].x, p[0], p[1]]; })); });
+    if (step) for (i = 0; i + 1 < st.length; i++) for (n = st[i].p.length, x = Math.ceil((st[i].x + 1) / step) * step; x < st[i + 1].x - 1; x += step) {
+      f = (x - st[i].x) / (st[i + 1].x - st[i].x); q = st[i].p.map(function (p, k) { return [x, p[0] + (st[i + 1].p[k][0] - p[0]) * f, p[1] + (st[i + 1].p[k][1] - p[1]) * f]; });
+      for (j = 0; j < n; j++) this.M(q[j], q[(j + 1) % n]);
+    }
+  };
+  // a side-profile polygon [[x, y], ...] given thickness z0..z1
+  G.prototype.extr = function (poly, z0, z1) {
+    for (var i = 0, n = poly.length; i < n; i++) {
+      var a = poly[i], b = poly[(i + 1) % n];
+      this.E([a[0], a[1], z0], [b[0], b[1], z0]); this.E([a[0], a[1], z1], [b[0], b[1], z1]); this.E([a[0], a[1], z0], [a[0], a[1], z1]); this.M([a[0], a[1], z0], [b[0], b[1], z1]);
+      this.Q([a[0], a[1], z0], [b[0], b[1], z0], [b[0], b[1], z1], [a[0], a[1], z1]);
+    }
+    this.fan(poly.map(function (p) { return [p[0], p[1], z0]; })); this.fan(poly.map(function (p) { return [p[0], p[1], z1]; }));
+  };
+  G.prototype.pyr = function (x0, x1, y, z0, z1, ap) {
+    var c = [[x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1]], i;
+    for (i = 0; i < 4; i++) { this.E(c[i], c[(i + 1) % 4]); this.E(c[i], ap); this.F(c[i], c[(i + 1) % 4], ap); }
+    this.D(ap);
+  };
+  G.prototype.cylx = function (x0, x1, y, z, r0, r1, n, dim) {   // a tube along the ship's length. dim = drawn as detail, hides nothing
+    var ra = [], rb = [], i, a, b, ca, sa, cb, sb, A, B, A2, B2;
+    for (i = 0; i < n; i++) {
+      a = i / n * TAU; b = (i + 1) / n * TAU; ca = Math.cos(a); sa = Math.sin(a); cb = Math.cos(b); sb = Math.sin(b);
+      A = [x0, y + r0 * ca, z + r0 * sa]; B = [x1, y + r1 * ca, z + r1 * sa]; A2 = [x0, y + r0 * cb, z + r0 * sb]; B2 = [x1, y + r1 * cb, z + r1 * sb];
+      if (dim) { this.T(A, A2); this.T(B, B2); this.T(A, B); }
+      else { this.E(A, A2); this.E(B, B2); this.E(A, B); this.M(A, B2); this.Q(A, A2, B2, B); ra.push(A); rb.push(B); }
+    }
+    if (!dim) { this.fan(ra); this.fan(rb); }
+  };
+  function oct(top, bot, wt, wm, wb) {   // eight-sided hull section: narrow deck, wide waist, narrow keel
+    var u = top + (bot - top) * 0.25, l = bot - (bot - top) * 0.3;
+    return [[top, -wt], [top, wt], [u, wm], [l, wm], [bot, wb], [bot, -wb], [l, -wm], [u, -wm]];
+  }
+  function rect(top, bot, w) { return [[top, -w], [top, w], [bot, w], [bot, -w]]; }
+
+  // ---------------- geometry builders: one per module. each gets (g, module, modules) and only draws ----------------
+  function bHull(g) {
+    var S = [[110, 140, 306, 38, 64, 30, 1], [204, 155, 312, 38, 64, 30, 0], [324, 154, 303, 38, 64, 30, 1], [413, 160, 297, 38, 64, 30, 1], [422, 160, 281, 38, 64, 34, 0], [503, 160, 270, 38, 64, 34, 1],
+      [560, 160, 290, 38, 64, 32, 0], [640, 205, 293, 36, 62, 30, 1]];
+    g.loft(S.map(function (s) { return { x: s[0], p: oct(s[1], s[2], s[3], s[4], s[5]), ring: !!s[6] }; }), true, 18);
+    // gun-deck window rows along the waist
+    [[122, 320, 196], [122, 320, 210], [426, 630, 250]].forEach(function (r) { for (var x = r[0]; x <= r[1]; x += 9) [-64.5, 64.5].forEach(function (z) { g.T([x, r[2], z], [x, r[2] + 4, z]); }); });
+    // the arterial causeway collar where the aft and fore hulls join
+    g.loft([{ x: 402, p: oct(156, 300, 42, 68, 33), ring: true }, { x: 413, p: oct(156, 300, 42, 68, 33), ring: true }]);
+  }
+  function bProw(g) {   // armoured prow, after the reference model: flat underside, a low vertical strake, sloped cheeks rising to a crest
+    var S = [[640, 200, 20, 63, 1], [652, 212, 20, 62, 0], [700, 238, 8, 59, 1], [750, 255, 3, 52, 0], [800, 268, 2, 40, 1], [845, 273, 1.5, 28, 0], [866, 276, 1, 17, 0], [878, 279, 0.5, 2, 1]], LOW = 292, i, x, k;
+    function sec(s) { var yb = Math.max(s[1] + 2, LOW - 19); return [[s[1], -s[2]], [s[1], s[2]], [yb, s[3]], [LOW, s[3]], [LOW, -s[3]], [yb, -s[3]]]; }
+    function at(x) { for (var j = 0; j + 1 < S.length; j++) if (x <= S[j + 1][0]) { var f = (x - S[j][0]) / (S[j + 1][0] - S[j][0]); return [x, S[j][1] + (S[j + 1][1] - S[j][1]) * f, S[j][2] + (S[j + 1][2] - S[j][2]) * f, S[j][3] + (S[j + 1][3] - S[j][3]) * f]; } return S[S.length - 1]; }
+    g.loft(S.map(function (s) { return { x: s[0], p: sec(s), ring: !!s[4] }; }), true, 14);
+    [-1, 1].forEach(function (sg) {
+      var a = at(646), b = at(700);
+      g.T([646, a[1], sg * (a[2] + 0.5)], [700, LOW - 19, sg * (b[3] + 0.5)]);                             // raked plate seam
+      [728, 800].forEach(function (px) { var q = sec(at(px)); g.T([px, q[1][0], sg * (q[1][1] + 0.5)], [px, q[2][0], sg * (q[2][1] + 0.5)]); });   // plate joints
+      [670, 692, 714, 736, 790, 812, 834].forEach(function (px) {                                         // launch slots in the flat underside
+        var z0 = sg * 12, z1 = sg * Math.max(16, Math.min(44, at(px)[3] - 8)), y = LOW + 0.5;
+        g.T([px - 4, y, z0], [px - 4, y, z1]); g.T([px + 4, y, z0], [px + 4, y, z1]); g.T([px - 4, y, z1], [px + 4, y, z1]);
+      });
+    });
+    g.extr([[645, LOW], [655, 310], [838, 310], [848, LOW]], -7, 7);                                       // keel strake, with its gun ports
+    for (i = 0; i < 8; i++) { x = 668 + i * 22; if (Math.abs(x - 757) > 26) g.box(x - 5, x + 5, 297, 306, -11, 11, true); }
+    g.dome([757, 298, 0], 23, [0, 1, 0]);                                                                 // ventral turret and its spike
+    [[3, 0], [0, 3], [-3, 0], [0, -3]].forEach(function (q) { g.E([757 + q[0], 320, q[1]], [757, 360, 0]); });
+    for (k = 0; k < 8; k++) g.T([757 + 5 * Math.cos(k / 8 * TAU), 331, 5 * Math.sin(k / 8 * TAU)], [757 + 5 * Math.cos((k + 1) / 8 * TAU), 331, 5 * Math.sin((k + 1) / 8 * TAU)]);
+    g.D([757, 360, 0]); g.D([878, 286, 0]);
+  }
+  function bStern(g) {
+    g.box(20, 110, 140, 284, -44, 44);
+    g.extr([[62, 284], [110, 284], [110, 306], [94, 304]], -30, 30);
+    [48, 78].forEach(function (x) { g.E([x, 140, -44], [x, 140, 44]); g.E([x, 140, 44], [x, 284, 44]); g.E([x, 284, 44], [x, 284, -44]); g.E([x, 284, -44], [x, 140, -44]); });   // drive coil ribs
+    g.sphere([84, 214, 0], 23);                                                                                  // plasma reactor
+    [-1, 1].forEach(function (s) {
+      g.cylx(24, 60, 186, s * 22, 13, 13, 8, true); g.cylx(24, 60, 246, s * 22, 11, 11, 8, true);               // feed trunks to the drives
+      for (var x = 30; x <= 96; x += 22) g.box(x, x + 14, 162, 200, s * 44, s * 50, true);                      // shield generator banks
+    });
+  }
+  function bEngines(g) {
+    [-1, 1].forEach(function (s) {
+      [[186, 21], [246, 18]].forEach(function (q) { g.cylx(2, 22, q[0], s * 22, q[1], q[1] - 4, 12); g.cylx(5, 9, q[0], s * 22, q[1] * 0.55, q[1] * 0.55, 8, true); g.D([2, q[0], s * 22]); });
+      g.cylx(134, 152, 284, s * 86, 15, 11, 8); g.cylx(137, 140, 284, s * 86, 8, 8, 8, true); g.D([134, 284, s * 86]);
+    });
+    g.cylx(6, 22, 216, 0, 9, 7, 8);
+  }
+  function bKeel(g) {
+    g.extr([[108, 316], [204, 314], [211, 416], [183, 427], [160, 418], [147, 391], [121, 333]], -9, 9);
+    [[340, 126, 204], [370, 139, 203], [400, 151, 207]].forEach(function (r) { [-9.5, 9.5].forEach(function (z) { g.T([r[1], r[0], z], [r[2], r[0], z]); }); });
+  }
+  function bTower(g) {
+    var x;
+    g.box(125, 273, 100, 155, -34, 34);                                     // tower base
+    g.box(136, 166, 84, 100, -20, 20);
+    g.box(166, 189, 47, 100, -12, 12); g.pyr(166, 189, 47, -12, 12, [178, 36, 0]);   // aft belfry
+    g.box(189, 227, 82, 100, -26, 26);                                      // nave, with a gabled roof
+    g.E([189, 70, 0], [227, 70, 0]); [189, 227].forEach(function (q) { g.E([q, 82, -26], [q, 70, 0]); g.E([q, 82, 26], [q, 70, 0]); });
+    g.box(227, 272, 66, 100, -28, 28);                                      // twin spires over the bridge
+    [-1, 1].forEach(function (s) { g.pyr(236, 260, 66, s * 8, s * 26, [248, 40, s * 17]); });
+    g.E([248, 66, 0], [248, 50, 0]); g.D([248, 50, 0]);
+    g.box(225, 274, 62, 66, -30, 30, true);                                 // observation gallery
+    g.box(272, 288, 80, 112, -18, 18);                                      // command deck, forward of the tower
+    [90, 101].forEach(function (y) { g.E([288, y, -18], [288, y, 18]); });
+    g.box(273, 340, 140, 157, -34, 34);
+    g.box(340, 366, 116, 157, -12, 12); g.E([353, 116, 0], [353, 102, 0]); g.D([353, 102, 0]);   // sensor mast
+    [-1, 1].forEach(function (s) {
+      [131, 267].forEach(function (q) { g.pyr(q - 5, q + 5, 100, s * 24, s * 34, [q, 86, s * 29]); });     // corner pinnacles
+      for (x = 140; x <= 262; x += 17) g.T([x, 155, s * 34], [x, 100, s * 34]);                            // buttress piers
+      for (x = 133; x <= 266; x += 7) { g.T([x, 112, s * 34.5], [x, 120, s * 34.5]); g.T([x, 132, s * 34.5], [x, 140, s * 34.5]); }   // lancet windows
+      for (x = 193; x <= 223; x += 6) g.T([x, 87, s * 26.5], [x, 95, s * 26.5]);
+      for (x = 231; x <= 268; x += 6) g.T([x, 72, s * 28.5], [x, 84, s * 28.5]);
+    });
+  }
+  function bSpine(g) {
+    g.box(365, 503, 150, 160, -18, 18);
+    for (var x = 372; x < 500; x += 14) { g.E([x, 150, -18], [x, 150, 18]); g.E([x, 150, -18], [x, 160, -18]); g.E([x, 150, 18], [x, 160, 18]); }
+  }
+  function bTurrets(g, m, mods) {   // the count is this module's plus any fitted upgrade that adds to it
+    var n = m.count, i, x;
+    mods.forEach(function (o) { if (o.adds === m.id && fitted(o)) n += o.count; });
+    for (i = 0; i < n; i++) { x = n === 1 ? 438 : 376 + 124 * i / (n - 1); g.box(x - 5, x + 5, 143, 150, -5, 5, true); g.E([x + 5, 146, 0], [x + 13, 144, 0]); g.D([x, 143, 0]); }
+  }
+  function bFore(g) {
+    var S = [[503, 150, 1], [527, 138, 0], [536, 128, 1], [551, 132, 0], [582, 140, 1], [603, 160, 0], [612, 176, 1]];
+    g.loft(S.map(function (s) { return { x: s[0], p: rect(s[1], 186, 30), ring: !!s[2] }; }), false, 16);
+    [[518, 144], [544, 130], [594, 150]].forEach(function (q) { g.E([q[0], q[1], 0], [q[0], q[1] - 8, 0]); g.D([q[0], q[1] - 8, 0]); });   // sensor spires and shield emitters
+    g.box(560, 574, 129, 136, -7, 7, true); [-3, 3].forEach(function (z) { g.E([574, 132, z], [591, 131, z]); });                       // dorsal macrocannon
+  }
+  function bSponson(g) {
+    g.extr([[324, 301], [347, 324], [352, 330], [357, 319], [372, 311], [408, 298]], -40, 40);
+    [-1, 1].forEach(function (s) {
+      g.E([352, 327, s * 28], [366, 332, s * 28]);
+      var z = s * 64.5; g.E([332, 258, z], [392, 258, z]); g.E([392, 258, z], [392, 288, z]); g.E([392, 288, z], [332, 288, z]); g.E([332, 288, z], [332, 258, z]); g.E([332, 273, z], [392, 273, z]);   // hangar mouth
+    });
+  }
+  function bWings(g) {   // weapon wings low on each flank: a boxy mount ending in a heavy ribbed lance barrel
+    [-1, 1].forEach(function (s) {
+      var S = [[150, 266, 304, 100], [170, 262, 306, 108], [356, 262, 306, 108], [372, 268, 300, 100]], x;
+      g.loft(S.map(function (q) { return { x: q[0], p: [[q[1], s * 64], [q[1], s * q[3]], [q[2], s * q[3]], [q[2], s * 64]], ring: true }; }), false, 22);
+      for (x = 185; x <= 345; x += 20) g.T([x, 272, s * 108.5], [x, 296, s * 108.5]);
+      g.cylx(372, 425, 284, s * 86, 12, 12, 10);                                              // lance barrel
+      for (x = 380; x <= 420; x += 8) g.cylx(x, x + 2, 284, s * 86, 14.5, 14.5, 10, true);    // cooling ribs
+      g.cylx(425, 427, 284, s * 86, 7, 7, 8, true); g.D([426, 284, s * 86]);                  // bore
+    });
+  }
+  function bBroadside(g, m) {   // domed gun turrets along each flank, twin guns run out. m.bays = [first x, last x, how many]
+    [-1, 1].forEach(function (s) {
+      var n = m.bays[2], w = (m.bays[1] - m.bays[0]) / n, i, x;
+      for (i = 0; i < n; i++) {
+        x = m.bays[0] + w * (i + 0.5);
+        g.dome([x, 222, s * 64], 17, [0, 0, s]);
+        [-4, 4].forEach(function (dx) { g.E([x + dx, 222, s * 78], [x + dx, 222, s * 95]); });
+        g.D([x, 222, s * 95]);
+        if (i) g.T([x - w / 2, 186, s * 64.5], [x - w / 2, 252, s * 64.5]);   // pylon between turrets
+      }
+    });
+  }
+  function bLance(g) {   // upgrade: the prow lance
+    g.cylx(868, 900, 286, 0, 10, 8, 8); g.cylx(900, 1010, 286, 0, 5, 0.6, 6);
+    [930, 962].forEach(function (x) { g.cylx(x, x + 3, 286, 0, 8, 8, 8); });
+    g.D([1010, 286, 0]);
+  }
+  // the void shield envelope: the old schematic's outline, a plan outline and a few hoops
+  var SHIELD = [0, 143, 0, 288, 12, 301, 41, 302, 59, 314, 77, 316, 101, 346, 132, 420, 145, 435, 165, 442, 195, 442, 226, 429, 226, 332, 284, 332, 313, 324, 335, 344, 360, 345, 382, 332, 391, 317, 419, 316, 434, 300, 459, 296,
+    475, 284, 502, 294, 528, 295, 569, 320, 595, 319, 615, 310, 637, 329, 659, 334, 844, 325, 883, 317, 896, 303, 897, 275, 889, 260, 842, 249, 802, 249, 696, 211, 633, 171, 622, 147, 591, 122, 526, 111, 485, 140, 398, 140, 385, 136,
+    377, 107, 360, 97, 332, 98, 319, 120, 307, 120, 303, 66, 264, 30, 230, 30, 210, 48, 200, 25, 162, 24, 151, 35, 150, 53, 117, 89, 102, 118, 51, 119, 31, 130, 13, 131];
+  function bShield(g) {
+    var a = [], i, k, plan = [[0, 56], [128, 62], [140, 126], [432, 126], [446, 84], [640, 80], [780, 60], [868, 28], [897, 0]], hoops = [[60, 119, 302, 60], [200, 28, 440, 126], [330, 98, 344, 126], [470, 140, 290, 84], [610, 135, 315, 82], [760, 235, 330, 62]];
+    for (i = 0; i < SHIELD.length; i += 2) a.push([SHIELD[i], SHIELD[i + 1], 0]);
+    g.S(a, true);
+    a = plan.map(function (p) { return [p[0], 215, p[1]]; }); for (i = plan.length - 2; i >= 0; i--) a.push([plan[i][0], 215, -plan[i][1]]);
+    g.S(a, true);
+    hoops.forEach(function (h) { a = []; for (k = 0; k < 24; k++) a.push([h[0], (h[1] + h[2]) / 2 - (h[2] - h[1]) / 2 * Math.cos(k / 24 * TAU), h[3] * Math.sin(k / 24 * TAU)]); g.S(a, true); });
+  }
+
+  // ---------------- the module table ----------------
+  // every part of the view comes from this list: geometry, section zones, callouts, damage and the camera fit.
+  //   id      unique name
+  //   label   callout text ('' = no callout)
+  //   kind    'hull' (always drawn), 'zone' (a marked section) or 'upgrade' (drawn only when fitted)
+  //   at      callout anchor [x, y, z] on the hull, schematic units; side 't' / 'b' = label above or below in the side view
+  //   boxes   [[x0, x1, y0, y1, z0, z1], ...] dashed zone outlines, lit when the section is picked
+  //   build   geometry builder (see above); count / adds: see bTurrets
+  //   added   true = a section that was not on the old 2D schematic
+  //   part    for hull parts: the section id whose callout lights this geometry
+  // TO ADD AN UPGRADE: write a builder, add one row here with kind 'upgrade', and add its id to INSTALLED. nothing else changes.
+  var INSTALLED = { lance: false, turrets2: false, battery2: false };   // upgrades fitted. the one place to wire to shared state later: call ShipView.install(id, true)
+  var MODULES = [
+    { id: 'hull', label: '', kind: 'hull', build: bHull },
+    { id: 'stern', label: '', kind: 'hull', build: bStern, part: 'plasma' },
+    { id: 'keel', label: '', kind: 'hull', build: bKeel },
+    { id: 'tower', label: '', kind: 'hull', build: bTower, part: 'bridge' },
+    { id: 'spine', label: '', kind: 'hull', build: bSpine, part: 'defense' },
+    { id: 'fore', label: '', kind: 'hull', build: bFore },
+    { id: 'sponson', label: '', kind: 'hull', build: bSponson, part: 'hangar' },
+    { id: 'turrets', label: '', kind: 'hull', build: bTurrets, count: 7, part: 'defense' },
+    { id: 'plasma', label: 'plasma drive', kind: 'zone', at: [60, 161, 0], side: 't', boxes: [[27, 110, 161, 274, -40, 40]] },
+    { id: 'bridge', label: 'bridge', kind: 'zone', at: [202, 105, 0], side: 't', boxes: [[141, 264, 105, 161, -30, 30]] },
+    { id: 'crew', label: 'crew quarters', kind: 'zone', at: [290, 168, 0], side: 't', boxes: [[114, 323, 168, 218, -45, 45]] },
+    { id: 'defense', label: 'defense array', kind: 'zone', at: [427, 138, 0], side: 't', boxes: [[328, 526, 138, 200, -26, 26]] },
+    { id: 'broadside', label: 'broadside battery', kind: 'zone', at: [512, 205, 66], side: 't', boxes: [[424, 600, 202, 243, 60, 84], [424, 600, 202, 243, -84, -60]], build: bBroadside, bays: [424, 600, 4], added: true },
+    { id: 'prow', label: 'prow', kind: 'zone', at: [740, 251, 0], side: 't', boxes: [[640, 882, 198, 318, -44, 44]], build: bProw, added: true },
+    { id: 'engines', label: 'engines', kind: 'zone', at: [14, 266, 0], side: 'b', boxes: [[1, 26, 162, 266, -46, 46]], build: bEngines, added: true },
+    { id: 'cargo', label: 'cargo bays a-d', kind: 'zone', at: [218, 290, 0], side: 'b', boxes: [[114, 166, 230, 290, -50, 50], [166, 218, 230, 290, -50, 50], [218, 270, 230, 290, -50, 50], [270, 323, 230, 290, -50, 50]] },
+    { id: 'wings', label: 'wing lances', kind: 'zone', at: [300, 308, 110], side: 'b', boxes: [[150, 428, 260, 308, 64, 110], [150, 428, 260, 308, -110, -64]], build: bWings, added: true },
+    { id: 'hangar', label: 'hangar deck', kind: 'zone', at: [362, 292, 0], side: 'b', boxes: [[325, 399, 251, 292, -64, 64]] },
+    { id: 'shield', label: 'void shield envelope', kind: 'zone', at: [595, 319, 0], side: 'b', build: bShield },
+    { id: 'lance', label: 'prow lance', kind: 'upgrade', at: [950, 276, 0], side: 't', boxes: [[866, 1012, 274, 298, -12, 12]], build: bLance },
+    { id: 'turrets2', label: '', kind: 'upgrade', adds: 'turrets', count: 3 },
+    { id: 'battery2', label: 'aft battery', kind: 'upgrade', at: [220, 243, 66], side: 'b', boxes: [[124, 316, 202, 243, 60, 84], [124, 316, 202, 243, -84, -60]], build: bBroadside, bays: [128, 312, 4] }
+  ];
+  function fitted(m) { return m.kind !== 'upgrade' || !!INSTALLED[m.id]; }
+
+  // ---------------- drawing ----------------
+  // vF: depth from the ship's centre (far parts a little dimmer). aD: distance along a dashed line. aR: a random number per edge, used to drop or flare edges under hull damage.
+  // aM: which section an edge belongs to; uPick = the section picked (-1 none): its edges turn bright and the rest dim.
+  var VS = 'attribute float aD; attribute float aR; attribute float aM; varying float vF; varying float vD; varying float vR; varying float vM; uniform float uSize; uniform vec3 uBar; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vec4 c = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0); vF = (mv.z - c.z) / 1.2; vD = aD; vR = aR; vM = aM; if (abs(mv.y - uBar.x) < uBar.y) mv.x += uBar.z; gl_PointSize = uSize; gl_Position = projectionMatrix * mv; }';
+  var FH = 'varying float vF; varying float vD; varying float vR; varying float vM; uniform vec3 uCol; uniform vec3 uHi; uniform float uOp; uniform float uBack; uniform vec3 uDash; uniform vec3 uDmg; uniform float uPick; uniform float uLit; void main(){ if (uDash.x > 0.0 && mod(vD + uDash.z, uDash.x + uDash.y) > uDash.x) discard; if (fract(vR + uDmg.y) < uDmg.x) discard; float a = uOp * mix(uBack, 1.0, smoothstep(-1.0, 1.0, vF)); vec3 c = uCol; if (fract(vR * 7.31 + uDmg.y * 3.7) < uDmg.z) { c = uHi; a = 1.0; } if (uPick > -0.5) { if (abs(vM - uPick) < 0.5) { c = uHi; a = max(a, uLit); } else a *= 0.45; } ';
+  var FL = FH + 'gl_FragColor = vec4(c, a); }', FP = FH + 'float r = length(gl_PointCoord - 0.5) * 2.0; if (r > 1.0) discard; gl_FragColor = vec4(c, a * (1.0 - r * r)); }';
+  var DMG = new THREE.Vector3(), CALM = new THREE.Vector3(), BAR = new THREE.Vector3(), PICK = { value: -1 }, NOPICK = { value: -1 };   // shared uniforms: (drop, seed, flare), a glitch bar (y, half-height, shift), the picked section
+  var rdr = null, cv = null, sc = null, cam = null, turn = null, ship = null, res = [], raf = 0, seen = true, lastT = 0, W = 0, H = 0, PR = 1,
+      mode = 'side', yaw = 0, pitch = 0, zoom = 1, zoomT = 1, idle = 0, drag = null, ptrs = {}, pinch = 0, moved = 0,
+      callouts = [], zones = {}, picked = null, hover = null, mEdge = null, mShield = null, ruler = null, span = 8.6, v3 = new THREE.Vector3(),
+      tSeed = 0, tBar = 0, rs = 20260115, paused = false;
+  var VIEWS = { side: [0, 0], top: [0, Math.PI / 2], front: [-Math.PI / 2, 0] }, TOP = 37, BOT = 33, TIERS = 1;
+  function rnd() { rs |= 0; rs = rs + 0x6D2B79F5 | 0; var t = Math.imul(rs ^ rs >>> 15, 1 | rs); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
+  function keep(x) { res.push(x); return x; }
+  // o: { dash: [on, off], dmg: takes hull damage, pt: point size, test: hidden behind the hull's faces, lit: brightness when its section is picked (0 = cannot be picked) }
+  function mat(c, op, back, o) {
+    o = o || {};
+    return keep(new THREE.ShaderMaterial({ uniforms: { uCol: { value: c }, uHi: { value: C_H }, uOp: { value: op }, uBack: { value: back }, uSize: { value: o.pt || 1 }, uBar: { value: BAR },
+      uDash: { value: new THREE.Vector3(o.dash ? o.dash[0] : 0, o.dash ? o.dash[1] : 0, 0) }, uDmg: { value: o.dmg ? DMG : CALM }, uPick: o.lit ? PICK : NOPICK, uLit: { value: o.lit || 0 } },
+      vertexShader: VS, fragmentShader: o.pt ? FP : FL, transparent: true, depthTest: !!o.test, depthWrite: false }));
+  }
+  function geo(arr, dist, own) {
+    var g = keep(new THREE.BufferGeometry()), n = arr.length / 3, d = new Float32Array(n), r = new Float32Array(n), m = new Float32Array(n), i, a, b, l;
+    for (i = 0; i < n; i++) m[i] = own ? own[i] : -1;
+    for (i = 0; i + 1 < n; i += 2) {
+      a = i * 3; b = a + 3;
+      if (dist) { d[i] = dist[i]; d[i + 1] = dist[i + 1]; }
+      else { l = Math.sqrt((arr[a] - arr[b]) * (arr[a] - arr[b]) + (arr[a + 1] - arr[b + 1]) * (arr[a + 1] - arr[b + 1]) + (arr[a + 2] - arr[b + 2]) * (arr[a + 2] - arr[b + 2])); d[i + 1] = l; }
+      r[i] = r[i + 1] = rnd();
+    }
+    if (n % 2) r[n - 1] = rnd();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); g.setAttribute('aD', new THREE.BufferAttribute(d, 1)); g.setAttribute('aR', new THREE.BufferAttribute(r, 1)); g.setAttribute('aM', new THREE.BufferAttribute(m, 1));
+    return g;
+  }
+  function add(o, order) { o.frustumCulled = false; o.renderOrder = order || 0; ship.add(o); return o; }
+  function lines(arr, m, dist, own, order) { return arr.length ? add(new THREE.LineSegments(geo(arr, dist, own), m), order) : null; }
+  // hull lines are drawn twice from one geometry: faintly everywhere (what shows through the hull), then at full strength where no face is in front
+  function both(arr, own, op, ghost, back, pt) {
+    if (!arr.length) return null;
+    var g = geo(arr, null, own), C = pt ? THREE.Points : THREE.LineSegments, col = pt ? C_H : C_G;
+    add(new C(g, mat(col, op * ghost, 1, { dmg: true, pt: pt, lit: 0.4 })), 1);
+    return add(new C(g, mat(col, op, back, { dmg: true, pt: pt, test: true, lit: 1 })), 2).material;
+  }
+  function el(tag, cls) { var e = document.createElementNS(NS, tag); if (cls) e.setAttribute('class', cls); svg.appendChild(e); return e; }
+
+  function build() {
+    var hull = new G(), list = MODULES.filter(fitted), fill = keep(new THREE.MeshBasicMaterial({ color: C_G, transparent: true, opacity: 0.16, depthTest: false, depthWrite: false })), idx = {}, n = 0, i, x0 = 1e9, x1 = -1e9, o;
+    sc = new THREE.Scene(); turn = new THREE.Group(); ship = new THREE.Group(); sc.add(turn); turn.add(ship);
+    callouts = []; zones = {}; svg.textContent = ''; Array.prototype.slice.call(over.querySelectorAll('span')).forEach(function (s) { over.removeChild(s); });
+    rs = 20260115;
+    list.forEach(function (m) { if (m.label && m.at) idx[m.id] = n++; });   // a number for each section that has a callout
+    list.forEach(function (m) {
+      hull.own = idx[m.id] !== undefined ? idx[m.id] : (m.part && idx[m.part] !== undefined ? idx[m.part] : -1);   // geometry lights with its own section, or the one named in part
+      if (m.build) m.build(hull, m, MODULES);
+      if (m.boxes) {
+        var zg = new G(), z = { line: null, fills: [] };
+        m.boxes.forEach(function (b) {
+          zg.box(b[0], b[1], b[2], b[3], b[4], b[5], true);
+          var p = P((b[0] + b[1]) / 2, (b[2] + b[3]) / 2, (b[4] + b[5]) / 2), f = new THREE.Mesh(keep(new THREE.BoxGeometry((b[1] - b[0]) / 100, (b[3] - b[2]) / 100, (b[5] - b[4]) / 100)), fill);
+          f.position.set(p[0], p[1], p[2]); f.visible = false; add(f, 3); z.fills.push(f);
+        });
+        z.line = lines(zg.e, mat(C_G, 0.55, 0.6, { dash: [0.07, 0.05] }), null, null, 4); zones[m.id] = z;
+      }
+      if (m.label && m.at) {
+        var s = document.createElement('span'); s.textContent = m.label; over.appendChild(s);
+        s.addEventListener('mouseenter', function () { hover = m.id; light(); }); s.addEventListener('mouseleave', function () { hover = null; light(); });
+        s.addEventListener('click', function () { picked = picked === m.id ? null : m.id; light(); });
+        callouts.push({ m: m, n: idx[m.id], el: s, ln: el('line'), ar: el('polygon'), p: new THREE.Vector3().fromArray(P(m.at[0], m.at[1], m.at[2])), w: 0 });
+      }
+    });
+    // the hull's faces, drawn into the depth buffer only, pushed back a touch so the edges lying on them still show
+    if (hull.f.length) { o = keep(new THREE.BufferGeometry()); o.setAttribute('position', new THREE.Float32BufferAttribute(hull.f, 3)); add(new THREE.Mesh(o, keep(new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1.5, polygonOffsetUnits: 3 }))), 0); }
+    both(hull.m, hull.mo, 0.16, 0.12, 0.6);
+    both(hull.t, hull.to, 0.5, 0.1, 0.6);
+    mEdge = both(hull.e, hull.eo, 0.95, 0.1, 0.6);
+    both(hull.d, hull.dd, 0.9, 0.12, 0.6, 3.4 * PR);
+    mShield = mat(C_D, 0.9, 0.7, { dash: [0.1, 0.08] }); lines(hull.s, mShield, hull.sd, null, 4);
+    for (i = 0; i < hull.e.length; i += 3) { if (hull.e[i] < x0) x0 = hull.e[i]; if (hull.e[i] > x1) x1 = hull.e[i]; }
+    ship.position.x = -(Math.max(x1, 4.48) + Math.min(x0, -4.49)) / 2; span = Math.max(x1, 4.48) - Math.min(x0, -4.49);   // keeps the ship centred when an upgrade lengthens it
+    ruler = { g: el('g'), parts: [] };
+    ['line', 'line', 'line', 'line', 'line', 'text', 'text', 'text'].forEach(function (t, k) { var e = document.createElementNS(NS, t); if (t === 'line') e.setAttribute('class', 'sv-tick'); ruler.g.appendChild(e); ruler.parts.push(e); if (t === 'text') e.textContent = ['STERN', 'MIDSHIP', 'BOW'][k - 5]; });
+    if (picked && !callouts.some(function (c) { return c.m.id === picked; })) picked = null;
+    light(); W = H = 0;
+  }
+  // a picked (clicked) or hovered section: its own geometry turns bright and the rest of the ship dims; its zone box fills and its label is boxed
+  function light() {
+    var id = hover || picked, n = -1;
+    callouts.forEach(function (c) { var on = c.m.id === id; if (on) n = c.n; c.el.classList.toggle('sv-on', on); });
+    PICK.value = n;
+    Object.keys(zones).forEach(function (k) { var z = zones[k], on = k === id; z.line.material.uniforms.uCol.value = on ? C_H : C_G; z.line.material.uniforms.uOp.value = on ? 1 : (id ? 0.25 : 0.55); z.line.material.uniforms.uDash.value.x = on ? 0 : 0.07; z.fills.forEach(function (f) { f.visible = on; }); });
+    if (mShield) { mShield.uniforms.uCol.value = id === 'shield' ? C_H : C_D; mShield.uniforms.uOp.value = id === 'shield' ? 1 : (id ? 0.45 : 0.9); }
+  }
+  function drop() { res.forEach(function (x) { x.dispose(); }); res = []; sc = null; callouts = []; zones = {}; mEdge = mShield = null; }
+  function setView(v, keepAngles) {
+    mode = v; idle = 0;
+    if (!keepAngles && v !== 'free') yaw = ((yaw + Math.PI) % TAU + TAU) % TAU - Math.PI;
+    if (v === 'free' && !keepAngles && Math.abs(pitch) < 0.05 && Math.abs(Math.sin(yaw)) < 0.05) { yaw = -0.6; pitch = 0.35; }   // leave a flat elevation at an angle
+    ['side', 'top', 'front', 'free'].forEach(function (k) { var b = document.getElementById('sv-b-' + k); if (b) b.setAttribute('aria-pressed', k === v ? 'true' : 'false'); });
+  }
+
+  function setup() {
+    cv = document.createElement('canvas'); cv.setAttribute('aria-label', 'ship wireframe. drag to turn, pinch or scroll to zoom.');
+    try { rdr = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: false }); } catch (e) { rdr = null; }
+    if (!rdr) { cv = null; box.classList.add('sv-nogl'); return false; }
+    var dpr = window.devicePixelRatio || 1; PR = dpr >= 2 ? Math.min(dpr / 2, 1.5) : 1;
+    rdr.setPixelRatio(PR); rdr.setClearColor(C_B, 1);
+    cam = new THREE.OrthographicCamera(-5, 5, 3, -3, 0.1, 80); cam.position.set(0, 0, 30);
+    box.insertBefore(cv, box.firstChild);
+    cv.addEventListener('pointerdown', function (ev) {
+      ptrs[ev.pointerId] = [ev.clientX, ev.clientY]; try { cv.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+      var k = Object.keys(ptrs);
+      if (k.length === 1) { drag = { id: ev.pointerId, x: ev.clientX, y: ev.clientY }; moved = 0; }
+      else if (k.length === 2) { drag = null; moved = 99; pinch = Math.hypot(ptrs[k[0]][0] - ptrs[k[1]][0], ptrs[k[0]][1] - ptrs[k[1]][1]) || 1; }
+    });
+    cv.addEventListener('pointermove', function (ev) {
+      if (!ptrs[ev.pointerId]) return;
+      ptrs[ev.pointerId] = [ev.clientX, ev.clientY];
+      var k = Object.keys(ptrs), d;
+      if (k.length === 2) { d = Math.hypot(ptrs[k[0]][0] - ptrs[k[1]][0], ptrs[k[0]][1] - ptrs[k[1]][1]) || 1; zoomT = Math.max(0.7, Math.min(4, zoomT * d / pinch)); pinch = d; return; }
+      if (!drag || ev.pointerId !== drag.id) return;
+      var dx = ev.clientX - drag.x, dy = ev.clientY - drag.y; moved += Math.abs(dx) + Math.abs(dy); drag.x = ev.clientX; drag.y = ev.clientY;
+      if (moved < 5) return;
+      if (mode !== 'free') setView('free', true);
+      yaw += dx * 0.01; pitch = Math.max(-1.5, Math.min(1.5, pitch + dy * 0.01));
+    });
+    function end(ev) {
+      if (!ptrs[ev.pointerId]) return;
+      delete ptrs[ev.pointerId];
+      if (drag && ev.pointerId === drag.id) { if (moved < 5 && ev.type === 'pointerup') tap(ev); drag = null; idle = 1.5; }
+    }
+    cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+    cv.addEventListener('wheel', function (ev) { ev.preventDefault(); zoomT = Math.max(0.7, Math.min(4, zoomT * Math.exp(-ev.deltaY * 0.0015))); }, { passive: false });
+    build(); lastT = performance.now();
+    return true;
+  }
+  function tap(ev) {   // tap near a section's anchor to pick it; tap elsewhere to clear
+    var r = cv.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top, best = null, bd = 30 * 30;
+    callouts.forEach(function (c) { var d = (c.ax - x) * (c.ax - x) + (c.ay - y) * (c.ay - y); if (d < bd) { bd = d; best = c.m.id; } });
+    picked = best === picked ? null : best; light();
+  }
+  function teardown() {
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    if (!rdr) return;
+    drop(); rdr.dispose(); try { rdr.forceContextLoss(); } catch (e) { /* ignore */ }
+    if (cv && cv.parentNode) cv.parentNode.removeChild(cv);
+    svg.textContent = ''; Array.prototype.slice.call(over.querySelectorAll('span')).forEach(function (s) { over.removeChild(s); });
+    rdr = cv = cam = null; drag = null; ptrs = {};
+  }
+  function size() {
+    var w = box.clientWidth, h = box.clientHeight, s, cy;
+    if (!w || !h) return false;
+    if (w !== W || h !== H) {
+      W = w; H = h; rdr.setSize(w, h, false);
+      TIERS = w >= 560 ? 1 : 2; TOP = 20 + 17 * TIERS; BOT = 16 + 17 * TIERS;   // room for the label rows: one each side, two on a phone
+      s = Math.min((w - 16) / (span + 0.5), (h - TOP - BOT) / 4.25); cy = TOP + (h - TOP - BOT) / 2;   // the ship sits in the band left free by the label rows
+      cam.left = -w / 2 / s; cam.right = w / 2 / s; cam.top = cy / s; cam.bottom = -(h - cy) / s; cam.updateProjectionMatrix(); cam.updateMatrixWorld();
+      callouts.forEach(function (c) { c.w = 0; });
+    }
+    return true;
+  }
+  function scr(v) { v.project(cam); return [(v.x * 0.5 + 0.5) * W, (0.5 - v.y * 0.5) * H]; }
+  // labels sit in two rows above and two below the ship, each joined to its section by a leader with an arrowhead; re-laid every frame as the ship turns
+  function layout() {
+    // rows: 0, 1 above the ship (outer, inner), 2, 3 below (outer, inner). the inner rows exist only on narrow screens (TIERS = 2).
+    var end = [0, 0, 0, 0], ys = [18, 35, H - 32, H - 49], flat = mode === 'side' || mode === 'top', mid = TOP + (H - TOP - BOT) / 2, a, b, s;
+    callouts.forEach(function (c) { var p = scr(v3.copy(c.p).applyMatrix4(ship.matrixWorld)); c.ax = p[0]; c.ay = p[1]; if (!c.w) c.w = c.el.offsetWidth || 90; });
+    // left to right: each label goes over its section if there is room, else just right of the last label in the row that needs the smaller shift;
+    // only when its own side is full does it cross to the other side of the ship
+    callouts.slice().sort(function (p, q) { return p.ax - q.ax; }).forEach(function (c) {
+      var top = flat ? c.m.side === 't' : c.ay < mid, order = top ? [0, 1, 2, 3] : [2, 3, 0, 1], want = Math.max(3, Math.min(W - c.w - 3, c.ax - c.w / 2)), row = -1, x = 0, i, k, r, xr, lx, ly, dx, dy, l;
+      for (k = 0; k < 2 && row < 0; k++) for (i = 0; i < TIERS; i++) {
+        r = order[k * 2 + i]; xr = Math.max(want, end[r] ? end[r] + 8 : 3);
+        if (xr + c.w <= W - 3 && (row < 0 || xr < x)) { row = r; x = xr; }
+      }
+      if (row < 0) { c.el.style.visibility = 'hidden'; c.ln.setAttribute('visibility', 'hidden'); c.ar.setAttribute('visibility', 'hidden'); return; }
+      end[row] = x + c.w;
+      c.el.style.visibility = 'visible'; c.ln.setAttribute('visibility', 'visible'); c.ar.setAttribute('visibility', 'visible');
+      c.el.style.transform = 'translate(' + x.toFixed(1) + 'px,' + ys[row] + 'px)';
+      lx = x + c.w / 2; ly = row < 2 ? ys[row] + 16 : ys[row] - 1; dx = c.ax - lx; dy = c.ay - ly; l = Math.sqrt(dx * dx + dy * dy) || 1; dx /= l; dy /= l;
+      c.ln.setAttribute('x1', lx.toFixed(1)); c.ln.setAttribute('y1', ly.toFixed(1)); c.ln.setAttribute('x2', (c.ax - dx * 5).toFixed(1)); c.ln.setAttribute('y2', (c.ay - dy * 5).toFixed(1));
+      c.ar.setAttribute('points', c.ax.toFixed(1) + ',' + c.ay.toFixed(1) + ' ' + (c.ax - dx * 6 - dy * 2.2).toFixed(1) + ',' + (c.ay - dy * 6 + dx * 2.2).toFixed(1) + ' ' + (c.ax - dx * 6 + dy * 2.2).toFixed(1) + ',' + (c.ay - dy * 6 - dx * 2.2).toFixed(1));
+    });
+    // stern / midship / bow ruler: only where the ship lies along the screen
+    ruler.g.setAttribute('visibility', flat ? 'visible' : 'hidden');
+    if (!flat) return;
+    a = scr(v3.fromArray(P(20, 230, 0)).applyMatrix4(ship.matrixWorld))[0]; b = scr(v3.fromArray(P(878, 230, 0)).applyMatrix4(ship.matrixWorld))[0];
+    a = Math.max(4, a); b = Math.min(W - 4, b); s = ruler.parts;
+    function ln(e, x1, y1, x2, y2) { e.setAttribute('x1', x1.toFixed(1)); e.setAttribute('y1', y1); e.setAttribute('x2', x2.toFixed(1)); e.setAttribute('y2', y2); }
+    ln(s[0], a, 13, b, 13); [0, 1, 2, 3].forEach(function (k) { var x = a + (b - a) * k / 3; ln(s[k + 1], x, 9, x, 17); });
+    s[5].setAttribute('x', (a + 3).toFixed(1)); s[5].setAttribute('y', 10); s[6].setAttribute('x', ((a + b) / 2).toFixed(1)); s[6].setAttribute('y', 10); s[6].setAttribute('text-anchor', 'middle'); s[7].setAttribute('x', (b - 3).toFixed(1)); s[7].setAttribute('y', 10); s[7].setAttribute('text-anchor', 'end');
+  }
+  // hull damage, read from the page's own hull state (hullLevels: dmg and crit, 0..1): edges drop out and flare, the picture flickers, twitches and tears
+  function damage(dt) {
+    var hl = typeof hullLevels !== 'undefined' && hullLevels ? hullLevels : null, d = hl ? hl.dmg : 0, c = hl ? hl.crit : 0;
+    if (calm || d < 0.04) { DMG.set(0, 0, 0); BAR.set(0, 0, 0); ship.position.y = 0; mEdge.uniforms.uOp.value = 0.95; return; }
+    tSeed -= dt; if (tSeed <= 0) { DMG.y = rnd(); tSeed = 0.12 + rnd() * Math.max(0.2, 1.6 - d - c * 0.5); }
+    DMG.x = d * 0.2 + c * 0.25; DMG.z = d * 0.03 + c * 0.07;
+    tBar -= dt;
+    if (tBar <= 0) {
+      if (BAR.y) { BAR.set(0, 0, 0); tBar = (0.4 + rnd() * 5) / (1 + d * 4 + c * 6); }
+      else { BAR.set((rnd() * 2 - 1) * 2, 0.06 + c * 0.2 + rnd() * 0.1, (rnd() - 0.5) * (0.3 + d * 0.6)); tBar = 0.05 + rnd() * 0.1; }
+    }
+    ship.position.y = rnd() < d * 0.08 ? (rnd() - 0.5) * 0.08 * (d + c) : 0;
+    mEdge.uniforms.uOp.value = 0.95 * (rnd() < d * 0.12 + c * 0.2 ? 0.55 + rnd() * 0.3 : 1);
+  }
+  function frame(now) {
+    raf = requestAnimationFrame(frame);
+    var dt = Math.min(0.05, (now - lastT) / 1000), k = 1 - Math.exp(-dt * 8); lastT = now;
+    if (!sc || !size()) return;
+    if (mode !== 'free') { yaw += (VIEWS[mode][0] - yaw) * k; pitch += (VIEWS[mode][1] - pitch) * k; }
+    else if (!drag && !paused) { if (idle > 0) idle -= dt; else if (!calm) yaw += dt * 0.25; }
+    turn.rotation.set(pitch, yaw, 0);
+    zoom += (zoomT - zoom) * k; if (Math.abs(cam.zoom - zoom) > 0.0005) { cam.zoom = zoom; cam.updateProjectionMatrix(); }
+    if (!calm) mShield.uniforms.uDash.value.z = now / 1000 * 0.07;
+    damage(dt);
+    sc.updateMatrixWorld(); layout();
+    rdr.render(sc, cam);
+  }
+  // runs only while the panel is on screen and the tab is showing; everything is disposed when the panel is hidden (group folded, map view, signed out)
+  function sync() {
+    if (box.offsetParent === null) { teardown(); return; }
+    if (seen && !document.hidden) { if (!rdr && !setup()) return; if (!raf) { lastT = performance.now(); raf = requestAnimationFrame(frame); } }
+    else if (raf) { cancelAnimationFrame(raf); raf = 0; }
+  }
+  if (window.IntersectionObserver) new IntersectionObserver(function (es) { seen = es[es.length - 1].isIntersecting; sync(); }).observe(box);
+  else sync();
+  document.addEventListener('visibilitychange', sync);
+  ['side', 'top', 'front', 'free'].forEach(function (k) { var b = document.getElementById('sv-b-' + k); if (b) b.addEventListener('click', function () { setView(k); }); });
+  function on(id, fn) { var b = document.getElementById(id); if (b) b.addEventListener('click', fn); }
+  on('sv-b-pause', function () { paused = !paused; this.setAttribute('aria-pressed', paused ? 'true' : 'false'); });   // holds the free view's turning; drag still works
+  on('sv-b-zin', function () { zoomT = Math.min(4, zoomT * 1.3); });
+  on('sv-b-zout', function () { zoomT = Math.max(0.7, zoomT / 1.3); });
+
+  // hooks: fit or remove an upgrade (rebuilds the view), and a readout for testing
+  window.ShipView = {
+    install: function (id, on) { if (!(id in INSTALLED)) return false; INSTALLED[id] = !!on; if (rdr) { drop(); build(); } return true; },
+    installed: function () { return JSON.parse(JSON.stringify(INSTALLED)); },
+    project: function (x, y, z) { return rdr ? scr(v3.fromArray(P(x, y, z)).applyMatrix4(ship.matrixWorld)) : null; },   // schematic units to canvas pixels
+    state: function () { return { live: !!rdr, running: !!raf, mode: mode, res: res.length, callouts: callouts.map(function (c) { return c.m.id + ':' + c.el.style.visibility; }), picked: picked, zoom: zoomT }; }
+  };
+})();
+</script>
 <script>
 /* GALACTIC CHART */
 (function () {
