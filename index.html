@@ -1869,17 +1869,56 @@ el.appendChild(d);
     [930, 962].forEach(function (x) { g.cylx(x, x + 3, 286, 0, 8, 8, 8); });
     g.D([1010, 286, 0]);
   }
-  // the void shield envelope: the old schematic's outline, a plan outline and a few hoops
-  var SHIELD = [0, 143, 0, 288, 12, 301, 41, 302, 59, 314, 77, 316, 101, 346, 132, 420, 145, 435, 165, 442, 195, 442, 226, 429, 226, 332, 284, 332, 313, 324, 335, 344, 360, 345, 382, 332, 391, 317, 419, 316, 434, 300, 459, 296,
-    475, 284, 502, 294, 528, 295, 569, 320, 595, 319, 615, 310, 637, 329, 659, 334, 844, 325, 883, 317, 896, 303, 897, 275, 889, 260, 842, 249, 802, 249, 696, 211, 633, 171, 622, 147, 591, 122, 526, 111, 485, 140, 398, 140, 385, 136,
-    377, 107, 360, 97, 332, 98, 319, 120, 307, 120, 303, 66, 264, 30, 230, 30, 210, 48, 200, 25, 162, 24, 151, 35, 150, 53, 117, 89, 102, 118, 51, 119, 31, 130, 13, 131];
-  function bShield(g) {
-    var a = [], i, k, plan = [[0, 56], [128, 62], [140, 126], [432, 126], [446, 84], [640, 80], [780, 60], [868, 28], [897, 0]], hoops = [[60, 119, 302, 60], [200, 28, 440, 126], [330, 98, 344, 126], [470, 140, 290, 84], [610, 135, 315, 82], [760, 235, 330, 62]];
-    for (i = 0; i < SHIELD.length; i += 2) a.push([SHIELD[i], SHIELD[i + 1], 0]);
-    g.S(a, true);
-    a = plan.map(function (p) { return [p[0], 215, p[1]]; }); for (i = plan.length - 2; i >= 0; i--) a.push([plan[i][0], 215, -plan[i][1]]);
-    g.S(a, true);
-    hoops.forEach(function (h) { a = []; for (k = 0; k < 24; k++) a.push([h[0], (h[1] + h[2]) / 2 - (h[2] - h[1]) / 2 * Math.cos(k / 24 * TAU), h[3] * Math.sin(k / 24 * TAU)]); g.S(a, true); });
+
+  // ---------------- baked model (ship60.bin) ----------------
+  // the feature edges (faces meeting at 60 degrees or more) of the reference STL, plus a coarse occluder, baked by tools/bake_stl.py.
+  // when the file loads, build() draws these in place of the procedural hull; if it does not load, the procedural ship stays.
+  // STL axes: x length, y beam, z up. S() / SB() take STL units and give schematic units, so zones can be written against the model.
+  var STL = null, K = 215.5;
+  function S(x, z, y) { return [449.2 + K * x, 230 - K * z, K * y]; }
+  function SB(x0, x1, z0, z1, y0, y1) { return [449.2 + K * x0, 449.2 + K * x1, 230 - K * z1, 230 - K * z0, K * y0, K * y1]; }
+  function parseSTL(buf) {
+    var dv = new DataView(buf), o = 44, nv, ns, no, nt, lo = [], hi = [], i, k, u, r = { v: null, ind: null, ov: null, oi: null };
+    if (buf.byteLength < 44 || dv.getUint32(0, true) !== 0x30365356) return null;   // 'VS60'
+    nv = dv.getUint32(4, true); ns = dv.getUint32(8, true); no = dv.getUint32(12, true); nt = dv.getUint32(16, true);
+    for (i = 0; i < 3; i++) { lo[i] = dv.getFloat32(20 + i * 4, true); hi[i] = dv.getFloat32(32 + i * 4, true); }
+    if (o + (nv * 3 + ns * 2 + no * 3 + nt * 3) * 2 > buf.byteLength) return null;
+    function pos(n) {   // u16 positions to schematic units (x along, y down, z beam)
+      var q = new Uint16Array(buf, o, n * 3), a = new Float32Array(n * 3), j, X, Y, Z;
+      for (j = 0; j < n; j++) {
+        X = lo[0] + q[j * 3] / 65535 * (hi[0] - lo[0]); Y = lo[1] + q[j * 3 + 1] / 65535 * (hi[1] - lo[1]); Z = lo[2] + q[j * 3 + 2] / 65535 * (hi[2] - lo[2]);
+        a[j * 3] = 449.2 + K * X; a[j * 3 + 1] = 230 - K * Z; a[j * 3 + 2] = K * Y;
+      }
+      o += n * 6; return a;
+    }
+    r.v = pos(nv); r.ind = new Uint16Array(buf, o, ns * 2); o += ns * 4; r.ov = pos(no); r.oi = new Uint16Array(buf, o, nt * 3);
+    return r;
+  }
+  function loadSTL() {
+    if (!window.fetch) return;
+    fetch('ship60.bin?v=3').then(function (r) { return r.ok ? r.arrayBuffer() : null; }).then(function (b) {
+      var m = b ? parseSTL(b) : null;
+      if (m) { STL = m; if (rdr) { drop(); build(); } }
+    }).catch(function () { /* no file: the procedural ship stays */ });
+  }
+  function bLanceStl(g) {   // the prow lance, on the baked model's nose
+    g.cylx(878, 905, 301, 0, 10, 8, 8); g.cylx(905, 1010, 301, 0, 5, 0.6, 6);
+    [935, 965].forEach(function (x) { g.cylx(x, x + 3, 301, 0, 8, 8, 8); });
+    g.D([1010, 301, 0]);
+  }
+  var OWNER = ['engines', 'plasma', 'bridge', 'defense', 'broadside', 'wings', 'prow', 'hangar', 'cargo', 'crew'];   // which zone claims an edge that lies in several
+  function addSTL(g, list, idx) {   // edges and occluder of the baked model; each edge lights with the zone it lies in
+    var v = STL.v, ind = STL.ind, n = ind.length / 2, i, j, k, a, b, A, B, mx, my, mz, l, own = [], bx, o;
+    OWNER.forEach(function (id) { list.forEach(function (m) { if (m.id === id && m.boxes && idx[id] !== undefined) own.push({ n: idx[id], boxes: m.boxes }); }); });
+    for (i = 0; i < n; i++) {
+      a = ind[i * 2] * 3; b = ind[i * 2 + 1] * 3; A = [v[a], v[a + 1], v[a + 2]]; B = [v[b], v[b + 1], v[b + 2]];
+      mx = (A[0] + B[0]) / 2; my = (A[1] + B[1]) / 2; mz = (A[2] + B[2]) / 2; g.own = -1;
+      for (j = 0; j < own.length && g.own < 0; j++) for (k = 0; k < own[j].boxes.length; k++) { bx = own[j].boxes[k]; if (mx >= bx[0] && mx <= bx[1] && my >= bx[2] && my <= bx[3] && mz >= bx[4] && mz <= bx[5]) { g.own = own[j].n; break; } }
+      l = Math.abs(A[0] - B[0]) + Math.abs(A[1] - B[1]) + Math.abs(A[2] - B[2]);
+      if (l < 4.5) g.T(A, B); else g.E(A, B);   // short runs (curves, fine greeble) are drawn dimmer
+    }
+    g.own = -1; o = STL.oi;
+    for (i = 0; i < o.length; i += 3) g.F([STL.ov[o[i] * 3], STL.ov[o[i] * 3 + 1], STL.ov[o[i] * 3 + 2]], [STL.ov[o[i + 1] * 3], STL.ov[o[i + 1] * 3 + 1], STL.ov[o[i + 1] * 3 + 2]], [STL.ov[o[i + 2] * 3], STL.ov[o[i + 2] * 3 + 1], STL.ov[o[i + 2] * 3 + 2]]);
   }
 
   // ---------------- the module table ----------------
@@ -1892,33 +1931,40 @@ el.appendChild(d);
   //   build   geometry builder (see above); count / adds: see bTurrets
   //   added   true = a section that was not on the old 2D schematic
   //   part    for hull parts: the section id whose callout lights this geometry
+  //   stl     overrides (build, at, boxes) used instead once ship60.bin has loaded; write them with S() / SB(), in the model's own units
   // TO ADD AN UPGRADE: write a builder, add one row here with kind 'upgrade', and add its id to INSTALLED. nothing else changes.
   var INSTALLED = { lance: false, turrets2: false, battery2: false };   // upgrades fitted. the one place to wire to shared state later: call ShipView.install(id, true)
   var MODULES = [
-    { id: 'hull', label: '', kind: 'hull', build: bHull },
-    { id: 'stern', label: '', kind: 'hull', build: bStern, part: 'plasma' },
-    { id: 'keel', label: '', kind: 'hull', build: bKeel },
-    { id: 'tower', label: '', kind: 'hull', build: bTower, part: 'bridge' },
-    { id: 'spine', label: '', kind: 'hull', build: bSpine, part: 'defense' },
-    { id: 'fore', label: '', kind: 'hull', build: bFore },
-    { id: 'sponson', label: '', kind: 'hull', build: bSponson, part: 'hangar' },
-    { id: 'turrets', label: '', kind: 'hull', build: bTurrets, count: 7, part: 'defense' },
-    { id: 'plasma', label: 'plasma drive', kind: 'zone', at: [60, 161, 0], side: 't', boxes: [[27, 110, 161, 274, -40, 40]] },
-    { id: 'bridge', label: 'bridge', kind: 'zone', at: [202, 105, 0], side: 't', boxes: [[141, 264, 105, 161, -30, 30]] },
-    { id: 'crew', label: 'crew quarters', kind: 'zone', at: [290, 168, 0], side: 't', boxes: [[114, 323, 168, 218, -45, 45]] },
-    { id: 'defense', label: 'defense array', kind: 'zone', at: [427, 138, 0], side: 't', boxes: [[328, 526, 138, 200, -26, 26]] },
-    { id: 'broadside', label: 'broadside battery', kind: 'zone', at: [512, 205, 66], side: 't', boxes: [[424, 600, 202, 243, 60, 84], [424, 600, 202, 243, -84, -60]], build: bBroadside, bays: [424, 600, 4], added: true },
-    { id: 'prow', label: 'prow', kind: 'zone', at: [740, 251, 0], side: 't', boxes: [[640, 882, 198, 318, -44, 44]], build: bProw, added: true },
-    { id: 'engines', label: 'engines', kind: 'zone', at: [14, 266, 0], side: 'b', boxes: [[1, 26, 162, 266, -46, 46]], build: bEngines, added: true },
-    { id: 'cargo', label: 'cargo bays a-d', kind: 'zone', at: [218, 290, 0], side: 'b', boxes: [[114, 166, 230, 290, -50, 50], [166, 218, 230, 290, -50, 50], [218, 270, 230, 290, -50, 50], [270, 323, 230, 290, -50, 50]] },
-    { id: 'wings', label: 'wing lances', kind: 'zone', at: [300, 308, 110], side: 'b', boxes: [[150, 428, 260, 308, 64, 110], [150, 428, 260, 308, -110, -64]], build: bWings, added: true },
-    { id: 'hangar', label: 'hangar deck', kind: 'zone', at: [362, 292, 0], side: 'b', boxes: [[325, 399, 251, 292, -64, 64]] },
-    { id: 'shield', label: 'void shield envelope', kind: 'zone', at: [595, 319, 0], side: 'b', build: bShield },
-    { id: 'lance', label: 'prow lance', kind: 'upgrade', at: [950, 276, 0], side: 't', boxes: [[866, 1012, 274, 298, -12, 12]], build: bLance },
+    { id: 'hull', label: '', kind: 'hull', build: bHull, stl: { build: null } },
+    { id: 'stern', label: '', kind: 'hull', build: bStern, part: 'plasma', stl: { build: null } },
+    { id: 'keel', label: '', kind: 'hull', build: bKeel, stl: { build: null } },
+    { id: 'tower', label: '', kind: 'hull', build: bTower, part: 'bridge', stl: { build: null } },
+    { id: 'spine', label: '', kind: 'hull', build: bSpine, part: 'defense', stl: { build: null } },
+    { id: 'fore', label: '', kind: 'hull', build: bFore, stl: { build: null } },
+    { id: 'sponson', label: '', kind: 'hull', build: bSponson, part: 'hangar', stl: { build: null } },
+    { id: 'turrets', label: '', kind: 'hull', build: bTurrets, count: 7, part: 'defense', stl: { build: null } },
+    { id: 'plasma', label: 'plasma drive', kind: 'zone', at: [60, 161, 0], side: 't', boxes: [[27, 110, 161, 274, -40, 40]], stl: { at: S(-1.5, 0.44, 0), boxes: [SB(-1.74, -1.25, -0.12, 0.44, -0.22, 0.22)] } },
+    { id: 'bridge', label: 'bridge', kind: 'zone', at: [202, 105, 0], side: 't', boxes: [[141, 264, 105, 161, -30, 30]], stl: { at: S(-0.62, 0.74, 0), boxes: [SB(-0.86, -0.28, 0.2, 0.74, -0.16, 0.16)] } },
+    { id: 'crew', label: 'crew quarters', kind: 'zone', at: [290, 168, 0], side: 't', boxes: [[114, 323, 168, 218, -45, 45]], stl: { at: S(-1.0, 0.32, 0), boxes: [SB(-1.25, -0.3, -0.12, 0.32, -0.26, 0.26)] } },
+    { id: 'defense', label: 'defense array', kind: 'zone', at: [427, 138, 0], side: 't', boxes: [[328, 526, 138, 200, -26, 26]], stl: { at: S(0.2, 0.22, 0), boxes: [SB(-0.1, 0.5, 0.0, 0.22, -0.14, 0.14)] } },
+    { id: 'broadside', label: 'broadside battery', kind: 'zone', at: [512, 205, 66], side: 't', boxes: [[424, 600, 202, 243, 60, 84], [424, 600, 202, 243, -84, -60]], build: bBroadside, bays: [424, 600, 4], added: true, stl: { build: null, at: S(0.2, 0.18, 0.3), boxes: [SB(-0.15, 0.5, -0.25, 0.18, 0.14, 0.34), SB(-0.15, 0.5, -0.25, 0.18, -0.34, -0.14)] } },
+    { id: 'prow', label: 'prow', kind: 'zone', at: [740, 251, 0], side: 't', boxes: [[640, 882, 198, 318, -44, 44]], build: bProw, added: true, stl: { build: null, at: S(1.2, -0.05, 0), boxes: [SB(0.5, 1.99, -0.36, 0.2, -0.3, 0.3)] } },
+    { id: 'engines', label: 'engines', kind: 'zone', at: [14, 266, 0], side: 'b', boxes: [[1, 26, 162, 266, -46, 46]], build: bEngines, added: true, stl: { build: null, at: S(-1.9, -0.16, 0), boxes: [SB(-2.0, -1.74, -0.16, 0.38, -0.16, 0.16)] } },
+    { id: 'cargo', label: 'cargo bays a-d', kind: 'zone', at: [218, 290, 0], side: 'b', boxes: [[114, 166, 230, 290, -50, 50], [166, 218, 230, 290, -50, 50], [218, 270, 230, 290, -50, 50], [270, 323, 230, 290, -50, 50]], stl: { at: S(-1.0, -0.4, 0), boxes: [SB(-1.25, -0.75, -0.4, -0.1, -0.22, 0.22)] } },
+    { id: 'wings', label: 'wing lances', kind: 'zone', at: [300, 308, 110], side: 'b', boxes: [[150, 428, 260, 308, 64, 110], [150, 428, 260, 308, -110, -64]], build: bWings, added: true, stl: { build: null, at: S(-0.7, -0.42, 0.5), boxes: [SB(-1.3, -0.1, -0.42, -0.16, 0.28, 0.51), SB(-1.3, -0.1, -0.42, -0.16, -0.51, -0.28)] } },
+    { id: 'hangar', label: 'hangar deck', kind: 'zone', at: [362, 292, 0], side: 'b', boxes: [[325, 399, 251, 292, -64, 64]], stl: { at: S(-0.5, -0.45, 0), boxes: [SB(-0.75, -0.25, -0.45, -0.1, -0.22, 0.22)] } },
+    { id: 'lance', label: 'prow lance', kind: 'upgrade', at: [950, 276, 0], side: 't', boxes: [[866, 1012, 274, 298, -12, 12]], build: bLance, stl: { build: bLanceStl, at: S(2.3, -0.33, 0), boxes: [SB(1.97, 2.6, -0.37, -0.29, -0.06, 0.06)] } },
     { id: 'turrets2', label: '', kind: 'upgrade', adds: 'turrets', count: 3 },
-    { id: 'battery2', label: 'aft battery', kind: 'upgrade', at: [220, 243, 66], side: 'b', boxes: [[124, 316, 202, 243, 60, 84], [124, 316, 202, 243, -84, -60]], build: bBroadside, bays: [128, 312, 4] }
+    { id: 'battery2', label: 'aft battery', kind: 'upgrade', at: [220, 243, 66], side: 'b', boxes: [[124, 316, 202, 243, 60, 84], [124, 316, 202, 243, -84, -60]], build: bBroadside, bays: [128, 312, 4], stl: { build: null, at: null, boxes: null } }
   ];
   function fitted(m) { return m.kind !== 'upgrade' || !!INSTALLED[m.id]; }
+  function asView(m) {   // with the baked model loaded, a row's `stl` entry overrides its geometry, anchor and zones
+    if (!STL || !m.stl) return m;
+    var c = {}, k;
+    for (k in m) if (k !== 'stl') c[k] = m[k];
+    for (k in m.stl) c[k] = m.stl[k];
+    return c;
+  }
 
   // ---------------- drawing ----------------
   // vF: depth from the ship's centre (far parts a little dimmer). aD: distance along a dashed line. aR: a random number per edge, used to drop or flare edges under hull damage.
@@ -1929,7 +1975,7 @@ el.appendChild(d);
   var DMG = new THREE.Vector3(), CALM = new THREE.Vector3(), BAR = new THREE.Vector3(), PICK = { value: -1 }, NOPICK = { value: -1 };   // shared uniforms: (drop, seed, flare), a glitch bar (y, half-height, shift), the picked section
   var rdr = null, cv = null, sc = null, cam = null, turn = null, ship = null, res = [], raf = 0, seen = true, lastT = 0, W = 0, H = 0, PR = 1,
       mode = 'side', yaw = 0, pitch = 0, zoom = 1, zoomT = 1, idle = 0, drag = null, ptrs = {}, pinch = 0, moved = 0,
-      callouts = [], zones = {}, picked = null, hover = null, mEdge = null, mShield = null, ruler = null, span = 8.6, v3 = new THREE.Vector3(),
+      callouts = [], zones = {}, picked = null, hover = null, mEdge = null, ruler = null, span = 8.6, v3 = new THREE.Vector3(),
       tSeed = 0, tBar = 0, rs = 20260115, paused = false;
   var VIEWS = { side: [0, 0], top: [0, Math.PI / 2], front: [-Math.PI / 2, 0] }, TOP = 37, BOT = 33, TIERS = 1;
   function rnd() { rs |= 0; rs = rs + 0x6D2B79F5 | 0; var t = Math.imul(rs ^ rs >>> 15, 1 | rs); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
@@ -1966,7 +2012,7 @@ el.appendChild(d);
   function el(tag, cls) { var e = document.createElementNS(NS, tag); if (cls) e.setAttribute('class', cls); svg.appendChild(e); return e; }
 
   function build() {
-    var hull = new G(), list = MODULES.filter(fitted), fill = keep(new THREE.MeshBasicMaterial({ color: C_G, transparent: true, opacity: 0.16, depthTest: false, depthWrite: false })), idx = {}, n = 0, i, x0 = 1e9, x1 = -1e9, o;
+    var hull = new G(), list = MODULES.filter(fitted).map(asView), fill = keep(new THREE.MeshBasicMaterial({ color: C_G, transparent: true, opacity: 0.16, depthTest: false, depthWrite: false })), idx = {}, n = 0, i, x0 = 1e9, x1 = -1e9, o;
     sc = new THREE.Scene(); turn = new THREE.Group(); ship = new THREE.Group(); sc.add(turn); turn.add(ship);
     callouts = []; zones = {}; svg.textContent = ''; Array.prototype.slice.call(over.querySelectorAll('span')).forEach(function (s) { over.removeChild(s); });
     rs = 20260115;
@@ -1990,13 +2036,13 @@ el.appendChild(d);
         callouts.push({ m: m, n: idx[m.id], el: s, ln: el('line'), ar: el('polygon'), p: new THREE.Vector3().fromArray(P(m.at[0], m.at[1], m.at[2])), w: 0 });
       }
     });
+    if (STL) addSTL(hull, list, idx);
     // the hull's faces, drawn into the depth buffer only, pushed back a touch so the edges lying on them still show
     if (hull.f.length) { o = keep(new THREE.BufferGeometry()); o.setAttribute('position', new THREE.Float32BufferAttribute(hull.f, 3)); add(new THREE.Mesh(o, keep(new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1.5, polygonOffsetUnits: 3 }))), 0); }
     both(hull.m, hull.mo, 0.16, 0.12, 0.6);
     both(hull.t, hull.to, 0.5, 0.1, 0.6);
     mEdge = both(hull.e, hull.eo, 0.95, 0.1, 0.6);
     both(hull.d, hull.dd, 0.9, 0.12, 0.6, 3.4 * PR);
-    mShield = mat(C_D, 0.9, 0.7, { dash: [0.1, 0.08] }); lines(hull.s, mShield, hull.sd, null, 4);
     for (i = 0; i < hull.e.length; i += 3) { if (hull.e[i] < x0) x0 = hull.e[i]; if (hull.e[i] > x1) x1 = hull.e[i]; }
     ship.position.x = -(Math.max(x1, 4.48) + Math.min(x0, -4.49)) / 2; span = Math.max(x1, 4.48) - Math.min(x0, -4.49);   // keeps the ship centred when an upgrade lengthens it
     ruler = { g: el('g'), parts: [] };
@@ -2009,10 +2055,9 @@ el.appendChild(d);
     var id = hover || picked, n = -1;
     callouts.forEach(function (c) { var on = c.m.id === id; if (on) n = c.n; c.el.classList.toggle('sv-on', on); });
     PICK.value = n;
-    Object.keys(zones).forEach(function (k) { var z = zones[k], on = k === id; z.line.material.uniforms.uCol.value = on ? C_H : C_G; z.line.material.uniforms.uOp.value = on ? 1 : (id ? 0.25 : 0.55); z.line.material.uniforms.uDash.value.x = on ? 0 : 0.07; z.fills.forEach(function (f) { f.visible = on; }); });
-    if (mShield) { mShield.uniforms.uCol.value = id === 'shield' ? C_H : C_D; mShield.uniforms.uOp.value = id === 'shield' ? 1 : (id ? 0.45 : 0.9); }
+    Object.keys(zones).forEach(function (k) { var z = zones[k], on = k === id; z.line.visible = on; z.line.material.uniforms.uCol.value = C_H; z.line.material.uniforms.uOp.value = 1; z.line.material.uniforms.uDash.value.x = 0; z.fills.forEach(function (f) { f.visible = on; }); });
   }
-  function drop() { res.forEach(function (x) { x.dispose(); }); res = []; sc = null; callouts = []; zones = {}; mEdge = mShield = null; }
+  function drop() { res.forEach(function (x) { x.dispose(); }); res = []; sc = null; callouts = []; zones = {}; mEdge = null; }
   function setView(v, keepAngles) {
     mode = v; idle = 0;
     if (!keepAngles && v !== 'free') yaw = ((yaw + Math.PI) % TAU + TAU) % TAU - Math.PI;
@@ -2133,7 +2178,6 @@ el.appendChild(d);
     else if (!drag && !paused) { if (idle > 0) idle -= dt; else if (!calm) yaw += dt * 0.25; }
     turn.rotation.set(pitch, yaw, 0);
     zoom += (zoomT - zoom) * k; if (Math.abs(cam.zoom - zoom) > 0.0005) { cam.zoom = zoom; cam.updateProjectionMatrix(); }
-    if (!calm) mShield.uniforms.uDash.value.z = now / 1000 * 0.07;
     damage(dt);
     sc.updateMatrixWorld(); layout();
     rdr.render(sc, cam);
@@ -2152,6 +2196,8 @@ el.appendChild(d);
   on('sv-b-pause', function () { paused = !paused; this.setAttribute('aria-pressed', paused ? 'true' : 'false'); });   // holds the free view's turning; drag still works
   on('sv-b-zin', function () { zoomT = Math.min(4, zoomT * 1.3); });
   on('sv-b-zout', function () { zoomT = Math.max(0.7, zoomT / 1.3); });
+
+  loadSTL();
 
   // hooks: fit or remove an upgrade (rebuilds the view), and a readout for testing
   window.ShipView = {
