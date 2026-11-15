@@ -433,27 +433,48 @@ a.gc-btn{display:inline-flex;align-items:center;text-decoration:none}
 html.map-mode body{padding:0;height:100vh;height:100dvh;min-height:0;overflow:hidden}
 .map-mode .wrap{max-width:none}
 .map-mode .wrap>:not(#gc-root),.map-mode #gc-root>.group-title,.map-mode #gc-mappanel>.gc-ptitle,.map-mode .warp-test-btn{display:none!important}
-.map-mode #gc-root{position:fixed;inset:0;margin:0;padding:6px;display:flex;flex-direction:column;gap:6px}
-.map-mode #gc-mappanel{flex:1 1 auto;min-height:0;margin:0;padding:8px 10px;display:flex;flex-direction:column}
-.map-mode #gc-mappanel>*{flex:none}
-.map-mode #gc-chart{flex:1 1 auto;min-height:180px;aspect-ratio:auto;max-height:none}
-.map-mode #gc-index{overflow:auto;max-height:38vh}
-.map-mode #gc-navdata{margin:0;padding:8px 10px;overflow:auto;z-index:6;background:rgba(3,17,7,.94);border-color:var(--green-dim);
-  box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 12px rgba(57,255,107,.12)}
+html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75rem / 1rem ratio kept */
+.map-mode #gc-root{position:fixed;inset:0;margin:0;padding:4px;display:flex;flex-direction:column;gap:4px}
+.map-mode #gc-mappanel{flex:1 1 auto;min-height:0;margin:0;padding:0;position:relative;overflow:hidden}
+.map-mode #gc-chart{position:absolute;inset:0;aspect-ratio:auto;max-height:none;border:0}   /* sized from the first frame, before the controls move into #gc-float */
+/* controls float small over the chart's top-left, below the ruler */
+.map-mode #gc-float{position:absolute;top:24px;left:6px;max-width:calc(100% - 12px);z-index:6;pointer-events:none;
+  display:flex;flex-direction:column;align-items:flex-start;gap:3px}
+.map-mode #gc-float>*{pointer-events:auto;margin:0;padding:2px 3px;background:rgba(2,10,4,.78);border:1px solid var(--border);max-width:100%}
+.map-mode #gc-float .gc-ctl{gap:3px;align-items:center}
+.map-mode #gc-float .gc-btn{padding:.1rem .4rem;min-height:1.5rem}
+.map-mode #gc-float .gc-tab{margin-left:0}
+.map-mode #gc-root #locDate{padding:.1rem .4rem;max-width:9rem}
+.map-mode #gc-status{padding:1px 4px;min-height:0}
+.map-mode #gc-status:empty{display:none}
+.map-mode #gc-index{padding:2px 6px;max-height:55vh;overflow:auto;width:30rem}
+.map-mode #gc-index>summary{margin:0}
+.map-mode #gc-index:not([open]){width:auto}
+.map-mode .gc-list{grid-template-columns:repeat(auto-fill,minmax(12rem,1fr));gap:2px}
+.map-mode .gc-list .gc-btn{min-height:1.5rem;padding:.1rem .4rem}
+/* navigation data: a full-height column (bottom strip on phones) */
+.map-mode #gc-navdata{margin:0;padding:6px 8px;overflow:auto;background:var(--panel);border-color:var(--green-dim)}
+.map-mode #gc-navdata .gc-btn{padding:.15rem .45rem;min-height:1.6rem}
+.map-mode #gc-navdata .gc-gtitle{margin:.4rem 0 .2rem}
+.map-mode #gc-navdata .gc-ctl{gap:3px;margin-top:.3rem}
+.map-mode #gc-vbox{height:200px}
 .map-mode #gc-navhead{margin:0;cursor:pointer;user-select:none;-webkit-user-select:none}
 .map-mode #gc-navhead::after{content:' [ - ]';color:var(--dim)}
 .map-mode #gc-navdata.gc-fold #gc-navhead::after{content:' [ + ]'}
 .map-mode #gc-navdata.gc-fold>:not(#gc-navhead){display:none}
 .map-mode #gc-navhead:hover{text-shadow:0 0 8px rgba(57,255,107,.9)}
 @media (min-width:760px){
-  .map-mode #gc-navdata{position:absolute;top:12px;right:12px;width:21rem;max-width:42vw}
+  .map-mode #gc-root{flex-direction:row}
+  .map-mode #gc-navdata{flex:none;width:21rem;max-width:40vw}
+  .map-mode #gc-navdata.gc-fold{width:auto;padding:8px 4px}
+  .map-mode #gc-navdata.gc-fold #gc-navhead{writing-mode:vertical-rl}
 }
 @media (max-width:759px){
-  .map-mode #gc-navdata{flex:none;max-height:36vh}
+  .map-mode #gc-navdata{flex:none;max-height:40vh}
   .map-mode .gc-ovl{flex-wrap:nowrap;overflow-x:auto}
   .map-mode .gc-ovl>*{flex:none}
+  .map-mode #gc-index{width:auto;max-height:45vh}
 }
-.map-mode #gc-mappanel{overflow-y:auto}
 
 </style>
 </head>
@@ -3502,20 +3523,17 @@ el.appendChild(d);
     h.addEventListener('click', flip);
     h.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); flip(); } });
   });
-  // map view: the navigation data overlay folds to its title bar (folded by default on phones)
+  // map view: the navigation data column folds to its title (folded by default on phones)
   if (!MAP) return;
   var nd = document.getElementById('gc-navdata'), nh = document.getElementById('gc-navhead');
   nh.setAttribute('role', 'button'); nh.tabIndex = 0;
   function fold(c) { nd.classList.toggle('gc-fold', c); nh.setAttribute('aria-expanded', String(!c)); }
   fold(window.matchMedia('(max-width: 759px)').matches);
-  // wide screens: the overlay sits top-right on the chart and stops above the zoom column
-  var chart = document.getElementById('gc-chart');
-  function fit() {
-    if (window.innerWidth < 760) { nd.style.maxHeight = ''; return; }
-    var r = chart.getBoundingClientRect(); nd.style.maxHeight = Math.max(120, Math.round(r.bottom - 196)) + 'px';
-  }
-  if (window.ResizeObserver) new ResizeObserver(fit).observe(chart); else window.addEventListener('resize', fit);
-  fit();
+  // the control rows under the chart float over its top-left corner instead, so the chart gets the whole panel
+  var mp = document.getElementById('gc-mappanel'), fl = document.createElement('div');
+  fl.id = 'gc-float';
+  Array.prototype.slice.call(mp.children).forEach(function (el) { if (el.id !== 'gc-chart' && !el.classList.contains('gc-ptitle')) fl.appendChild(el); });
+  mp.appendChild(fl);
   nh.addEventListener('click', function () { fold(!nd.classList.contains('gc-fold')); });
   nh.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); fold(!nd.classList.contains('gc-fold')); } });
 })();
