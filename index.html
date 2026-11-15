@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Voidship Status</title>
+<script>/* ?map=1: full-page starmap view (opened from the map's "open in new tab") */
+if (/[?&]map=1(&|$)/.test(location.search)) { document.documentElement.classList.add('map-mode'); document.title = 'Voidship Starmap'; }</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=block" rel="stylesheet">
@@ -17,6 +19,8 @@
 --fs-s:.75rem; --fs-m:1rem;                 /* body text sizes: small / base */
 --dmg:0; --crit:0;                          /* hull damage: set by script. dmg 0..1 builds steadily; crit 0..1 only below 25% hull */
 --noise-base:calc(.07 + var(--dmg)*.2 + var(--crit)*.3);
+--gap:10px;                                 /* space between panels, groups and titles */
+--pad:12px 14px;                            /* panel padding */
 }
 *{box-sizing:border-box}
 *{scrollbar-width:thin;scrollbar-color:var(--green-dim) var(--panel2)}
@@ -40,7 +44,7 @@ html{font-size:117%}
 @keyframes jitter{0%,88%,100%{transform:translate(0,0)}89%{transform:translate(-.5px,.5px)}
 90%{transform:translate(.5px,0)}91%{transform:translate(0,-.5px)}92%{transform:translate(0,0)}}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--term);
-padding:24px 16px 60px;min-height:100vh;position:relative;animation:flicker 6s infinite;
+padding:16px 12px 40px;min-height:100vh;position:relative;animation:flicker 6s infinite;
 filter:blur(calc(.1px + var(--dmg)*.12px + var(--crit)*.15px));
 text-shadow:1px 0 1.6px rgba(57,255,107,.35), -0.8px 0 1.6px rgba(57,255,107,.18),
 0 0 1px rgba(57,255,107,.3)}
@@ -130,10 +134,10 @@ h1{font-size:1.9rem;color:var(--green);letter-spacing:.14em;text-align:center;
 text-shadow:0 0 4px var(--green),0 0 9px rgba(57,255,107,.45),
 1.1px 0 2px rgba(57,255,107,.4),-0.9px 0 2px rgba(57,255,107,.2);animation:jitter 4.5s infinite}
 h1::before{content:'▓▓ '} h1::after{content:' ▓▓'}
-.sub{text-align:center;color:var(--dim);font-size:var(--fs-s);margin:6px 0 28px;letter-spacing:.05em}
+.sub{text-align:center;color:var(--dim);font-size:var(--fs-s);margin:4px 0 16px;letter-spacing:.05em}
 .wrap{max-width:640px;margin:0 auto;position:relative;z-index:1}
-.group{margin-bottom:14px}
-.group-title{display:flex;align-items:center;gap:14px;margin:0 0 14px;
+.group{margin-bottom:var(--gap)}
+.group-title{display:flex;align-items:center;gap:14px;margin:0 0 var(--gap);
   font-size:1.4rem;letter-spacing:.22em;color:var(--green);
   text-shadow:0 0 6px rgba(57,255,107,.6),0 0 14px rgba(57,255,107,.3)}
 .group-title::before,.group-title::after{content:'';flex:1;height:1px}
@@ -143,15 +147,16 @@ h1::before{content:'▓▓ '} h1::after{content:' ▓▓'}
 .group-title span::after{content:' ]'}
 .panel{background:var(--panel);border:1px solid var(--border);
 box-shadow:0 0 0 1px rgba(0,0,0,.6),inset 0 0 20px rgba(0,255,64,.03);
-padding:16px 18px;margin-bottom:16px}
-.panel h2{font-size:var(--fs-m);color:var(--green);margin-bottom:14px;letter-spacing:.08em;
+padding:var(--pad);margin-bottom:var(--gap)}
+.panel h2{font-size:var(--fs-m);color:var(--green);margin-bottom:var(--gap);letter-spacing:.08em;
 text-shadow:0 0 5px rgba(57,255,107,.6)}
 .panel h2::before{content:'> '}
-.row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:7px}
+.row.desig{margin:6px 0 0;padding-top:8px;border-top:1px dashed var(--border)}
 .row:last-child{margin-bottom:0}
 label{color:var(--dim);font-size:var(--fs-s);min-width:70px;text-transform:uppercase;letter-spacing:.04em}
 input,textarea{background:var(--panel2);border:1px solid var(--border);color:var(--green);
-font-family:var(--term);font-size:var(--fs-m);padding:7px 9px;width:100%;caret-color:var(--green)}
+font-family:var(--term);font-size:var(--fs-m);padding:6px 8px;width:100%;caret-color:var(--green)}
 input:focus,textarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 6px rgba(57,255,107,.5)}
 input::placeholder,textarea::placeholder{color:var(--dim);opacity:.85}
 input[type=number]{max-width:70px;text-align:center}
@@ -159,7 +164,7 @@ input[type=number]{max-width:70px;text-align:center}
 .bar{height:8px;background:var(--panel2);margin-top:4px;overflow:hidden;border:1px solid var(--border)}
 .bar>div{height:100%;background:repeating-linear-gradient(90deg,var(--green) 0 6px,var(--bg) 6px 8px);
 box-shadow:0 0 8px rgba(57,255,107,.7)}
-.list-item{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.list-item{display:flex;gap:8px;margin-bottom:6px;align-items:center}
 .list-item input{flex:1}
 .del{background:none;border:1px solid var(--danger);color:var(--danger);cursor:pointer;
 padding:6px 9px;font-family:inherit;font-size:var(--fs-s)}
@@ -170,15 +175,15 @@ padding:7px 10px;font-family:inherit;font-size:var(--fs-s);width:100%;margin-top
 .die-select{background-color:var(--panel2);border:1px solid var(--border);color:var(--green);
 font-family:var(--term);font-size:var(--fs-m);padding:6px 20px 6px 6px;width:auto;max-width:72px;caret-color:var(--green)}
 .die-select:focus{outline:none;border-color:var(--green);box-shadow:0 0 6px rgba(57,255,107,.5)}
-.cargo-bay{border:1px solid var(--border);padding:10px;margin-bottom:8px}
+.cargo-bay{border:1px solid var(--border);padding:8px;margin-bottom:6px}
 .cargo-bay .bay-head{color:var(--dim);font-size:var(--fs-s);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
 .cargo-bay .bay-row{display:flex;gap:8px;flex-wrap:wrap}
 .cargo-bay .bay-row input[type=text]{flex:1;min-width:90px}
 .cargo-bay .bay-row input[type=number]{max-width:70px}
-.log-entry{border-bottom:1px solid var(--border);padding:8px 0;font-size:var(--fs-m)}
+.log-entry{border-bottom:1px solid var(--border);padding:6px 0;font-size:var(--fs-m)}
 .log-entry .t{color:var(--dim);font-size:var(--fs-s)}
 
-.clock-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.clock-item{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
 .clock-item:last-child{border-bottom:none}
 .clock-svg{width:92px;height:92px;flex:none;touch-action:manipulation;
   filter:drop-shadow(0 0 3px rgba(57,255,107,.3))}
@@ -191,8 +196,8 @@ font-family:var(--term);font-size:var(--fs-m);padding:6px 20px 6px 6px;width:aut
 .clock-count{margin-top:4px;color:var(--dim);font-size:var(--fs-s);letter-spacing:.08em;text-transform:uppercase}
 .clock-item.full .clock-count{color:var(--green);text-shadow:0 0 6px rgba(57,255,107,.7)}
 .clock-empty{color:var(--dim);text-align:center;padding:6px 0}
-.clock-add{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;
-  padding-top:12px;border-top:1px dashed var(--border)}
+.clock-add{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:var(--gap);
+  padding-top:var(--gap);border-top:1px dashed var(--border)}
 .clock-add input{flex:1;min-width:150px}
 .seg-select{background-color:var(--panel2);border:1px solid var(--border);color:var(--green);
   font-family:var(--term);font-size:var(--fs-m);padding:7px 22px 7px 8px;width:auto;caret-color:var(--green)}
@@ -242,7 +247,7 @@ text-shadow:0 0 4px rgba(57,255,107,.6)}
 .die-btn:active{box-shadow:0 0 14px rgba(57,255,107,.7)}
 .die-icon{width:34px;height:34px;object-fit:contain;
   filter:drop-shadow(0 0 3px rgba(57,255,107,.4))}
-.dice-result{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);
+.dice-result{margin-top:var(--gap);padding-top:var(--gap);border-top:1px dashed var(--border);
   text-align:center;min-height:4.2em;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
 .dice-result .roll-die{color:var(--dim);font-size:var(--fs-s);letter-spacing:.08em}
 .dice-result .roll-num{font-size:2.3rem;line-height:1;text-shadow:0 0 10px var(--green)}
@@ -294,9 +299,9 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 #gc-root ::-webkit-scrollbar-thumb{background:var(--border)}
 #gc-root button,#gc-root input,#gc-root select{font:inherit;font-weight:400;color:inherit;text-shadow:inherit;border-radius:0;text-transform:inherit}
 
-.gc-panel{background:var(--panel);border:1px solid var(--border);box-shadow:0 0 0 1px rgba(0,0,0,.6),inset 0 0 20px rgba(0,255,64,.03);padding:16px 18px;margin-bottom:16px}
-.gc-ptitle{margin:0 0 14px;font-size:var(--fs-m);font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--green);text-shadow:0 0 5px rgba(57,255,107,.6)}
-.gc-gtitle{display:flex;align-items:center;gap:.6rem;margin:.7rem 0 .4rem;font-size:1rem;font-weight:400;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
+.gc-panel{background:var(--panel);border:1px solid var(--border);box-shadow:0 0 0 1px rgba(0,0,0,.6),inset 0 0 20px rgba(0,255,64,.03);padding:var(--pad);margin-bottom:var(--gap)}
+.gc-ptitle{margin:0 0 var(--gap);font-size:var(--fs-m);font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--green);text-shadow:0 0 5px rgba(57,255,107,.6)}
+.gc-gtitle{display:flex;align-items:center;gap:.6rem;margin:.5rem 0 .3rem;font-size:1rem;font-weight:400;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
 .gc-gtitle::before,.gc-gtitle::after{content:"";flex:1;height:1px}
 .gc-gtitle::before{background:var(--green-dim)}
 .gc-gtitle::after{background:var(--green-dim)}
@@ -335,20 +340,24 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 .gc-mk.gc-ship .gc-nm{color:var(--hi);border-color:var(--green);background:rgba(57,255,107,.28);box-shadow:0 0 8px rgba(57,255,107,.3)}
 
 /* inline controls */
-.gc-ctl{display:flex;flex-wrap:wrap;gap:.4rem;margin:.5rem 0 0}
-.gc-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:.45rem .7rem;min-height:2.3rem;cursor:pointer;letter-spacing:.04em}
+.gc-ctl{display:flex;flex-wrap:wrap;gap:.35rem;margin:.4rem 0 0}
+.gc-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:.35rem .6rem;min-height:2.1rem;cursor:pointer;letter-spacing:.04em}
+a.gc-btn{display:inline-flex;align-items:center;text-decoration:none}
+.gc-tab{margin-left:auto}
+#gc-bBack,.map-mode #gc-bTab{display:none}
+.map-mode #gc-bBack{display:inline-flex}
 .gc-btn:hover{border-color:var(--green-dim)}
 .gc-btn:focus-visible,#gc-root input:focus-visible{outline:1px solid var(--green);outline-offset:2px}
 .gc-btn[aria-pressed="true"]{border-color:var(--green);background:rgba(57,255,107,.1);color:var(--hi)}
 .gc-btn.gc-add{border-style:dashed;border-color:var(--green-dim)}
-#gc-status{margin:.5rem 0 0;color:var(--dim);font-size:.75rem;min-height:1em}
+#gc-status{margin:.4rem 0 0;color:var(--dim);font-size:.75rem;min-height:1em}
 
 /* detail, ship, index */
 .gc-kv{display:grid;grid-template-columns:auto 1fr;gap:.15rem .9rem;margin:.4rem 0 0}
 .gc-kv dt{color:var(--dim)}
 .gc-kv dd{margin:0}
 #gc-dtext,#gc-otext{margin:.3rem 0 0}
-.gc-fld{display:block;margin:.6rem 0 .2rem;color:var(--dim);font-size:.75rem;letter-spacing:.08em}
+.gc-fld{display:block;margin:.45rem 0 .2rem;color:var(--dim);font-size:.75rem;letter-spacing:.08em}
 #gc-root input[type=text]{width:100%;max-width:22rem;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:.4rem .5rem;caret-color:var(--green)}
 #gc-root input[type=text]::placeholder{color:var(--dim)}
 #gc-root input[type=range]{-webkit-appearance:none;appearance:none;width:100%;max-width:22rem;height:2rem;background:transparent;display:block;margin:0}
@@ -379,14 +388,14 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 /* host overrides: the tracker's global label / input rules would otherwise leak into the chart */
 #gc-root label{min-width:0;text-transform:inherit;letter-spacing:.08em}
 #gc-root input[type=range]{border:0;padding:0;box-shadow:none}
-#gc-root{margin-bottom:14px}
-.gc-ovl{align-items:center;margin-top:.8rem;padding-top:.7rem;border-top:1px dashed var(--border)}
+#gc-root{margin-bottom:var(--gap)}
+.gc-ovl{align-items:center;margin-top:.6rem;padding-top:.5rem;border-top:1px dashed var(--border)}
 
 #gc-root #locDate{text-transform:none;max-width:12rem}
 .gc-sec span::before{content:'[ '}
 .gc-sec span::after{content:' ]'}
-#gc-index{margin-top:.8rem;padding-top:.7rem;border-top:1px dashed var(--border)}   /* the imperial date keeps its capital M */
-.gc-keybox{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1rem;margin-top:.7rem}
+#gc-index{margin-top:.6rem;padding-top:.5rem;border-top:1px dashed var(--border)}   /* the imperial date keeps its capital M */
+.gc-keybox{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1rem;margin-top:.5rem}
 .gc-keybox .gc-key{gap:.3rem 1rem}
 #gc-index>summary{cursor:pointer;list-style:none;user-select:none;-webkit-user-select:none}
 #gc-index>summary::-webkit-details-marker{display:none}
@@ -419,6 +428,32 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 .group.collapsed .group-title span::before{content:'[ + '}
 .group.collapsed>*:not(.group-title){display:none}
 .group.collapsed .group-title{margin-bottom:0}
+
+/* ===== map view (?map=1): the starmap alone, filling the tab ===== */
+html.map-mode body{padding:0;height:100vh;height:100dvh;min-height:0;overflow:hidden}
+.map-mode .wrap{max-width:none}
+.map-mode .wrap>:not(#gc-root),.map-mode #gc-root>.group-title,.map-mode #gc-mappanel>.gc-ptitle,.map-mode .warp-test-btn{display:none!important}
+.map-mode #gc-root{position:fixed;inset:0;margin:0;padding:6px;display:flex;flex-direction:column;gap:6px}
+.map-mode #gc-mappanel{flex:1 1 auto;min-height:0;margin:0;padding:8px 10px;display:flex;flex-direction:column}
+.map-mode #gc-mappanel>*{flex:none}
+.map-mode #gc-chart{flex:1 1 auto;min-height:180px;aspect-ratio:auto;max-height:none}
+.map-mode #gc-index{overflow:auto;max-height:38vh}
+.map-mode #gc-navdata{margin:0;padding:8px 10px;overflow:auto;z-index:6;background:rgba(3,17,7,.94);border-color:var(--green-dim);
+  box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 12px rgba(57,255,107,.12)}
+.map-mode #gc-navhead{margin:0;cursor:pointer;user-select:none;-webkit-user-select:none}
+.map-mode #gc-navhead::after{content:' [ - ]';color:var(--dim)}
+.map-mode #gc-navdata.gc-fold #gc-navhead::after{content:' [ + ]'}
+.map-mode #gc-navdata.gc-fold>:not(#gc-navhead){display:none}
+.map-mode #gc-navhead:hover{text-shadow:0 0 8px rgba(57,255,107,.9)}
+@media (min-width:760px){
+  .map-mode #gc-navdata{position:absolute;top:12px;right:12px;width:21rem;max-width:42vw}
+}
+@media (max-width:759px){
+  .map-mode #gc-navdata{flex:none;max-height:36vh}
+  .map-mode .gc-ovl{flex-wrap:nowrap;overflow-x:auto}
+  .map-mode .gc-ovl>*{flex:none}
+}
+.map-mode #gc-mappanel{overflow-y:auto}
 
 </style>
 </head>
@@ -456,7 +491,7 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 <div class="sub" id="connLine"><span class="status-dot"></span><span id="connText">connection live // praise the omnissiah</span></div>
 <section class="group" id="gc-root">
 <h2 class="group-title"><span>Navigation</span></h2>
-  <div class="gc-panel">
+  <div class="gc-panel" id="gc-mappanel">
     <h2 class="gc-ptitle">&gt; starmap</h2>
     <div class="gc-ctl gc-lab">
       <span class="gc-dim gc-sm">date //</span>
@@ -492,6 +527,8 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
       <button class="gc-btn" id="gc-bT0" type="button" aria-pressed="true">galaxy</button>
       <button class="gc-btn" id="gc-bT1" type="button" aria-pressed="false">local group</button>
       <button class="gc-btn" id="gc-bT2" type="button" aria-pressed="false">system</button>
+      <a class="gc-btn gc-add gc-tab" id="gc-bTab" href="?map=1" target="_blank" rel="noopener">open in new tab</a>
+      <a class="gc-btn gc-tab" id="gc-bBack" href="./">&lt; back to terminal</a>
     </div>
     <div class="gc-ctl gc-ovl">
       <span class="gc-dim gc-sm">overlays //</span>
@@ -527,8 +564,8 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
     </details>
   </div>
 
-  <div class="gc-panel">
-    <h2 class="gc-ptitle">&gt; navigation data</h2>
+  <div class="gc-panel" id="gc-navdata">
+    <h2 class="gc-ptitle" id="gc-navhead">&gt; navigation data</h2>
     <div aria-live="polite">
     <h3 class="gc-gtitle gc-sec"><span id="gc-dtitle">selected system</span></h3>
     <div id="gc-dnone" class="gc-dim">// nothing selected</div>
@@ -593,13 +630,6 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
     <div>
     <h3 class="gc-gtitle gc-sec"><span>voidship</span></h3>
     <div id="gc-sstat"></div>
-    <dl class="gc-kv">
-      <dt>plane offset</dt><dd id="gc-soff"></dd>
-    </dl>
-    <label class="gc-fld" for="gc-sname">designation</label>
-    <input type="text" id="gc-sname" maxlength="40" autocomplete="off" placeholder="pala imperatoris">
-    <label class="gc-fld" for="gc-sheight">plane offset</label>
-    <input type="range" id="gc-sheight" min="-3" max="3" step="0.1">
     <div class="gc-ctl">
       <button class="gc-btn gc-add" id="gc-bPlace" type="button" aria-pressed="false">set position on chart</button>
       <button class="gc-btn" id="gc-bShipFly" type="button">view ship</button>
@@ -678,6 +708,8 @@ body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.1
 <line class="leader" x1="260" y1="480" x2="260" y2="290" marker-end="url(#arr)"/>
 <text class="lbl" x="200" y="492">CARGO BAYS A–D</text>
 </svg>
+<div class="row desig"><label for="gc-sname">Designation</label>
+<input type="text" id="gc-sname" maxlength="40" autocomplete="off" placeholder="pala imperatoris"></div>
 </div>
 
 <div class="panel">
@@ -1860,8 +1892,8 @@ el.appendChild(d);
   var ship = { name: SHIP_NAME, at: 'rattigon', body: null, star: null, e: 30, n: -3, u: 0 };
   try {
     var sv = JSON.parse(window.localStorage.getItem(STORE) || 'null');
-    if (sv && typeof sv.e === 'number' && typeof sv.n === 'number' && typeof sv.u === 'number') {
-      ship.e = sv.e; ship.n = sv.n; ship.u = sv.u; ship.at = (sv.at && byId[sv.at]) ? sv.at : null;
+    if (sv && typeof sv.e === 'number' && typeof sv.n === 'number') {
+      ship.e = sv.e; ship.n = sv.n; ship.u = typeof sv.u === 'number' ? sv.u : 0; ship.at = (sv.at && byId[sv.at]) ? sv.at : null;
       ship.star = (!ship.at && typeof sv.star === 'string') ? sv.star.slice(0, 80) : null;
       ship.body = ((ship.at || ship.star) && typeof sv.body === 'string') ? sv.body : null;
       if (typeof sv.name === 'string' && sv.name.trim() && !OLD_NAMES[sv.name]) ship.name = sv.name.slice(0, 40);
@@ -2066,9 +2098,6 @@ el.appendChild(d);
     else if (ship.star) st = (ship.body ? 'in orbit // ' + ship.body + ' // ' : 'on station // ') + starLabel(ship.star);
     else { var best = null, bd = 1e9; PLACES.forEach(function (pl) { var d = pl.p.distanceTo(shipP); if (d < bd) { bd = d; best = pl; } }); st = 'in transit // ' + ly(bd) + ' from ' + best.name; }
     $('gc-sstat').textContent = st;
-    var hv = Math.round(ship.u * 10) * 100;
-    $('gc-soff').textContent = hv === 0 ? 'in plane' : (hv > 0 ? '+' : '-') + Math.abs(hv).toLocaleString('en-US') + ' ly';
-    var hIn = $('gc-sheight'); if (document.activeElement !== hIn) hIn.value = String(ship.u);
     var nIn = $('gc-sname'); if (document.activeElement !== nIn) nIn.value = ship.name;
     shipItem.nm.textContent = ship.name; shipItem.w = shipItem.nm.offsetWidth || shipItem.w;
     refreshTarget();
@@ -2081,7 +2110,6 @@ el.appendChild(d);
     saveShip(silent); refreshTierShip(); refreshShip();
   }
   $('gc-sname').addEventListener('input', function () { ship.name = this.value.trim().slice(0, 40) || SHIP_NAME; saveShip(); refreshShip(); });
-  $('gc-sheight').addEventListener('input', function () { setShip(ship.e, ship.n, parseFloat(this.value) || 0, null); });
   $('gc-bShipFly').addEventListener('click', function () { flyShip(); if (chart.scrollIntoView) chart.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' }); });
   var bPlace = $('gc-bPlace');
   function setPlacing(on) {
@@ -3458,7 +3486,7 @@ el.appendChild(d);
 /* collapsible sections: every group heading folds its group; the choice is remembered on this device */
 (function () {
   'use strict';
-  var KEY = 'vt_collapsed', st = {};
+  var KEY = 'vt_collapsed', st = {}, MAP = document.documentElement.classList.contains('map-mode');
   try { st = JSON.parse(window.localStorage.getItem(KEY) || '{}') || {}; } catch (e) { st = {}; }
   document.querySelectorAll('.group').forEach(function (g) {
     var h = g.querySelector('.group-title');
@@ -3470,10 +3498,26 @@ el.appendChild(d);
       var c = !g.classList.contains('collapsed'); set(c); st[id] = c;
       try { window.localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { /* ignore */ }
     }
-    set(!!st[id]);
+    set(!!st[id] && !(MAP && g.id === 'gc-root'));   // the map view never opens folded
     h.addEventListener('click', flip);
     h.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); flip(); } });
   });
+  // map view: the navigation data overlay folds to its title bar (folded by default on phones)
+  if (!MAP) return;
+  var nd = document.getElementById('gc-navdata'), nh = document.getElementById('gc-navhead');
+  nh.setAttribute('role', 'button'); nh.tabIndex = 0;
+  function fold(c) { nd.classList.toggle('gc-fold', c); nh.setAttribute('aria-expanded', String(!c)); }
+  fold(window.matchMedia('(max-width: 759px)').matches);
+  // wide screens: the overlay sits top-right on the chart and stops above the zoom column
+  var chart = document.getElementById('gc-chart');
+  function fit() {
+    if (window.innerWidth < 760) { nd.style.maxHeight = ''; return; }
+    var r = chart.getBoundingClientRect(); nd.style.maxHeight = Math.max(120, Math.round(r.bottom - 196)) + 'px';
+  }
+  if (window.ResizeObserver) new ResizeObserver(fit).observe(chart); else window.addEventListener('resize', fit);
+  fit();
+  nh.addEventListener('click', function () { fold(!nd.classList.contains('gc-fold')); });
+  nh.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); fold(!nd.classList.contains('gc-fold')); } });
 })();
 </script>
 </body>
