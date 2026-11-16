@@ -1144,7 +1144,8 @@ const DMG_RULES = {
   P_MID: 25,      // on top of that, every hit rolls once for one more damage: an s-curve, 50% at P_MID points
   P_STEEP: 0.184, // chance = 1 / (1 + e^(-(loss - P_MID) * P_STEEP)): 1 point ~1%, 10 ~6%, 25 = 50%, 40 ~94%, 50 = 99%
   WORSEN: 0.5,    // chance that damage worsens an existing one rather than adding a new one
-  OFFLINE: 0.35   // chance that a damage reaching severity 3 becomes "system offline"
+  TYPES: ['breach', 'fire'],   // types a new damage can be. for now only these two; surge, structural and coolant (plasma drive only) still draw if stored
+  OFFLINE: 0      // chance that a damage reaching severity 3 becomes "system offline" (off for now; was 0.35)
 };
 const DMG_TYPES = {breach:'hull breach', fire:'fire', surge:'power surge', offline:'system offline', structural:'structural', coolant:'coolant leak'};
 const DMG_SEV = ['', 'minor', 'serious', 'critical'];
@@ -1214,8 +1215,7 @@ parts.forEach(cost=>{
     d = pick(open); d.sev++; d.cost += cost;
     if(d.sev === 3 && rng() < R.OFFLINE) d.type = 'offline';
   } else if(list.length < R.CAP){
-    const sec = pick(sections), types = ['breach','fire','surge','structural'];
-    if(sec === 'plasma') types.push('coolant');          // coolant only leaks from the reactor
+    const sec = pick(sections), types = R.TYPES.filter(t=> t !== 'offline' && (t !== 'coolant' || sec === 'plasma'));   // offline only comes by worsening; coolant only leaks from the reactor
     d = {id:'d' + Date.now().toString(36) + Math.floor(rng() * 1679616).toString(36), section:sec, type:pick(types), sev:1, cost:cost, t:Date.now()};
     list.push(d);
   } else { d = pick(list); d.cost += cost; }             // at the cap with everything critical: the points still land on a damage
@@ -2203,10 +2203,15 @@ el.appendChild(d);
     // the stored damages, one per slot. uHit = place and radius, uFx = (type, section, spark rate, -)
     + 'for (int i = 0; i < 12; i++) { float k = uFx[i].x; if (k < 0.5) continue; float fi = float(i); '
     + 'if (abs(k - 4.0) < 0.5) { if (abs(vM - uFx[i].y) < 0.5) a *= 0.08 + 0.92 * pow(max(0.0, sin(uT * 3.0 + fi)), 8.0); continue; } '   // 4 system offline: the whole section dark, with a pulse
-    + 'float dd = distance(vP, uHit[i].xyz); float rr = uHit[i].w * (0.7 + 0.6 * fract(vR * 3.17 + fi * 0.37)); if (dd > rr) continue; '
-    + 'if (k < 1.5) { if (dd < rr * 0.72) a *= 0.05; else { c = uHi; a = max(a, uLit * (0.55 + 0.45 * step(0.5, fract(vR * 5.3 + uT * 3.0)))); } } '   // 1 hull breach: dark inside, bright ragged rim
-    + 'else if (k < 2.5) { c = uHi; a = max(a * 0.4, uLit * (1.0 - 0.6 * dd / rr) * (0.25 + 0.75 * step(0.45, fract(vR * 9.7 + uT * (5.0 + 4.0 * fract(vR * 2.3)))))); } '   // 2 fire: a flare, each edge flickering at its own rate
-    + 'else if (k < 3.5) { float h = fract(sin(floor(uT * 7.0 + fi * 1.7) * 12.9898 + vR * 78.233) * 43758.5453); if (h < 0.5) a = 0.0; else if (h > 0.9) { c = uHi; a = max(a, uLit); } } '   // 3 power surge: edges drop out and snap back
+    + 'float dd = distance(vP, uHit[i].xyz); float rr = uHit[i].w * (0.7 + 0.6 * fract(vR * 3.17 + fi * 0.37)); '
+    // 1 hull breach: dark inside, bright ragged rim, and a shock ring that runs outward over the hull again and again
+    + 'if (k < 1.5) { if (dd < rr * 0.72) a *= 0.03; else if (dd < rr) { c = uHi; a = max(a, uLit * (0.55 + 0.45 * step(0.5, fract(vR * 5.3 + uT * 3.0)))); } '
+    + 'else { float w = fract(uT * 0.45 + fi * 0.31); if (abs(dd - uHit[i].w * (1.0 + w * 2.2)) < 0.05 + 0.05 * w) { c = uHi; a = max(a, uLit * (1.0 - w) * 0.85); } } continue; } '
+    // 2 fire: a flare that breathes, each edge flickering at its own rate, and its glow thrown on the hull round it
+    + 'if (k < 2.5) { float fr = rr * (0.85 + 0.3 * sin(uT * 5.0 + fi * 2.1)); if (dd < fr) { c = uHi; a = max(a * 0.4, uLit * (1.0 - 0.5 * dd / fr) * (0.3 + 0.7 * step(0.4, fract(vR * 9.7 + uT * (5.0 + 4.0 * fract(vR * 2.3)))))); } '
+    + 'else if (dd < fr * 1.9) a = min(1.0, a + uLit * 0.55 * (1.0 - (dd - fr) / (fr * 0.9)) * (0.6 + 0.4 * sin(uT * 9.0 + vR * 6.28))); continue; } '
+    + 'if (dd > rr) continue; '
+    + 'if (k < 3.5) { float h = fract(sin(floor(uT * 7.0 + fi * 1.7) * 12.9898 + vR * 78.233) * 43758.5453); if (h < 0.5) a = 0.0; else if (h > 0.9) { c = uHi; a = max(a, uLit); } } '   // 3 power surge: edges drop out and snap back
     + 'else if (k < 5.5) { if (fract(vD * 12.0 + vR * 3.0) > 0.55) a *= 0.15; else { c = uHi; a = max(a, uLit * 0.7); } } '   // 5 structural: broken into bright fragments (the vertex shader shakes it)
     + 'else { a *= 0.45 + 0.55 * step(0.5, fract(vD * 10.0 - uT * 1.5 + vR)); } } '   // 6 coolant leak: edges crawl; the venting dashes do the rest
     + 'if (uLost > 0.5) a *= 0.1 + 0.25 * pow(max(0.0, sin(uT * 1.2 + vP.x)), 6.0); '   // ship lost: everything dark, a slow dying ripple
@@ -2222,9 +2227,9 @@ el.appendChild(d);
   // every damage drawn comes from the shared list (the page's dmgState, or ShipView.inject for tests): one slot each, up to SLOTS.
   var SLOTS = 12,                            // must match the 12s in the shaders
       KIND = { breach: 1, fire: 2, surge: 3, offline: 4, structural: 5, coolant: 6 },
-      DMG_R = [0, 0.3, 0.48, 0.7],           // radius by severity 1..3, in ship units (the ship is about 8.6 long)
-      VENT_LEN = { breach: [0, 0, 0.5, 0.9], coolant: [0, 0.6, 0.9, 1.3] },   // how far the venting dashes fly, by severity (0 = none)
-      SPARK_RATE = { fire: [0, 0.3, 0.5, 0.75], surge: [0, 0.08, 0.14, 0.2] },   // chance that a spark point fires each cycle, by severity
+      DMG_R = [0, 0.4, 0.62, 0.9],           // radius by severity 1..3, in ship units (the ship is about 8.6 long)
+      VENT_LEN = { breach: [0, 0.5, 0.95, 1.5], fire: [0, 0.35, 0.6, 0.9], coolant: [0, 0.6, 0.9, 1.3] },   // how far the dashes fly, by severity (0 = none): venting from a breach, flames rising from a fire
+      SPARK_RATE = { fire: [0, 0.45, 0.65, 0.9], breach: [0, 0.1, 0.18, 0.3], surge: [0, 0.08, 0.14, 0.2] },   // chance that a spark point fires each cycle, by severity
       TWITCH = [0, 0.02, 0.035, 0.055],      // structural: size of the twitch, by severity
       SHAKE_AMP = 0.14,                      // size of the judder after a hit
       SWEEP_EVERY = [7, 16], SWEEP_W = 1.6, SWEEP_SPEED = 5;   // seconds between scan sweeps, width of the lit trail, speed (ship units a second)
@@ -2237,7 +2242,7 @@ el.appendChild(d);
   function hashId(s) { var h = 2166136261, i; for (i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d); h ^= h >>> 12; return h >>> 0; }
   // sparks: points that pop and fade round a damage. venting: short dashes streaming out of one. both are drawn over the hull.
   var PICKSLOT = 'vec4 h = uHit[0]; vec4 f = uFx[0]; vec4 vd = uVent[0]; for (int i = 1; i < 12; i++) { if (abs(aS - float(i)) < 0.5) { h = uHit[i]; f = uFx[i]; vd = uVent[i]; } } ';
-  var VSS = 'attribute float aS; attribute vec3 aDir; attribute float aPh; attribute float aSp; attribute float aSeed; uniform vec4 uHit[12]; uniform vec4 uFx[12]; uniform vec4 uVent[12]; uniform float uT; uniform float uSize; varying float vA; void main(){ ' + PICKSLOT + 'float q = uT * aSp + aPh; float l = fract(q) / 0.22; float on = step(fract(sin(floor(q) * 12.9898 + aSeed * 78.233) * 43758.5453), f.z) * step(0.001, f.z) * step(l, 1.0); vA = on * (1.0 - l); gl_PointSize = uSize * (0.5 + 1.5 * (1.0 - l)) * on + 0.01; gl_Position = projectionMatrix * modelViewMatrix * vec4(h.xyz + aDir * h.w * (0.8 + 0.5 * l) + vd.xyz * 0.0, 1.0); }';
+  var VSS = 'attribute float aS; attribute vec3 aDir; attribute float aPh; attribute float aSp; attribute float aSeed; uniform vec4 uHit[12]; uniform vec4 uFx[12]; uniform vec4 uVent[12]; uniform float uT; uniform float uSize; varying float vA; void main(){ ' + PICKSLOT + 'float q = uT * aSp + aPh; float l = fract(q) / 0.22; float on = step(fract(sin(floor(q) * 12.9898 + aSeed * 78.233) * 43758.5453), f.z) * step(0.001, f.z) * step(l, 1.0); vA = on * (1.0 - l); gl_PointSize = uSize * (0.5 + 1.5 * (1.0 - l)) * on + 0.01; gl_Position = projectionMatrix * modelViewMatrix * vec4(h.xyz + aDir * h.w * (0.7 + 0.6 * l) + vd.xyz * l * 0.5 * h.w, 1.0); }';   // sparks fly out and drift the way the damage vents
   var FSS = 'uniform vec3 uCol; varying float vA; void main(){ if (vA <= 0.0) discard; vec2 q = abs(gl_PointCoord - 0.5) * 2.0; float star = max(0.0, 1.0 - min(q.x, q.y) * 7.0) * (1.0 - max(q.x, q.y)); float core = max(0.0, 1.0 - length(q) * 2.2); gl_FragColor = vec4(uCol, vA * max(star, core)); }';
   var VSV = 'attribute float aS; attribute float aE; attribute float aPh; attribute float aSp; attribute vec3 aDir; uniform vec4 uHit[12]; uniform vec4 uFx[12]; uniform vec4 uVent[12]; uniform float uT; varying float vA; void main(){ ' + PICKSLOT + 'float t = fract(uT * aSp + aPh); vec3 dir = normalize(vd.xyz + aDir * 0.45); vec3 p = h.xyz + dir * (h.w * 0.3 + t * vd.w + aE * 0.1 * (1.0 - t * 0.6)); vA = step(0.01, vd.w) * step(0.5, f.x) * step(0.05, h.w) * (1.0 - t) * 0.9; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }';
   var FSV = 'uniform vec3 uCol; varying float vA; void main(){ if (vA <= 0.01) discard; gl_FragColor = vec4(uCol, vA); }';
@@ -2271,6 +2276,7 @@ el.appendChild(d);
       tgt[s] = DMG_R[d.sev] || DMG_R[1];
       FX.value[s].set(KIND[d.type] || 1, o.sec, SPARK_RATE[d.type] ? SPARK_RATE[d.type][d.sev] : 0, 0);
       VENT.value[s].w = VENT_LEN[d.type] ? VENT_LEN[d.type][d.sev] : 0;
+      if (d.type === 'fire') { VENT.value[s].x = 0.1; VENT.value[s].y = 0.99; VENT.value[s].z = 0; }   // flames rise; a breach vents outward (set in place)
       if (first) HITS.value[s].w = tgt[s];   // already there when the page opens: no growing in
     });
     if (hit && !first) shake = 1;
@@ -2282,7 +2288,7 @@ el.appendChild(d);
   }
   // the extra draw objects (two in all), rebuilt with the ship and disposed with it
   function fx(src) {
-    var i, k, s, e, g, SN = 16, VN = 14, p = [], sS = [], sDir = [], ph = [], sp = [], sd = [], pos = [], aS = [], aE = [], aPh = [], aSp = [], aDir = [], dx, dy, dz, a1, a2, l, U;
+    var i, k, s, e, g, SN = 36, VN = 22, p = [], sS = [], sDir = [], ph = [], sp = [], sd = [], pos = [], aS = [], aE = [], aPh = [], aSp = [], aDir = [], dx, dy, dz, a1, a2, l, U;
     pool = src.e.length ? src.e : src.t; poolOwn = src.e.length ? src.eo : src.to; baseX = ship.position.x; secPts = {};
     for (i = 0; i < SLOTS; i++) clearSlot(i);
     SWEEP.value.set(0, 0); lastSig = null;
@@ -2296,7 +2302,7 @@ el.appendChild(d);
     U = function (o) { o.uHit = HITS; o.uFx = FX; o.uVent = VENT; o.uT = TIME; o.uCol = { value: C_H }; return o; };
     g = keep(new THREE.BufferGeometry()); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.setAttribute('aS', new THREE.Float32BufferAttribute(sS, 1)); g.setAttribute('aDir', new THREE.Float32BufferAttribute(sDir, 3));
     g.setAttribute('aPh', new THREE.Float32BufferAttribute(ph, 1)); g.setAttribute('aSp', new THREE.Float32BufferAttribute(sp, 1)); g.setAttribute('aSeed', new THREE.Float32BufferAttribute(sd, 1));
-    add(new THREE.Points(g, keep(new THREE.ShaderMaterial({ uniforms: U({ uSize: { value: 9 * PR } }), vertexShader: VSS, fragmentShader: FSS, transparent: true, depthTest: false, depthWrite: false }))), 6);
+    add(new THREE.Points(g, keep(new THREE.ShaderMaterial({ uniforms: U({ uSize: { value: 11 * PR } }), vertexShader: VSS, fragmentShader: FSS, transparent: true, depthTest: false, depthWrite: false }))), 6);
     for (s = 0; s < SLOTS; s++) for (i = 0; i < VN; i++) {
       dx = hrnd() * 2 - 1; dy = hrnd() * 2 - 1; dz = hrnd() * 2 - 1; a1 = hrnd(); a2 = 0.5 + hrnd() * 0.9;
       for (e = 0; e < 2; e++) { pos.push(0, 0, 0); aS.push(s); aE.push(e); aPh.push(a1); aSp.push(a2); aDir.push(dx, dy, dz); }
