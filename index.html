@@ -237,6 +237,8 @@ box-shadow:0 0 6px var(--green);animation:blink 1.4s infinite}
 #sv-over polygon{fill:var(--green)}
 #sv-over text{fill:var(--dim);font-family:var(--term);font-size:11px;letter-spacing:.06em}
 #sv-over span{position:absolute;left:0;top:0;white-space:nowrap;font-size:14px;line-height:1;letter-spacing:.06em;text-transform:uppercase;color:var(--green);text-shadow:0 0 4px rgba(57,255,107,.6);padding:0 2px;border:1px solid transparent;background:rgba(2,10,4,.55);pointer-events:auto;cursor:pointer}
+#sv-over span.sv-fail{color:var(--dim);animation:textGlitch .8s steps(5) infinite}
+@media (prefers-reduced-motion:reduce){#sv-over span.sv-fail{animation:none}}
 #sv-over span.sv-on{color:var(--hi);border-color:var(--green);background:rgba(57,255,107,.1)}
 #sv-foot{position:absolute;right:6px;bottom:3px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);pointer-events:none}
 #sv-off{display:none;position:absolute;inset:0;place-items:center;color:var(--dim)}
@@ -1972,8 +1974,11 @@ el.appendChild(d);
   // ---------------- drawing ----------------
   // vF: depth from the ship's centre (far parts a little dimmer). aD: distance along a dashed line. aR: a random number per edge, used to drop or flare edges under hull damage.
   // aM: which section an edge belongs to; uPick = the section picked (-1 none): its edges turn bright and the rest dim.
-  var VS = 'attribute float aD; attribute float aR; attribute float aM; varying float vF; varying float vD; varying float vR; varying float vM; uniform float uSize; uniform vec3 uBar; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vec4 c = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0); vF = (mv.z - c.z) / 1.2; vD = aD; vR = aR; vM = aM; if (abs(mv.y - uBar.x) < uBar.y) mv.x += uBar.z; gl_PointSize = uSize; gl_Position = projectionMatrix * mv; }';
-  var FH = 'varying float vF; varying float vD; varying float vR; varying float vM; uniform vec3 uCol; uniform vec3 uHi; uniform float uOp; uniform float uBack; uniform vec3 uDash; uniform vec3 uDmg; uniform float uPick; uniform float uLit; void main(){ if (uDash.x > 0.0 && mod(vD + uDash.z, uDash.x + uDash.y) > uDash.x) discard; if (fract(vR + uDmg.y) < uDmg.x) discard; float a = uOp * mix(uBack, 1.0, smoothstep(-1.0, 1.0, vF)); vec3 c = uCol; if (fract(vR * 7.31 + uDmg.y * 3.7) < uDmg.z) { c = uHi; a = 1.0; } if (uPick > -0.5) { if (abs(vM - uPick) < 0.5) { c = uHi; a = max(a, uLit); } else a *= 0.45; } ';
+  var VS = 'attribute float aD; attribute float aR; attribute float aM; varying float vF; varying float vD; varying float vR; varying float vM; varying vec3 vP; uniform float uSize; uniform vec3 uBar; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vec4 c = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0); vF = (mv.z - c.z) / 1.2; vD = aD; vR = aR; vM = aM; vP = position; if (abs(mv.y - uBar.x) < uBar.y) mv.x += uBar.z; gl_PointSize = uSize; gl_Position = projectionMatrix * mv; }';
+  var FH = 'varying float vF; varying float vD; varying float vR; varying float vM; uniform vec3 uCol; uniform vec3 uHi; uniform float uOp; uniform float uBack; uniform vec3 uDash; uniform vec3 uDmg; uniform float uPick; uniform float uLit; varying vec3 vP; uniform vec4 uHit[4]; uniform float uT; uniform float uFail; uniform vec2 uSweep; void main(){ if (uDash.x > 0.0 && mod(vD + uDash.z, uDash.x + uDash.y) > uDash.x) discard; if (fract(vR + uDmg.y) < uDmg.x) discard; float a = uOp * mix(uBack, 1.0, smoothstep(-1.0, 1.0, vF)); vec3 c = uCol; if (fract(vR * 7.31 + uDmg.y * 3.7) < uDmg.z) { c = uHi; a = 1.0; } if (uPick > -0.5) { if (abs(vM - uPick) < 0.5) { c = uHi; a = max(a, uLit); } else a *= 0.45; } '
+    + 'for (int i = 0; i < 4; i++) { if (uHit[i].w > 0.0) { float dd = distance(vP, uHit[i].xyz); float rr = uHit[i].w * (0.7 + 0.6 * fract(vR * 3.17 + float(i) * 0.37)); if (dd < rr * 0.72) a *= 0.05; else if (dd < rr) { c = uHi; a = max(a, uLit * (0.55 + 0.45 * step(0.5, fract(vR * 5.3 + uT * 3.0)))); } } } '   // breaches: dark inside, bright ragged rim
+    + 'if (uFail > -0.5 && abs(vM - uFail) < 0.5) a *= 0.1 + 0.9 * pow(max(0.0, sin(uT * 3.0)), 8.0); '   // a failed section: dark, with a pulse
+    + 'if (uSweep.y > 0.0) { float sw = uSweep.x - vP.x; if (sw > 0.0 && sw < uSweep.y) { a = min(1.0, a + (1.0 - sw / uSweep.y) * 0.6 * uLit); if (sw < 0.05) c = uHi; } } ';   // scan sweep
   var FL = FH + 'gl_FragColor = vec4(c, a); }', FP = FH + 'float r = length(gl_PointCoord - 0.5) * 2.0; if (r > 1.0) discard; gl_FragColor = vec4(c, a * (1.0 - r * r)); }';
   var DMG = new THREE.Vector3(), CALM = new THREE.Vector3(), BAR = new THREE.Vector3(), PICK = { value: -1 }, NOPICK = { value: -1 };   // shared uniforms: (drop, seed, flare), a glitch bar (y, half-height, shift), the picked section
   var rdr = null, cv = null, sc = null, cam = null, turn = null, ship = null, res = [], raf = 0, seen = true, lastT = 0, W = 0, H = 0, PR = 1,
@@ -1981,13 +1986,64 @@ el.appendChild(d);
       callouts = [], zones = {}, picked = null, hover = null, mEdge = null, ruler = null, span = 8.6, v3 = new THREE.Vector3(),
       tSeed = 0, tBar = 0, rs = 20260115, paused = false;
   var VIEWS = { side: [0, 0], top: [0, Math.PI / 2], front: [-Math.PI / 2, 0] }, TOP = 37, BOT = 33, TIERS = 1;
+  // ---- damage effects: tuning ----
+  var BREACH_AT = [0.12, 0.3, 0.5, 0.7],     // hull damage (dmg, 0..1) at which the 1st..4th breach opens
+      BREACH_R = [0.5, 0.85],              // breach radius range, in ship units (the ship is about 8.6 long)
+      VENT_LEN = 0.9,                        // how far the venting dashes fly from a breach
+      SPARK_RATE = [0.25, 0.35],             // chance that a spark point fires each cycle: [per dmg, per crit]
+      FAIL_AT = 0.3,                         // crit level at which one section fails (goes dark and pulses)
+      SHAKE_DROP = 0.03, SHAKE_AMP = 0.14,   // a hit = dmg rising by this much in one frame; size of the judder
+      SWEEP_EVERY = [7, 16], SWEEP_W = 1.6, SWEEP_SPEED = 5,   // seconds between scan sweeps, width of the lit trail, speed (ship units a second)
+      HIT_HOLD = 12;                         // seconds a breach made by ShipView.hit() stays open
+  function v4s() { return [new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4()]; }
+  // shared uniforms: breach points (xyz in ship space, w = radius, 0 = closed), venting directions, a clock, the failed section, the sweep (x, width), spark chance, venting on
+  var HITS = { value: v4s() }, NOHITS = { value: v4s() }, VENT = { value: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] }, TIME = { value: 0 },
+      FAIL = { value: -1 }, NOFAIL = { value: -1 }, SWEEP = { value: new THREE.Vector2() }, NOSWEEP = { value: new THREE.Vector2() }, SPARK = { value: 0 }, VON = { value: 0 };
+  var tgt = [0, 0, 0, 0], hold = [0, 0, 0, 0], hitSec = [-1, -1, -1, -1], pool = null, poolOwn = null, baseX = 0, shake = 0, prevD = -1, tSweep = 5, failId = -1, lastSec = -1, dbg = null, hs = 1, slotN = 0;
+  function hrnd() { hs |= 0; hs = hs + 0x6D2B79F5 | 0; var t = Math.imul(hs ^ hs >>> 15, 1 | hs); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
+  // sparks: points that pop and fade. venting: short dashes streaming out of each breach. both are drawn over the hull.
+  var VSS = 'attribute float aPh; attribute float aSp; attribute float aSeed; uniform float uT; uniform float uSpark; uniform float uSize; varying float vA; void main(){ float q = uT * aSp + aPh; float l = fract(q) / 0.22; float on = step(fract(sin(floor(q) * 12.9898 + aSeed * 78.233) * 43758.5453), uSpark) * step(l, 1.0); vA = on * (1.0 - l); gl_PointSize = uSize * (0.5 + 1.5 * (1.0 - l)) * on + 0.01; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
+  var FSS = 'uniform vec3 uCol; varying float vA; void main(){ if (vA <= 0.0) discard; vec2 q = abs(gl_PointCoord - 0.5) * 2.0; float star = max(0.0, 1.0 - min(q.x, q.y) * 7.0) * (1.0 - max(q.x, q.y)); float core = max(0.0, 1.0 - length(q) * 2.2); gl_FragColor = vec4(uCol, vA * max(star, core)); }';
+  var VSV = 'attribute float aS; attribute float aE; attribute float aPh; attribute float aSp; attribute vec3 aDir; uniform vec4 uHit[4]; uniform vec3 uVent[4]; uniform float uT; uniform float uLen; uniform float uOn; varying float vA; void main(){ vec4 h = uHit[0]; vec3 vd = uVent[0]; for (int i = 1; i < 4; i++) { if (abs(aS - float(i)) < 0.5) { h = uHit[i]; vd = uVent[i]; } } float t = fract(uT * aSp + aPh); vec3 dir = normalize(vd + aDir * 0.45); vec3 p = h.xyz + dir * (h.w * 0.3 + t * uLen + aE * 0.1 * (1.0 - t * 0.6)); vA = uOn * step(0.05, h.w) * (1.0 - t) * 0.9; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }';
+  var FSV = 'uniform vec3 uCol; varying float vA; void main(){ if (vA <= 0.01) discard; gl_FragColor = vec4(uCol, vA); }';
+  // opens breach i at a point on the hull: in section sec if given (-1 = anywhere). damage breaches always open in the same places; manual hits land at random
+  function placeHit(i, sec, manual) {
+    if (!pool || !pool.length) return;
+    if (!manual) hs = 9001 + i * 7919;
+    var n = pool.length / 3, v = HITS.value[i], k = 0, j, y, z, l;
+    for (j = 0; j < 300; j++) { k = Math.floor(hrnd() * n); if (sec < 0 || poolOwn[k] === sec) break; }
+    v.set(pool[k * 3], pool[k * 3 + 1], pool[k * 3 + 2], 0.001);
+    y = v.y; z = v.z; l = Math.sqrt(y * y + z * z); if (l < 0.05) { y = 1; z = 0; l = 1; }
+    VENT.value[i].set(0.15, y / l, z / l).normalize();   // vents outward from the ship's axis
+    tgt[i] = BREACH_R[0] + hrnd() * (BREACH_R[1] - BREACH_R[0]); hitSec[i] = poolOwn[k];
+  }
+  function setFail(n) { if (n === failId && FAIL.value === n) return; failId = n; FAIL.value = n; callouts.forEach(function (c) { c.el.classList.toggle('sv-fail', n >= 0 && c.n === n); }); }
+  // the extra draw objects (two in all), rebuilt with the ship and disposed with it
+  function fx(src) {
+    var i, k, s, e, g, n = 90, p = [], ph = new Float32Array(n), sp = new Float32Array(n), sd = new Float32Array(n), VN = 14, pos = [], aS = [], aE = [], aPh = [], aSp = [], aDir = [], dx, dy, dz, a1, a2;
+    pool = src.e.length ? src.e : src.t; poolOwn = src.e.length ? src.eo : src.to; baseX = ship.position.x;
+    HITS.value.forEach(function (v) { v.set(0, 0, 0, 0); }); tgt = [0, 0, 0, 0]; hold = [0, 0, 0, 0]; failId = -1; FAIL.value = -1; SWEEP.value.set(0, 0); lastSec = -1;
+    if (!pool.length) return;
+    hs = 4242;
+    for (i = 0; i < n; i++) { k = Math.floor(hrnd() * pool.length / 3) * 3; p.push(pool[k], pool[k + 1], pool[k + 2]); ph[i] = hrnd(); sp[i] = 0.8 + hrnd() * 1.7; sd[i] = hrnd(); }
+    g = keep(new THREE.BufferGeometry()); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.setAttribute('aPh', new THREE.BufferAttribute(ph, 1)); g.setAttribute('aSp', new THREE.BufferAttribute(sp, 1)); g.setAttribute('aSeed', new THREE.BufferAttribute(sd, 1));
+    add(new THREE.Points(g, keep(new THREE.ShaderMaterial({ uniforms: { uT: TIME, uSpark: SPARK, uSize: { value: 9 * PR }, uCol: { value: C_H } }, vertexShader: VSS, fragmentShader: FSS, transparent: true, depthTest: false, depthWrite: false }))), 6);
+    for (s = 0; s < 4; s++) for (i = 0; i < VN; i++) {
+      dx = hrnd() * 2 - 1; dy = hrnd() * 2 - 1; dz = hrnd() * 2 - 1; a1 = hrnd(); a2 = 0.5 + hrnd() * 0.9;
+      for (e = 0; e < 2; e++) { pos.push(0, 0, 0); aS.push(s); aE.push(e); aPh.push(a1); aSp.push(a2); aDir.push(dx, dy, dz); }
+    }
+    g = keep(new THREE.BufferGeometry()); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('aS', new THREE.Float32BufferAttribute(aS, 1)); g.setAttribute('aE', new THREE.Float32BufferAttribute(aE, 1));
+    g.setAttribute('aPh', new THREE.Float32BufferAttribute(aPh, 1)); g.setAttribute('aSp', new THREE.Float32BufferAttribute(aSp, 1)); g.setAttribute('aDir', new THREE.Float32BufferAttribute(aDir, 3));
+    add(new THREE.LineSegments(g, keep(new THREE.ShaderMaterial({ uniforms: { uHit: HITS, uVent: VENT, uT: TIME, uLen: { value: VENT_LEN }, uOn: VON, uCol: { value: C_H } }, vertexShader: VSV, fragmentShader: FSV, transparent: true, depthTest: false, depthWrite: false }))), 6);
+  }
   function rnd() { rs |= 0; rs = rs + 0x6D2B79F5 | 0; var t = Math.imul(rs ^ rs >>> 15, 1 | rs); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
   function keep(x) { res.push(x); return x; }
   // o: { dash: [on, off], dmg: takes hull damage, pt: point size, test: hidden behind the hull's faces, lit: brightness when its section is picked (0 = cannot be picked) }
   function mat(c, op, back, o) {
     o = o || {};
     return keep(new THREE.ShaderMaterial({ uniforms: { uCol: { value: c }, uHi: { value: C_H }, uOp: { value: op }, uBack: { value: back }, uSize: { value: o.pt || 1 }, uBar: { value: BAR },
-      uDash: { value: new THREE.Vector3(o.dash ? o.dash[0] : 0, o.dash ? o.dash[1] : 0, 0) }, uDmg: { value: o.dmg ? DMG : CALM }, uPick: o.lit ? PICK : NOPICK, uLit: { value: o.lit || 0 } },
+      uDash: { value: new THREE.Vector3(o.dash ? o.dash[0] : 0, o.dash ? o.dash[1] : 0, 0) }, uDmg: { value: o.dmg ? DMG : CALM }, uPick: o.lit ? PICK : NOPICK, uLit: { value: o.lit || 0 },
+      uHit: o.dmg ? HITS : NOHITS, uT: TIME, uFail: o.dmg ? FAIL : NOFAIL, uSweep: o.dmg ? SWEEP : NOSWEEP },
       vertexShader: VS, fragmentShader: o.pt ? FP : FL, transparent: true, depthTest: !!o.test, depthWrite: false }));
   }
   function geo(arr, dist, own) {
@@ -2048,6 +2104,7 @@ el.appendChild(d);
     both(hull.d, hull.dd, 0.9, 0.12, 0.6, 3.4 * PR);
     for (i = 0; i < hull.e.length; i += 3) { if (hull.e[i] < x0) x0 = hull.e[i]; if (hull.e[i] > x1) x1 = hull.e[i]; }
     ship.position.x = -(Math.max(x1, 4.48) + Math.min(x0, -4.49)) / 2; span = Math.max(x1, 4.48) - Math.min(x0, -4.49);   // keeps the ship centred when an upgrade lengthens it
+    fx(hull);
     ruler = { g: el('g'), parts: [] };
     ['line', 'line', 'line', 'line', 'line', 'text', 'text', 'text'].forEach(function (t, k) { var e = document.createElementNS(NS, t); if (t === 'line') e.setAttribute('class', 'sv-tick'); ruler.g.appendChild(e); ruler.parts.push(e); if (t === 'text') e.textContent = ['STERN', 'MIDSHIP', 'BOW'][k - 5]; });
     if (picked && !callouts.some(function (c) { return c.m.id === picked; })) picked = null;
@@ -2060,7 +2117,7 @@ el.appendChild(d);
     PICK.value = n;
     Object.keys(zones).forEach(function (k) { var z = zones[k], on = k === id; z.line.visible = on; z.line.material.uniforms.uCol.value = C_H; z.line.material.uniforms.uOp.value = 1; z.line.material.uniforms.uDash.value.x = 0; z.fills.forEach(function (f) { f.visible = on; }); });
   }
-  function drop() { res.forEach(function (x) { x.dispose(); }); res = []; sc = null; callouts = []; zones = {}; mEdge = null; }
+  function drop() { res.forEach(function (x) { x.dispose(); }); res = []; sc = null; callouts = []; zones = {}; mEdge = null; pool = poolOwn = null; }
   function setView(v, keepAngles) {
     mode = v; idle = 0;
     if (!keepAngles && v !== 'free') yaw = ((yaw + Math.PI) % TAU + TAU) % TAU - Math.PI;
@@ -2159,19 +2216,48 @@ el.appendChild(d);
     ln(s[0], a, 13, b, 13); [0, 1, 2, 3].forEach(function (k) { var x = a + (b - a) * k / 3; ln(s[k + 1], x, 9, x, 17); });
     s[5].setAttribute('x', (a + 3).toFixed(1)); s[5].setAttribute('y', 10); s[6].setAttribute('x', ((a + b) / 2).toFixed(1)); s[6].setAttribute('y', 10); s[6].setAttribute('text-anchor', 'middle'); s[7].setAttribute('x', (b - 3).toFixed(1)); s[7].setAttribute('y', 10); s[7].setAttribute('text-anchor', 'end');
   }
-  // hull damage, read from the page's own hull state (hullLevels: dmg and crit, 0..1): edges drop out and flare, the picture flickers, twitches and tears
+  // hull damage, read from the page's own hull state (hullLevels: dmg and crit, 0..1; or the ShipView.debugHull override).
+  // as hull falls: edges drop out and flare, breaches open (dark ragged patches with bright rims) and vent, sparks pop, a scan sweep crosses now and then,
+  // the picture flickers, twitches and tears, a sudden drop shakes it, and at critical hull one section fails. nothing at all at full hull.
+  function levels() { return dbg || (typeof hullLevels !== 'undefined' && hullLevels ? hullLevels : null); }
   function damage(dt) {
-    var hl = typeof hullLevels !== 'undefined' && hullLevels ? hullLevels : null, d = hl ? hl.dmg : 0, c = hl ? hl.crit : 0;
-    if (calm || d < 0.04) { DMG.set(0, 0, 0); BAR.set(0, 0, 0); ship.position.y = 0; mEdge.uniforms.uOp.value = 0.95; return; }
+    var hl = levels(), d = hl ? hl.dmg : 0, c = hl ? hl.crit : 0, k = 1 - Math.exp(-dt * 6), n = 0, i, v, sh;
+    if (d < 0.04 && !(hold[0] > 0 || hold[1] > 0 || hold[2] > 0 || hold[3] > 0)) {   // full hull: exactly the undamaged picture
+      DMG.set(0, 0, 0); BAR.set(0, 0, 0); ship.position.set(baseX, 0, 0); mEdge.uniforms.uOp.value = 0.95;
+      for (i = 0; i < 4; i++) { HITS.value[i].w = 0; tgt[i] = 0; }
+      SPARK.value = 0; VON.value = 0; SWEEP.value.set(0, 0); setFail(-1); prevD = d; shake = 0; return;
+    }
+    if (!calm) TIME.value += dt;
+    // breaches: one more opens at each BREACH_AT step, and closes again if the hull is repaired
+    for (i = 0; i < 4; i++) if (d >= BREACH_AT[i]) n = i + 1;
+    for (i = 0; i < 4; i++) {
+      v = HITS.value[i]; if (hold[i] > 0) hold[i] -= dt;
+      if (i < n || hold[i] > 0) { if (!tgt[i]) placeHit(i, -1, false); v.w += (tgt[i] - v.w) * k; }
+      else { tgt[i] = 0; v.w = v.w < 0.02 ? 0 : v.w * (1 - k); }
+    }
+    // section failure at critical hull: the last section hit, else the one with the first breach
+    if (c > FAIL_AT) { if (failId < 0) setFail(lastSec >= 0 ? lastSec : (hitSec[0] >= 0 ? hitSec[0] : (callouts.length ? callouts[Math.floor(hrnd() * callouts.length)].n : -1))); }
+    else if (failId >= 0) setFail(-1);
+    DMG.x = d * 0.2 + c * 0.25;
+    if (calm) { DMG.z = 0; BAR.set(0, 0, 0); ship.position.set(baseX, 0, 0); mEdge.uniforms.uOp.value = 0.95; SPARK.value = 0; VON.value = 0; SWEEP.value.set(0, 0); prevD = d; return; }   // reduced motion: the damage shows, but nothing flickers, shakes or sweeps
     tSeed -= dt; if (tSeed <= 0) { DMG.y = rnd(); tSeed = 0.12 + rnd() * Math.max(0.2, 1.6 - d - c * 0.5); }
-    DMG.x = d * 0.2 + c * 0.25; DMG.z = d * 0.03 + c * 0.07;
+    DMG.z = d * 0.03 + c * 0.07;
     tBar -= dt;
     if (tBar <= 0) {
       if (BAR.y) { BAR.set(0, 0, 0); tBar = (0.4 + rnd() * 5) / (1 + d * 4 + c * 6); }
-      else { BAR.set((rnd() * 2 - 1) * 2, 0.06 + c * 0.2 + rnd() * 0.1, (rnd() - 0.5) * (0.3 + d * 0.6)); tBar = 0.05 + rnd() * 0.1; }
+      else if (d >= 0.04) { BAR.set((rnd() * 2 - 1) * 2, 0.06 + c * 0.2 + rnd() * 0.1, (rnd() - 0.5) * (0.3 + d * 0.6)); tBar = 0.05 + rnd() * 0.1; }
     }
-    ship.position.y = rnd() < d * 0.08 ? (rnd() - 0.5) * 0.08 * (d + c) : 0;
+    // a hit (hull dropping suddenly, or ShipView.hit): a short judder and a sharper tear
+    if (prevD >= 0 && d - prevD > SHAKE_DROP) shake = 1;
+    prevD = d; shake *= Math.exp(-dt * 5); sh = shake > 0.02 ? SHAKE_AMP * shake : 0;
+    ship.position.x = baseX + (rnd() - 0.5) * sh;
+    ship.position.y = (rnd() < d * 0.08 ? (rnd() - 0.5) * 0.08 * (d + c) : 0) + (rnd() - 0.5) * sh;
+    if (shake > 0.5) BAR.set((rnd() * 2 - 1) * 2, 0.25, (rnd() - 0.5) * 0.9);
     mEdge.uniforms.uOp.value = 0.95 * (rnd() < d * 0.12 + c * 0.2 ? 0.55 + rnd() * 0.3 : 1);
+    SPARK.value = d * SPARK_RATE[0] + c * SPARK_RATE[1]; VON.value = 1;
+    // scan sweep: a bright line runs stern to bow, the edges behind it lit for a moment
+    if (SWEEP.value.y > 0) { SWEEP.value.x += SWEEP_SPEED * dt; if (SWEEP.value.x > span / 2 + SWEEP_W + 0.5) { SWEEP.value.set(0, 0); tSweep = SWEEP_EVERY[0] + rnd() * (SWEEP_EVERY[1] - SWEEP_EVERY[0]); } }
+    else if (d >= 0.04) { tSweep -= dt; if (tSweep <= 0) SWEEP.value.set(-span / 2 - 0.5, SWEEP_W); }
   }
   function frame(now) {
     raf = requestAnimationFrame(frame);
@@ -2207,7 +2293,11 @@ el.appendChild(d);
     install: function (id, on) { if (!(id in INSTALLED)) return false; INSTALLED[id] = !!on; if (rdr) { drop(); build(); } return true; },
     installed: function () { return JSON.parse(JSON.stringify(INSTALLED)); },
     project: function (x, y, z) { return rdr ? scr(v3.fromArray(P(x, y, z)).applyMatrix4(ship.matrixWorld)) : null; },   // schematic units to canvas pixels
-    state: function () { return { live: !!rdr, running: !!raf, mode: mode, res: res.length, callouts: callouts.map(function (c) { return c.m.id + ':' + c.el.style.visibility; }), picked: picked, zoom: zoomT }; }
+    // damage hooks. hit(id): open a breach on a section ('' = anywhere) with a shake; it closes after HIT_HOLD seconds unless the hull is that damaged anyway.
+    // debugHull(percent): show the wireframe as if hull were at that percent, without touching the page or the database; debugHull(null) returns to the real value.
+    hit: function (id) { var n = -1, s = -1, i; if (!rdr || !pool) return false; callouts.forEach(function (c) { if (c.m.id === id) n = c.n; }); for (i = 0; i < 4; i++) if (!tgt[i]) { s = i; break; } if (s < 0) s = slotN++ % 4; hs = (performance.now() * 1000) | 0; placeHit(s, n, true); hold[s] = HIT_HOLD; lastSec = hitSec[s]; shake = 1; return true; },
+    debugHull: function (pct) { dbg = pct === null || pct === undefined ? null : (typeof hullLevelsFor === 'function' ? hullLevelsFor(pct, 100) : { dmg: Math.pow(1 - pct / 100, 1.8), crit: 0 }); return dbg; },
+    state: function () { return { hits: HITS.value.map(function (v) { return +v.w.toFixed(2); }), fail: failId, sweep: SWEEP.value.y > 0, spark: +SPARK.value.toFixed(2), live: !!rdr, running: !!raf, mode: mode, res: res.length, callouts: callouts.map(function (c) { return c.m.id + ':' + c.el.style.visibility; }), picked: picked, zoom: zoomT }; }
   };
 })();
 </script>
