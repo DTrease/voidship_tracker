@@ -246,6 +246,8 @@ box-shadow:0 0 6px var(--green);animation:blink 1.4s infinite}
 #sv-warn .gc-btn{flex:none;white-space:nowrap;font-family:var(--term);font-size:var(--fs-s);text-transform:lowercase;text-shadow:inherit;padding:.15rem .45rem;min-height:1.6rem}
 #sv-warn .sv-dim,#hullMsg{color:var(--dim)}
 #hullMsg{font-size:var(--fs-s);letter-spacing:.04em;margin:-2px 0 4px}
+.hull-hit{justify-content:flex-start}
+.hull-hit .gc-btn{font-family:var(--term);font-size:var(--fs-m);text-transform:lowercase;text-shadow:inherit;white-space:nowrap}
 #sv-warn .sv-new{color:var(--hi);animation:textGlitch .6s steps(5)}
 @media (prefers-reduced-motion:reduce){#sv-warn .sv-new{animation:none}}
 #sv-over span.sv-fail{color:var(--dim);animation:textGlitch .8s steps(5) infinite}
@@ -715,6 +717,9 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
 <div class="bar hull"><div id="hullBar" style="width:0%"></div></div></div>
 <input id="hull" type="number" onchange="hullEdit(this)"> / <input id="hullMax" type="number" onchange="hullMaxEdit(this)">
 <select id="hullQuality" class="die-select" onchange="saveStatus(this)"></select></div>
+<div class="row hull-hit"><label for="hullHit">Damage</label>
+<input id="hullHit" type="number" min="0" inputmode="numeric" placeholder="0" onkeydown="if(event.key==='Enter'){event.preventDefault();hullHit();}">
+<button class="gc-btn gc-add" type="button" onclick="hullHit()">apply damage</button></div>
 <div id="hullMsg" aria-live="polite"></div>
 <div class="row"><div class="stat"><label>Shields</label>
 <div class="bar shields"><div id="shieldsBar" style="width:0%"></div></div></div>
@@ -1131,13 +1136,13 @@ dmgWrite({['status/'+el.id]: el.tagName === 'SELECT' ? el.value : +el.value});
 // ---- ship damage: persistent and shared ----
 // stored at /damage: list/{id} = {section, type, sev 1..3, cost (hull points lost to it, cumulative), t (created, ms)}
 // and pool = hull points lost with no damage made ("unattributed").
-// damage is made only by the device whose hull field is lowered (hullEdit), and removed only by repair.
+// damage is made only by the device that applies the hit (the damage field, or a lower value typed into the hull field), and removed only by repair.
 // the wireframe draws from dmgState alone, so every device shows the same ship.
 const DMG_RULES = {
   CAP: 12,        // most damages kept; at the cap, new damage worsens an existing one
-  P_SPAN: 25,     // hull points lost in one go that make damage near certain; each full span above it is one sure damage
-  P_EXP: 1.5,     // chance of damage = min(P_MAX, (loss / P_SPAN) ^ P_EXP): 1 point ~0.8%, 10 ~25%, 25 = 95%
-  P_MAX: 0.95,
+  MARKS: [0.75, 0.5, 0.25],   // a hit that takes hull below one of these fractions of max always makes a damage (one for each mark crossed)
+  P_MID: 25,      // on top of that, every hit rolls once for one more damage: an s-curve, 50% at P_MID points
+  P_STEEP: 0.184, // chance = 1 / (1 + e^(-(loss - P_MID) * P_STEEP)): 1 point ~1%, 10 ~6%, 25 = 50%, 40 ~94%, 50 = 99%
   WORSEN: 0.5,    // chance that damage worsens an existing one rather than adding a new one
   OFFLINE: 0.35   // chance that a damage reaching severity 3 becomes "system offline"
 };
@@ -1190,21 +1195,21 @@ renderDamageList();
 }
 
 // rolls what a loss of hull does. pure: returns the new list and pool, and the records that changed
-function rollHullLoss(loss, state, sections, rng){
+// prev and max (hull before the hit, hull max) decide which marks the hit crosses; without them only the chance roll applies.
+// the points lost (plus the pool) are shared evenly between the damages made; with none made they go to the pool
+function rollHullLoss(loss, state, sections, rng, prev, max){
 const R = DMG_RULES, list = state.list.map(d=>Object.assign({}, d)), changed = {}, parts = [];
-let pool = state.pool || 0;
+let pool = state.pool || 0, n = 0;
 const pick = a=> a[Math.min(a.length - 1, Math.floor(rng() * a.length))];
-if(loss > R.P_SPAN){
-  const n = Math.floor(loss / R.P_SPAN), rem = loss - n * R.P_SPAN;
-  for(let i=0;i<n;i++) parts.push([R.P_SPAN, true]);
-  if(rem > 0) parts.push([rem, false]);
-} else parts.push([loss, false]);
-parts.forEach(part=>{
-  const pts = part[0];
-  if(!part[1] && rng() >= Math.min(R.P_MAX, Math.pow(pts / R.P_SPAN, R.P_EXP))){ pool += pts; return; }
-  const cost = pool + pts, open = list.filter(d=>d.sev < 3);
+if(max > 0 && isFinite(prev)) R.MARKS.forEach(m=>{ if(prev >= m * max && prev - loss < m * max) n++; });
+if(rng() < 1 / (1 + Math.exp(-(loss - R.P_MID) * R.P_STEEP))) n++;
+if(!n) return {list:list, pool:pool + loss, changed:changed, count:0};
+const total = pool + loss, share = Math.floor(total / n);
+for(let i=0;i<n;i++) parts.push(i ? share : total - share * (n - 1));
+pool = 0;
+parts.forEach(cost=>{
+  const open = list.filter(d=>d.sev < 3);
   let d;
-  pool = 0;
   if(open.length && (list.length >= R.CAP || rng() < R.WORSEN)){
     d = pick(open); d.sev++; d.cost += cost;
     if(d.sev === 3 && rng() < R.OFFLINE) d.type = 'offline';
@@ -1216,7 +1221,7 @@ parts.forEach(part=>{
   } else { d = pick(list); d.cost += cost; }             // at the cap with everything critical: the points still land on a damage
   changed[d.id] = d;
 });
-return {list:list, pool:pool, changed:changed};
+return {list:list, pool:pool, changed:changed, count:n};
 }
 
 function hullMsg(t){
@@ -1243,9 +1248,26 @@ if(nv > prev){
   hullMsg('// refused // repair damage or set hull to max');
   return;
 }
-const r = rollHullLoss(prev - nv, dmgState, dmgSections(), Math.random), up = {'status/hull': nv, 'damage/pool': r.pool};
+applyHit(prev - nv);
+}
+
+// a hit of this many points: lowers hull (not below 0), rolls for damage and writes both together
+function applyHit(loss){
+const st = curStatus || {}, prev = Number(st.hull);
+if(!(loss > 0) || !isFinite(prev) || prev <= 0) return false;
+loss = Math.min(loss, prev);
+const r = rollHullLoss(loss, dmgState, dmgSections(), Math.random, prev, Number(st.hullMax)), up = {'status/hull': prev - loss, 'damage/pool': r.pool};
 Object.keys(r.changed).forEach(id=>{ const d = r.changed[id]; up['damage/list/' + id] = {section:d.section, type:d.type, sev:d.sev, cost:d.cost, t:d.t}; });
+hullMsg('// hit -' + (Math.round(loss * 100) / 100) + ' hull // ' + (r.count ? 'damage x' + r.count : 'no damage'));
 dmgWrite(up);
+return true;
+}
+// the damage field: enter the points, then "apply damage" (or enter)
+function hullHit(){
+const el = document.getElementById('hullHit'), v = Number(el.value);
+if(el.value.trim() === '' || !(v > 0)){ hullMsg('// enter damage points'); return; }
+if(!curStatus || !(Number(curStatus.hull) > 0)){ hullMsg('// no hull left'); return; }
+if(applyHit(v)) el.value = '';
 }
 
 // hull max. lowering it below the hull trims the hull to fit; that is not a hit, so nothing is rolled
@@ -1310,7 +1332,7 @@ window.ShipDamage = {
   rules: DMG_RULES,
   detach(){ dmgDetached = true; try { db.ref('status').off(); db.ref('damage').off(); } catch(e){ /* not connected */ } if(!curStatus) curStatus = Object.assign({}, DEFAULTS.status); renderDamage(dmgRaw); renderStatus(curStatus); return true; },
   set(list, pool){ if(!dmgDetached) return false; const o = {}; (list || []).forEach((d,i)=>{ o[d.id || ('t' + i)] = {section:d.section, type:d.type, sev:d.sev || 1, cost:d.cost || 0, t:d.t || (Date.now() - i)}; }); renderDamage({list:o, pool:pool || 0}); return true; },
-  roll(loss, state, rng){ return rollHullLoss(loss, state || dmgState, dmgSections(), rng || Math.random); },
+  roll(loss, state, rng, prev, max){ return rollHullLoss(loss, state || dmgState, dmgSections(), rng || Math.random, prev, max); },
   state(){ return {detached:dmgDetached, hull:curStatus ? curStatus.hull : null, hullMax:curStatus ? curStatus.hullMax : null, pool:dmgState.pool, list:dmgState.list.map(d=>Object.assign({}, d))}; }
 };
 
