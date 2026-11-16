@@ -237,9 +237,15 @@ box-shadow:0 0 6px var(--green);animation:blink 1.4s infinite}
 #sv-over polygon{fill:var(--green)}
 #sv-over text{fill:var(--dim);font-family:var(--term);font-size:11px;letter-spacing:.06em}
 #sv-over span{position:absolute;left:0;top:0;white-space:nowrap;font-size:14px;line-height:1;letter-spacing:.06em;text-transform:uppercase;color:var(--green);text-shadow:0 0 4px rgba(57,255,107,.6);padding:0 2px;border:1px solid transparent;background:rgba(2,10,4,.55);pointer-events:auto;cursor:pointer}
-#sv-warn{display:flex;flex-wrap:wrap;gap:0 .8rem;margin:4px 0 0;font-size:var(--fs-s);letter-spacing:.04em;color:var(--green)}
-#sv-warn:empty{display:none}
-#sv-warn .sv-dim{color:var(--dim)}
+#sv-warn{margin:4px 0 0;font-size:var(--fs-s);letter-spacing:.04em;color:var(--green)}
+#sv-warn:empty,#hullMsg:empty{display:none}
+#sv-warn .sv-hd{display:flex;flex-wrap:wrap;gap:0 .8rem}
+#sv-warn .sv-dl{display:flex;align-items:center;gap:.5rem;margin-top:3px}
+#sv-warn .sv-dn{flex:1;min-width:0;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer;color:var(--green);font-family:var(--term);font-size:var(--fs-s);letter-spacing:.04em;text-transform:lowercase;text-shadow:inherit}
+#sv-warn .sv-dn:hover,#sv-warn .sv-dn:focus-visible{color:var(--hi);outline:none}
+#sv-warn .gc-btn{flex:none;white-space:nowrap;font-family:var(--term);font-size:var(--fs-s);text-transform:lowercase;text-shadow:inherit;padding:.15rem .45rem;min-height:1.6rem}
+#sv-warn .sv-dim,#hullMsg{color:var(--dim)}
+#hullMsg{font-size:var(--fs-s);letter-spacing:.04em;margin:-2px 0 4px}
 #sv-warn .sv-new{color:var(--hi);animation:textGlitch .6s steps(5)}
 @media (prefers-reduced-motion:reduce){#sv-warn .sv-new{animation:none}}
 #sv-over span.sv-fail{color:var(--dim);animation:textGlitch .8s steps(5) infinite}
@@ -707,8 +713,9 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
 <h2>Hull &amp; Systems</h2>
 <div class="row"><div class="stat"><label>Hull</label>
 <div class="bar hull"><div id="hullBar" style="width:0%"></div></div></div>
-<input id="hull" type="number" onchange="saveStatus(this)"> / <input id="hullMax" type="number" onchange="saveStatus(this)">
+<input id="hull" type="number" onchange="hullEdit(this)"> / <input id="hullMax" type="number" onchange="hullMaxEdit(this)">
 <select id="hullQuality" class="die-select" onchange="saveStatus(this)"></select></div>
+<div id="hullMsg" aria-live="polite"></div>
 <div class="row"><div class="stat"><label>Shields</label>
 <div class="bar shields"><div id="shieldsBar" style="width:0%"></div></div></div>
 <input id="shields" type="number" onchange="saveStatus(this)"> / <input id="shieldsMax" type="number" onchange="saveStatus(this)">
@@ -978,6 +985,7 @@ Object.keys(DEFAULTS).forEach(k=> Object.keys(DEFAULTS[k]).forEach(c=>{ seed[k+'
 if(Object.keys(seed).length) db.ref('/').update(seed);
 });
 db.ref('status').on('value', s=>renderStatus(s.val()||DEFAULTS.status));
+db.ref('damage').on('value', s=>renderDamage(s.val()));
 db.ref('location').on('value', s=>renderLocation(s.val()||DEFAULTS.location));
 db.ref('crew').on('value', s=>renderList('crew','crewList',s.val(),[
   {key:'desc',placeholder:'description'},
@@ -1096,7 +1104,8 @@ return fx;
 }
 
 function renderStatus(v){
-let held = false;                    // a field is being edited right now, so it can't be refreshed yet
+curStatus = Object.assign({}, v);
+let held = false;                   // a field is being edited right now, so it can't be refreshed yet
 ['hull','hullMax','shields','shieldsMax','fuel','fuelMax'].forEach(k=>{
 const el=document.getElementById(k);
 if(document.activeElement!==el) el.value = v[k]; else held = true;
@@ -1110,13 +1119,200 @@ document.getElementById('hullBar').style.width = Math.min(100,(v.hull/v.hullMax)
 document.getElementById('shieldsBar').style.width = Math.min(100,(v.shields/v.shieldsMax)*100)+'%';
 document.getElementById('fuelBar').style.width = Math.min(100,(v.fuel/v.fuelMax)*100)+'%';
 applyHullDamage(v.hull, v.hullMax);
+renderDamageList();
 }
 function saveStatus(el){
 // Save ONLY the field that changed. Writing every field would let a stale value in some other
 // field overwrite what another player just set. (Field ids are the database keys.)
 if(!el || !el.id) return;
-db.ref('status').update({[el.id]: el.tagName === 'SELECT' ? el.value : +el.value});
+dmgWrite({['status/'+el.id]: el.tagName === 'SELECT' ? el.value : +el.value});
 }
+
+// ---- ship damage: persistent and shared ----
+// stored at /damage: list/{id} = {section, type, sev 1..3, cost (hull points lost to it, cumulative), t (created, ms)}
+// and pool = hull points lost with no damage made ("unattributed").
+// damage is made only by the device whose hull field is lowered (hullEdit), and removed only by repair.
+// the wireframe draws from dmgState alone, so every device shows the same ship.
+const DMG_RULES = {
+  CAP: 12,        // most damages kept; at the cap, new damage worsens an existing one
+  P_SPAN: 25,     // hull points lost in one go that make damage near certain; each full span above it is one sure damage
+  P_EXP: 1.5,     // chance of damage = min(P_MAX, (loss / P_SPAN) ^ P_EXP): 1 point ~0.8%, 10 ~25%, 25 = 95%
+  P_MAX: 0.95,
+  WORSEN: 0.5,    // chance that damage worsens an existing one rather than adding a new one
+  OFFLINE: 0.35   // chance that a damage reaching severity 3 becomes "system offline"
+};
+const DMG_TYPES = {breach:'hull breach', fire:'fire', surge:'power surge', offline:'system offline', structural:'structural', coolant:'coolant leak'};
+const DMG_SEV = ['', 'minor', 'serious', 'critical'];
+const DMG_SECTIONS = {plasma:'plasma drive', bridge:'bridge', crew:'crew quarters', defense:'defense array', broadside:'broadside battery', prow:'prow',
+  engines:'engines', cargo:'cargo bays a-d', wings:'wing lances', hangar:'hangar deck', lance:'prow lance', battery2:'aft battery'};
+const DMG_UPGRADES = {lance:1, battery2:1};          // sections that exist only when the upgrade is fitted
+let dmgState = {list:[], pool:0};                    // parsed: list newest first
+let dmgRaw = {list:{}, pool:0};                      // as stored
+let curStatus = null;                                // last status seen
+let dmgDetached = false;                             // tests: true = nothing here is written to the database
+let dmgArmed = null, dmgArmTimer = null, hullMsgTimer = null;
+
+// sections damage can land in: what the wireframe has fitted, else the ten fixed ones
+function dmgSections(){
+try { if(window.ShipView && ShipView.sections){ const s = ShipView.sections(); if(s && s.length) return s.map(x=>x.id).filter(id=>DMG_SECTIONS[id]); } } catch(e){ /* fall through */ }
+return Object.keys(DMG_SECTIONS).filter(id=>!DMG_UPGRADES[id]);
+}
+
+// one write for hull and damage together, so nobody sees one without the other
+function dmgWrite(updates){
+if(dmgDetached){
+  if(!curStatus) curStatus = Object.assign({}, DEFAULTS.status);
+  Object.keys(updates).forEach(p=>{
+    const v = updates[p], k = p.split('/');
+    if(k[0] === 'status') curStatus[k[1]] = v;
+    else if(p === 'damage/pool') dmgRaw.pool = v;
+    else if(p === 'damage/list') dmgRaw.list = v || {};
+    else if(k[0] === 'damage' && k[1] === 'list'){ if(v === null) delete dmgRaw.list[k[2]]; else dmgRaw.list[k[2]] = v; }
+  });
+  renderDamage(dmgRaw); renderStatus(curStatus);
+  return Promise.resolve();
+}
+return Promise.resolve(db.ref('/').update(updates)).catch(()=>{ hullMsg('// write refused // check database rules'); });
+}
+
+function renderDamage(v){
+v = v || {};
+dmgRaw = {list: Object.assign({}, v.list || {}), pool: Number(v.pool) > 0 ? Number(v.pool) : 0};
+const list = [];
+Object.keys(dmgRaw.list).forEach(id=>{
+  const d = dmgRaw.list[id];
+  if(!d || !DMG_SECTIONS[d.section] || !DMG_TYPES[d.type]) return;
+  list.push({id:id, section:d.section, type:d.type, sev:Math.max(1, Math.min(3, Math.round(Number(d.sev)) || 1)), cost:Number(d.cost) > 0 ? Number(d.cost) : 0, t:Number(d.t) || 0});
+});
+list.sort((a,b)=> b.t - a.t || (a.id < b.id ? 1 : -1));
+dmgState = {list:list, pool:dmgRaw.pool};
+renderDamageList();
+}
+
+// rolls what a loss of hull does. pure: returns the new list and pool, and the records that changed
+function rollHullLoss(loss, state, sections, rng){
+const R = DMG_RULES, list = state.list.map(d=>Object.assign({}, d)), changed = {}, parts = [];
+let pool = state.pool || 0;
+const pick = a=> a[Math.min(a.length - 1, Math.floor(rng() * a.length))];
+if(loss > R.P_SPAN){
+  const n = Math.floor(loss / R.P_SPAN), rem = loss - n * R.P_SPAN;
+  for(let i=0;i<n;i++) parts.push([R.P_SPAN, true]);
+  if(rem > 0) parts.push([rem, false]);
+} else parts.push([loss, false]);
+parts.forEach(part=>{
+  const pts = part[0];
+  if(!part[1] && rng() >= Math.min(R.P_MAX, Math.pow(pts / R.P_SPAN, R.P_EXP))){ pool += pts; return; }
+  const cost = pool + pts, open = list.filter(d=>d.sev < 3);
+  let d;
+  pool = 0;
+  if(open.length && (list.length >= R.CAP || rng() < R.WORSEN)){
+    d = pick(open); d.sev++; d.cost += cost;
+    if(d.sev === 3 && rng() < R.OFFLINE) d.type = 'offline';
+  } else if(list.length < R.CAP){
+    const sec = pick(sections), types = ['breach','fire','surge','structural'];
+    if(sec === 'plasma') types.push('coolant');          // coolant only leaks from the reactor
+    d = {id:'d' + Date.now().toString(36) + Math.floor(rng() * 1679616).toString(36), section:sec, type:pick(types), sev:1, cost:cost, t:Date.now()};
+    list.push(d);
+  } else { d = pick(list); d.cost += cost; }             // at the cap with everything critical: the points still land on a damage
+  changed[d.id] = d;
+});
+return {list:list, pool:pool, changed:changed};
+}
+
+function hullMsg(t){
+const el = document.getElementById('hullMsg');
+if(!el) return;
+el.textContent = t;
+clearTimeout(hullMsgTimer);
+hullMsgTimer = setTimeout(()=>{ el.textContent = ''; }, 6000);
+}
+
+// the hull field. lowering it is a hit (may make damage). it rises only by repair: one damage, or set to max (clears everything).
+function hullEdit(el){
+const st = curStatus || {}, prev = Number(st.hull), max = Number(st.hullMax);
+const known = st.hull !== null && st.hull !== undefined && String(st.hull).trim() !== '' && isFinite(prev);
+let nv = Number(el.value);
+if(el.value.trim() === '' || !isFinite(nv)){ if(known) el.value = prev; return; }
+nv = Math.max(0, nv);
+el.value = nv;
+if(!known){ dmgWrite({'status/hull': nv}); return; }
+if(nv === prev) return;
+if(nv > prev){
+  if(nv === max){ dmgArmed = null; dmgWrite({'status/hull': max, 'damage/list': null, 'damage/pool': 0}); return; }
+  el.value = prev;
+  hullMsg('// refused // repair damage or set hull to max');
+  return;
+}
+const r = rollHullLoss(prev - nv, dmgState, dmgSections(), Math.random), up = {'status/hull': nv, 'damage/pool': r.pool};
+Object.keys(r.changed).forEach(id=>{ const d = r.changed[id]; up['damage/list/' + id] = {section:d.section, type:d.type, sev:d.sev, cost:d.cost, t:d.t}; });
+dmgWrite(up);
+}
+
+// hull max. lowering it below the hull trims the hull to fit; that is not a hit, so nothing is rolled
+function hullMaxEdit(el){
+const nv = Number(el.value), up = {'status/hullMax': nv};
+if(el.value.trim() === '' || !isFinite(nv)){ if(curStatus) el.value = curStatus.hullMax; return; }
+if(curStatus && nv > 0 && Number(curStatus.hull) > nv) up['status/hull'] = nv;
+dmgWrite(up);
+}
+
+function repairDamage(id){
+const d = dmgState.list.filter(x=>x.id === id)[0], st = curStatus || {}, hull = Number(st.hull), max = Number(st.hullMax);
+if(!d) return;
+const up = {['damage/list/' + id]: null};
+if(isFinite(hull)) up['status/hull'] = max > 0 ? Math.max(hull, Math.min(max, hull + d.cost)) : hull + d.cost;
+dmgWrite(up);
+}
+// repair asks for a second tap on the same button
+function repairTap(id){
+clearTimeout(dmgArmTimer);
+if(dmgArmed === id){ dmgArmed = null; repairDamage(id); return; }
+dmgArmed = id;
+dmgArmTimer = setTimeout(()=>{ dmgArmed = null; renderDamageList(); }, 4000);
+renderDamageList();
+}
+
+// the damage list under the ship: hull line, then one line per damage, newest first
+function renderDamageList(){
+const el = document.getElementById('sv-warn');
+if(!el) return;
+if(holdRender('sv-warn', null, renderDamageList)) return;
+const st = curStatus || {}, hull = Number(st.hull), max = Number(st.hullMax) > 0 ? Number(st.hullMax) : 100;
+const known = st.hull !== null && st.hull !== undefined && String(st.hull).trim() !== '' && isFinite(hull);
+const pct = known ? Math.round(Math.max(0, Math.min(1, hull / max)) * 100) : 100, lost = known && hull <= 0;
+const num = n=> String(Math.round(n * 100) / 100);
+const span = (t, cls)=>{ const s = document.createElement('span'); s.textContent = t; if(cls) s.className = cls; return s; };
+document.documentElement.classList.toggle('ship-lost', lost);
+el.textContent = '';
+if(!dmgState.list.length && !dmgState.pool && !(known && hull < max)) return;
+const hd = document.createElement('div'); hd.className = 'sv-hd';
+if(lost) hd.appendChild(span('// ship lost', 'sv-new'));
+hd.appendChild(span('// hull ' + pct + '%' + (hullLevels.crit > 0 && !lost ? ' // critical' : ''), hullLevels.crit > 0 && !lost ? 'sv-new' : 'sv-dim'));
+if(dmgState.pool) hd.appendChild(span('// unattributed -' + num(dmgState.pool) + ' hull', 'sv-dim'));
+el.appendChild(hd);
+dmgState.list.forEach(d=>{
+  const row = document.createElement('div'), name = document.createElement('button'), rep = document.createElement('button');
+  row.className = 'sv-dl';
+  name.type = 'button'; name.className = 'sv-dn' + (Date.now() - d.t < 8000 ? ' sv-new' : '');
+  name.textContent = '// ' + DMG_SECTIONS[d.section] + ': ' + DMG_TYPES[d.type] + ' (' + DMG_SEV[d.sev] + ') -' + num(d.cost) + ' hull';
+  name.addEventListener('click', ()=>{ if(window.ShipView && ShipView.pick) ShipView.pick(d.section); });
+  rep.type = 'button'; rep.className = 'gc-btn gc-add';
+  rep.textContent = (dmgArmed === d.id ? 'confirm +' : 'repair +') + num(d.cost);
+  rep.setAttribute('aria-pressed', dmgArmed === d.id ? 'true' : 'false');
+  rep.addEventListener('click', ()=>repairTap(d.id));
+  row.appendChild(name); row.appendChild(rep); el.appendChild(row);
+});
+}
+
+// test hooks. detach(): from then on nothing is written to or read from the shared database (reload to reattach).
+// set(list, pool): put damages in place (detached only). roll(loss): what a loss would do, without applying it.
+window.ShipDamage = {
+  rules: DMG_RULES,
+  detach(){ dmgDetached = true; try { db.ref('status').off(); db.ref('damage').off(); } catch(e){ /* not connected */ } if(!curStatus) curStatus = Object.assign({}, DEFAULTS.status); renderDamage(dmgRaw); renderStatus(curStatus); return true; },
+  set(list, pool){ if(!dmgDetached) return false; const o = {}; (list || []).forEach((d,i)=>{ o[d.id || ('t' + i)] = {section:d.section, type:d.type, sev:d.sev || 1, cost:d.cost || 0, t:d.t || (Date.now() - i)}; }); renderDamage({list:o, pool:pool || 0}); return true; },
+  roll(loss, state, rng){ return rollHullLoss(loss, state || dmgState, dmgSections(), rng || Math.random); },
+  state(){ return {detached:dmgDetached, hull:curStatus ? curStatus.hull : null, hullMax:curStatus ? curStatus.hullMax : null, pool:dmgState.pool, list:dmgState.list.map(d=>Object.assign({}, d))}; }
+};
 
 function renderLocation(v){
 // the campaign date is the only field left of the old Position panel (still stored at location/date)
@@ -1980,10 +2176,18 @@ el.appendChild(d);
   // ---------------- drawing ----------------
   // vF: depth from the ship's centre (far parts a little dimmer). aD: distance along a dashed line. aR: a random number per edge, used to drop or flare edges under hull damage.
   // aM: which section an edge belongs to; uPick = the section picked (-1 none): its edges turn bright and the rest dim.
-  var VS = 'attribute float aD; attribute float aR; attribute float aM; varying float vF; varying float vD; varying float vR; varying float vM; varying vec3 vP; uniform float uSize; uniform vec3 uBar; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vec4 c = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0); vF = (mv.z - c.z) / 1.2; vD = aD; vR = aR; vM = aM; vP = position; if (abs(mv.y - uBar.x) < uBar.y) mv.x += uBar.z; gl_PointSize = uSize; gl_Position = projectionMatrix * mv; }';
-  var FH = 'varying float vF; varying float vD; varying float vR; varying float vM; uniform vec3 uCol; uniform vec3 uHi; uniform float uOp; uniform float uBack; uniform vec3 uDash; uniform vec3 uDmg; uniform float uPick; uniform float uLit; varying vec3 vP; uniform vec4 uHit[4]; uniform float uT; uniform float uFail; uniform vec2 uSweep; void main(){ if (uDash.x > 0.0 && mod(vD + uDash.z, uDash.x + uDash.y) > uDash.x) discard; if (fract(vR + uDmg.y) < uDmg.x) discard; float a = uOp * mix(uBack, 1.0, smoothstep(-1.0, 1.0, vF)); vec3 c = uCol; if (fract(vR * 7.31 + uDmg.y * 3.7) < uDmg.z) { c = uHi; a = 1.0; } if (uPick > -0.5) { if (abs(vM - uPick) < 0.5) { c = uHi; a = max(a, uLit); } else a *= 0.45; } '
-    + 'for (int i = 0; i < 4; i++) { if (uHit[i].w > 0.0) { float dd = distance(vP, uHit[i].xyz); float rr = uHit[i].w * (0.7 + 0.6 * fract(vR * 3.17 + float(i) * 0.37)); if (dd < rr * 0.72) a *= 0.05; else if (dd < rr) { c = uHi; a = max(a, uLit * (0.55 + 0.45 * step(0.5, fract(vR * 5.3 + uT * 3.0)))); } } } '   // breaches: dark inside, bright ragged rim
-    + 'if (uFail > -0.5 && abs(vM - uFail) < 0.5) a *= 0.1 + 0.9 * pow(max(0.0, sin(uT * 3.0)), 8.0); '   // a failed section: dark, with a pulse
+  var VS = 'attribute float aD; attribute float aR; attribute float aM; varying float vF; varying float vD; varying float vR; varying float vM; varying vec3 vP; uniform float uSize; uniform vec3 uBar; uniform vec4 uHit[12]; uniform vec4 uFx[12]; uniform vec3 uOff[12]; void main(){ vec3 p = position; for (int i = 0; i < 12; i++) { if (abs(uFx[i].x - 5.0) < 0.5 && (abs(aM - uFx[i].y) < 0.5 || distance(position, uHit[i].xyz) < uHit[i].w)) p += uOff[i]; } vec4 mv = modelViewMatrix * vec4(p, 1.0); vec4 c = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0); vF = (mv.z - c.z) / 1.2; vD = aD; vR = aR; vM = aM; vP = position; if (abs(mv.y - uBar.x) < uBar.y) mv.x += uBar.z; gl_PointSize = uSize; gl_Position = projectionMatrix * mv; }';
+  var FH = 'varying float vF; varying float vD; varying float vR; varying float vM; uniform vec3 uCol; uniform vec3 uHi; uniform float uOp; uniform float uBack; uniform vec3 uDash; uniform vec3 uDmg; uniform float uPick; uniform float uLit; varying vec3 vP; uniform vec4 uHit[12]; uniform vec4 uFx[12]; uniform float uT; uniform float uLost; uniform vec2 uSweep; void main(){ if (uDash.x > 0.0 && mod(vD + uDash.z, uDash.x + uDash.y) > uDash.x) discard; if (fract(vR + uDmg.y) < uDmg.x) discard; float a = uOp * mix(uBack, 1.0, smoothstep(-1.0, 1.0, vF)); vec3 c = uCol; if (fract(vR * 7.31 + uDmg.y * 3.7) < uDmg.z) { c = uHi; a = 1.0; } if (uPick > -0.5) { if (abs(vM - uPick) < 0.5) { c = uHi; a = max(a, uLit); } else a *= 0.45; } '
+    // the stored damages, one per slot. uHit = place and radius, uFx = (type, section, spark rate, -)
+    + 'for (int i = 0; i < 12; i++) { float k = uFx[i].x; if (k < 0.5) continue; float fi = float(i); '
+    + 'if (abs(k - 4.0) < 0.5) { if (abs(vM - uFx[i].y) < 0.5) a *= 0.08 + 0.92 * pow(max(0.0, sin(uT * 3.0 + fi)), 8.0); continue; } '   // 4 system offline: the whole section dark, with a pulse
+    + 'float dd = distance(vP, uHit[i].xyz); float rr = uHit[i].w * (0.7 + 0.6 * fract(vR * 3.17 + fi * 0.37)); if (dd > rr) continue; '
+    + 'if (k < 1.5) { if (dd < rr * 0.72) a *= 0.05; else { c = uHi; a = max(a, uLit * (0.55 + 0.45 * step(0.5, fract(vR * 5.3 + uT * 3.0)))); } } '   // 1 hull breach: dark inside, bright ragged rim
+    + 'else if (k < 2.5) { c = uHi; a = max(a * 0.4, uLit * (1.0 - 0.6 * dd / rr) * (0.25 + 0.75 * step(0.45, fract(vR * 9.7 + uT * (5.0 + 4.0 * fract(vR * 2.3)))))); } '   // 2 fire: a flare, each edge flickering at its own rate
+    + 'else if (k < 3.5) { float h = fract(sin(floor(uT * 7.0 + fi * 1.7) * 12.9898 + vR * 78.233) * 43758.5453); if (h < 0.5) a = 0.0; else if (h > 0.9) { c = uHi; a = max(a, uLit); } } '   // 3 power surge: edges drop out and snap back
+    + 'else if (k < 5.5) { if (fract(vD * 12.0 + vR * 3.0) > 0.55) a *= 0.15; else { c = uHi; a = max(a, uLit * 0.7); } } '   // 5 structural: broken into bright fragments (the vertex shader shakes it)
+    + 'else { a *= 0.45 + 0.55 * step(0.5, fract(vD * 10.0 - uT * 1.5 + vR)); } } '   // 6 coolant leak: edges crawl; the venting dashes do the rest
+    + 'if (uLost > 0.5) a *= 0.1 + 0.25 * pow(max(0.0, sin(uT * 1.2 + vP.x)), 6.0); '   // ship lost: everything dark, a slow dying ripple
     + 'if (uSweep.y > 0.0) { float sw = uSweep.x - vP.x; if (sw > 0.0 && sw < uSweep.y) { a = min(1.0, a + (1.0 - sw / uSweep.y) * 0.6 * uLit); if (sw < 0.05) c = uHi; } } ';   // scan sweep
   var FL = FH + 'gl_FragColor = vec4(c, a); }', FP = FH + 'float r = length(gl_PointCoord - 0.5) * 2.0; if (r > 1.0) discard; gl_FragColor = vec4(c, a * (1.0 - r * r)); }';
   var DMG = new THREE.Vector3(), CALM = new THREE.Vector3(), BAR = new THREE.Vector3(), PICK = { value: -1 }, NOPICK = { value: -1 };   // shared uniforms: (drop, seed, flare), a glitch bar (y, half-height, shift), the picked section
@@ -1993,54 +2197,91 @@ el.appendChild(d);
       tSeed = 0, tBar = 0, rs = 20260115, paused = false;
   var VIEWS = { side: [0, 0], top: [0, Math.PI / 2], front: [-Math.PI / 2, 0] }, TOP = 37, BOT = 33, TIERS = 1;
   // ---- damage effects: tuning ----
-  var BREACH_AT = [0.12, 0.3, 0.5, 0.7],     // hull damage (dmg, 0..1) at which the 1st..4th breach opens
-      BREACH_R = [0.5, 0.85],              // breach radius range, in ship units (the ship is about 8.6 long)
-      VENT_LEN = 0.9,                        // how far the venting dashes fly from a breach
-      SPARK_RATE = [0.25, 0.35],             // chance that a spark point fires each cycle: [per dmg, per crit]
-      FAIL_AT = 0.3,                         // crit level at which one section fails (goes dark and pulses)
-      SHAKE_DROP = 0.03, SHAKE_AMP = 0.14,   // a hit = dmg rising by this much in one frame; size of the judder
-      SWEEP_EVERY = [7, 16], SWEEP_W = 1.6, SWEEP_SPEED = 5,   // seconds between scan sweeps, width of the lit trail, speed (ship units a second)
-      HIT_HOLD = 12;                         // seconds a breach made by ShipView.hit() stays open
-  function v4s() { return [new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4()]; }
-  // shared uniforms: breach points (xyz in ship space, w = radius, 0 = closed), venting directions, a clock, the failed section, the sweep (x, width), spark chance, venting on
-  var HITS = { value: v4s() }, NOHITS = { value: v4s() }, VENT = { value: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] }, TIME = { value: 0 },
-      FAIL = { value: -1 }, NOFAIL = { value: -1 }, SWEEP = { value: new THREE.Vector2() }, NOSWEEP = { value: new THREE.Vector2() }, SPARK = { value: 0 }, VON = { value: 0 };
-  var tgt = [0, 0, 0, 0], hold = [0, 0, 0, 0], hitSec = [-1, -1, -1, -1], pool = null, poolOwn = null, baseX = 0, shake = 0, prevD = -1, tSweep = 5, failId = -1, lastSec = -1, dbg = null, hs = (Date.now() ^ 0x5bd1e995) | 0, born = [0, 0, 0, 0], tick = 0, newSlot = -1, lastSig = -1, warnEl = document.getElementById('sv-warn');
+  // every damage drawn comes from the shared list (the page's dmgState, or ShipView.inject for tests): one slot each, up to SLOTS.
+  var SLOTS = 12,                            // must match the 12s in the shaders
+      KIND = { breach: 1, fire: 2, surge: 3, offline: 4, structural: 5, coolant: 6 },
+      DMG_R = [0, 0.3, 0.48, 0.7],           // radius by severity 1..3, in ship units (the ship is about 8.6 long)
+      VENT_LEN = { breach: [0, 0, 0.5, 0.9], coolant: [0, 0.6, 0.9, 1.3] },   // how far the venting dashes fly, by severity (0 = none)
+      SPARK_RATE = { fire: [0, 0.3, 0.5, 0.75], surge: [0, 0.08, 0.14, 0.2] },   // chance that a spark point fires each cycle, by severity
+      TWITCH = [0, 0.02, 0.035, 0.055],      // structural: size of the twitch, by severity
+      SHAKE_AMP = 0.14,                      // size of the judder after a hit
+      SWEEP_EVERY = [7, 16], SWEEP_W = 1.6, SWEEP_SPEED = 5;   // seconds between scan sweeps, width of the lit trail, speed (ship units a second)
+  function vecs(C) { var a = [], i; for (i = 0; i < SLOTS; i++) a.push(new C()); return a; }
+  // shared uniforms: damage points (xyz in ship space, w = radius), their (type, section, spark rate), structural offsets, venting (direction, length), a clock, ship lost, the sweep (x, width)
+  var HITS = { value: vecs(THREE.Vector4) }, NOHITS = { value: vecs(THREE.Vector4) }, FX = { value: vecs(THREE.Vector4) }, NOFX = { value: vecs(THREE.Vector4) }, OFF = { value: vecs(THREE.Vector3) },
+      VENT = { value: vecs(THREE.Vector4) }, TIME = { value: 0 }, LOST = { value: 0 }, NOLOST = { value: 0 }, SWEEP = { value: new THREE.Vector2() }, NOSWEEP = { value: new THREE.Vector2() };
+  var slot = [], tgt = [], twT = [], twB = [], pool = null, poolOwn = null, secPts = {}, baseX = 0, shake = 0, prevD = -1, tSweep = 5, dbg = null, inj = null, lastSig = null, wasLost = false, hs = 4242;
   function hrnd() { hs |= 0; hs = hs + 0x6D2B79F5 | 0; var t = Math.imul(hs ^ hs >>> 15, 1 | hs); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
-  // sparks: points that pop and fade. venting: short dashes streaming out of each breach. both are drawn over the hull.
-  var VSS = 'attribute float aPh; attribute float aSp; attribute float aSeed; uniform float uT; uniform float uSpark; uniform float uSize; varying float vA; void main(){ float q = uT * aSp + aPh; float l = fract(q) / 0.22; float on = step(fract(sin(floor(q) * 12.9898 + aSeed * 78.233) * 43758.5453), uSpark) * step(l, 1.0); vA = on * (1.0 - l); gl_PointSize = uSize * (0.5 + 1.5 * (1.0 - l)) * on + 0.01; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
+  function hashId(s) { var h = 2166136261, i; for (i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d); h ^= h >>> 12; return h >>> 0; }
+  // sparks: points that pop and fade round a damage. venting: short dashes streaming out of one. both are drawn over the hull.
+  var PICKSLOT = 'vec4 h = uHit[0]; vec4 f = uFx[0]; vec4 vd = uVent[0]; for (int i = 1; i < 12; i++) { if (abs(aS - float(i)) < 0.5) { h = uHit[i]; f = uFx[i]; vd = uVent[i]; } } ';
+  var VSS = 'attribute float aS; attribute vec3 aDir; attribute float aPh; attribute float aSp; attribute float aSeed; uniform vec4 uHit[12]; uniform vec4 uFx[12]; uniform vec4 uVent[12]; uniform float uT; uniform float uSize; varying float vA; void main(){ ' + PICKSLOT + 'float q = uT * aSp + aPh; float l = fract(q) / 0.22; float on = step(fract(sin(floor(q) * 12.9898 + aSeed * 78.233) * 43758.5453), f.z) * step(0.001, f.z) * step(l, 1.0); vA = on * (1.0 - l); gl_PointSize = uSize * (0.5 + 1.5 * (1.0 - l)) * on + 0.01; gl_Position = projectionMatrix * modelViewMatrix * vec4(h.xyz + aDir * h.w * (0.8 + 0.5 * l) + vd.xyz * 0.0, 1.0); }';
   var FSS = 'uniform vec3 uCol; varying float vA; void main(){ if (vA <= 0.0) discard; vec2 q = abs(gl_PointCoord - 0.5) * 2.0; float star = max(0.0, 1.0 - min(q.x, q.y) * 7.0) * (1.0 - max(q.x, q.y)); float core = max(0.0, 1.0 - length(q) * 2.2); gl_FragColor = vec4(uCol, vA * max(star, core)); }';
-  var VSV = 'attribute float aS; attribute float aE; attribute float aPh; attribute float aSp; attribute vec3 aDir; uniform vec4 uHit[4]; uniform vec3 uVent[4]; uniform float uT; uniform float uLen; uniform float uOn; varying float vA; void main(){ vec4 h = uHit[0]; vec3 vd = uVent[0]; for (int i = 1; i < 4; i++) { if (abs(aS - float(i)) < 0.5) { h = uHit[i]; vd = uVent[i]; } } float t = fract(uT * aSp + aPh); vec3 dir = normalize(vd + aDir * 0.45); vec3 p = h.xyz + dir * (h.w * 0.3 + t * uLen + aE * 0.1 * (1.0 - t * 0.6)); vA = uOn * step(0.05, h.w) * (1.0 - t) * 0.9; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }';
+  var VSV = 'attribute float aS; attribute float aE; attribute float aPh; attribute float aSp; attribute vec3 aDir; uniform vec4 uHit[12]; uniform vec4 uFx[12]; uniform vec4 uVent[12]; uniform float uT; varying float vA; void main(){ ' + PICKSLOT + 'float t = fract(uT * aSp + aPh); vec3 dir = normalize(vd.xyz + aDir * 0.45); vec3 p = h.xyz + dir * (h.w * 0.3 + t * vd.w + aE * 0.1 * (1.0 - t * 0.6)); vA = step(0.01, vd.w) * step(0.5, f.x) * step(0.05, h.w) * (1.0 - t) * 0.9; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }';
   var FSV = 'uniform vec3 uCol; varying float vA; void main(){ if (vA <= 0.01) discard; gl_FragColor = vec4(uCol, vA); }';
-  // opens breach i at a random point on the hull: in section sec if given (-1 = anywhere)
-  function placeHit(i, sec) {
-    if (!pool || !pool.length) return;
-    var n = pool.length / 3, v = HITS.value[i], k = 0, j, y, z, l;
-    for (j = 0; j < 300; j++) { k = Math.floor(hrnd() * n); if (sec < 0 || poolOwn[k] === sec) break; }
-    v.set(pool[k * 3], pool[k * 3 + 1], pool[k * 3 + 2], 0.001);
+  function clearSlot(i) { slot[i] = null; tgt[i] = 0; twT[i] = 0; twB[i] = 0; HITS.value[i].set(0, 0, 0, 0); FX.value[i].set(0, 0, 0, 0); OFF.value[i].set(0, 0, 0); VENT.value[i].set(0, 1, 0, 0); }
+  // puts damage d in slot i, at a place inside its section worked out from its id: the same on every device
+  function place(i, d) {
+    var c = null, pts, v = HITS.value[i], k, y, z, l;
+    callouts.forEach(function (q) { if (q.m.id === d.section) c = q; });
+    slot[i] = { id: d.id, section: d.section, sev: 0, type: '', sec: c ? c.n : -5, on: !!c };   // a section that is not fitted is listed but not drawn
+    if (!c) return;
+    pts = secPts[c.n];
+    if (pts && pts.length) { k = pts[hashId(d.id) % pts.length] * 3; v.set(pool[k], pool[k + 1], pool[k + 2], 0.001); } else v.set(c.p.x, c.p.y, c.p.z, 0.001);
     y = v.y; z = v.z; l = Math.sqrt(y * y + z * z); if (l < 0.05) { y = 1; z = 0; l = 1; }
-    VENT.value[i].set(0.15, y / l, z / l).normalize();   // vents outward from the ship's axis
-    tgt[i] = BREACH_R[0] + hrnd() * (BREACH_R[1] - BREACH_R[0]); hitSec[i] = poolOwn[k]; born[i] = ++tick;
+    VENT.value[i].set(0.15, y / l, z / l, 0); l = Math.sqrt(0.0225 + 1); VENT.value[i].x /= l; VENT.value[i].y /= l; VENT.value[i].z /= l;   // vents outward from the ship's axis
   }
-  function setFail(n) { if (n === failId && FAIL.value === n) return; failId = n; FAIL.value = n; callouts.forEach(function (c) { c.el.classList.toggle('sv-fail', n >= 0 && c.n === n); }); }
+  // brings the slots in line with the list. only runs when the list has changed
+  function slotSync(list) {
+    var sig = list.map(function (d) { return d.id + ':' + d.type + d.sev + d.section; }).join('|'), first = lastSig === null, have = {}, hit = false, i;
+    if (sig === lastSig) return;
+    lastSig = sig;
+    list.forEach(function (d) { have[d.id] = 1; });
+    for (i = 0; i < SLOTS; i++) if (slot[i] && !have[slot[i].id]) clearSlot(i);
+    list.forEach(function (d) {
+      var s = -1, o;
+      for (i = 0; i < SLOTS; i++) if (slot[i] && slot[i].id === d.id) { if (slot[i].section === d.section) s = i; else clearSlot(i); }
+      if (s < 0) { for (i = 0; i < SLOTS; i++) if (!slot[i]) { s = i; break; } if (s < 0) return; place(s, d); }
+      o = slot[s];
+      if (d.sev > o.sev) hit = true;
+      o.sev = d.sev; o.type = d.type;
+      if (!o.on) return;
+      tgt[s] = DMG_R[d.sev] || DMG_R[1];
+      FX.value[s].set(KIND[d.type] || 1, o.sec, SPARK_RATE[d.type] ? SPARK_RATE[d.type][d.sev] : 0, 0);
+      VENT.value[s].w = VENT_LEN[d.type] ? VENT_LEN[d.type][d.sev] : 0;
+      if (first) HITS.value[s].w = tgt[s];   // already there when the page opens: no growing in
+    });
+    if (hit && !first) shake = 1;
+    marks();
+  }
+  // labels: a section that is offline reads as failed; with the ship lost they all do
+  function marks() {
+    callouts.forEach(function (c) { c.el.classList.toggle('sv-fail', wasLost || slot.some(function (o) { return o && o.type === 'offline' && o.sec === c.n; })); });
+  }
   // the extra draw objects (two in all), rebuilt with the ship and disposed with it
   function fx(src) {
-    var i, k, s, e, g, n = 90, p = [], ph = new Float32Array(n), sp = new Float32Array(n), sd = new Float32Array(n), VN = 14, pos = [], aS = [], aE = [], aPh = [], aSp = [], aDir = [], dx, dy, dz, a1, a2;
-    pool = src.e.length ? src.e : src.t; poolOwn = src.e.length ? src.eo : src.to; baseX = ship.position.x;
-    HITS.value.forEach(function (v) { v.set(0, 0, 0, 0); }); tgt = [0, 0, 0, 0]; hold = [0, 0, 0, 0]; failId = -1; FAIL.value = -1; SWEEP.value.set(0, 0); lastSec = -1; newSlot = -1; lastSig = -1;
+    var i, k, s, e, g, SN = 16, VN = 14, p = [], sS = [], sDir = [], ph = [], sp = [], sd = [], pos = [], aS = [], aE = [], aPh = [], aSp = [], aDir = [], dx, dy, dz, a1, a2, l, U;
+    pool = src.e.length ? src.e : src.t; poolOwn = src.e.length ? src.eo : src.to; baseX = ship.position.x; secPts = {};
+    for (i = 0; i < SLOTS; i++) clearSlot(i);
+    SWEEP.value.set(0, 0); lastSig = null;
     if (!pool.length) return;
-    var seed0 = hs; hs = 4242;   // the spark points are the same every time; strikes are not
-    for (i = 0; i < n; i++) { k = Math.floor(hrnd() * pool.length / 3) * 3; p.push(pool[k], pool[k + 1], pool[k + 2]); ph[i] = hrnd(); sp[i] = 0.8 + hrnd() * 1.7; sd[i] = hrnd(); }
-    g = keep(new THREE.BufferGeometry()); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.setAttribute('aPh', new THREE.BufferAttribute(ph, 1)); g.setAttribute('aSp', new THREE.BufferAttribute(sp, 1)); g.setAttribute('aSeed', new THREE.BufferAttribute(sd, 1));
-    add(new THREE.Points(g, keep(new THREE.ShaderMaterial({ uniforms: { uT: TIME, uSpark: SPARK, uSize: { value: 9 * PR }, uCol: { value: C_H } }, vertexShader: VSS, fragmentShader: FSS, transparent: true, depthTest: false, depthWrite: false }))), 6);
-    for (s = 0; s < 4; s++) for (i = 0; i < VN; i++) {
+    for (i = 0, k = pool.length / 3; i < k; i++) if (poolOwn[i] >= 0) (secPts[poolOwn[i]] = secPts[poolOwn[i]] || []).push(i);
+    hs = 4242;   // the same points every time
+    for (s = 0; s < SLOTS; s++) for (i = 0; i < SN; i++) {
+      do { dx = hrnd() * 2 - 1; dy = hrnd() * 2 - 1; dz = hrnd() * 2 - 1; l = dx * dx + dy * dy + dz * dz; } while (l > 1);
+      p.push(0, 0, 0); sS.push(s); sDir.push(dx, dy, dz); ph.push(hrnd()); sp.push(0.8 + hrnd() * 1.7); sd.push(hrnd());
+    }
+    U = function (o) { o.uHit = HITS; o.uFx = FX; o.uVent = VENT; o.uT = TIME; o.uCol = { value: C_H }; return o; };
+    g = keep(new THREE.BufferGeometry()); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.setAttribute('aS', new THREE.Float32BufferAttribute(sS, 1)); g.setAttribute('aDir', new THREE.Float32BufferAttribute(sDir, 3));
+    g.setAttribute('aPh', new THREE.Float32BufferAttribute(ph, 1)); g.setAttribute('aSp', new THREE.Float32BufferAttribute(sp, 1)); g.setAttribute('aSeed', new THREE.Float32BufferAttribute(sd, 1));
+    add(new THREE.Points(g, keep(new THREE.ShaderMaterial({ uniforms: U({ uSize: { value: 9 * PR } }), vertexShader: VSS, fragmentShader: FSS, transparent: true, depthTest: false, depthWrite: false }))), 6);
+    for (s = 0; s < SLOTS; s++) for (i = 0; i < VN; i++) {
       dx = hrnd() * 2 - 1; dy = hrnd() * 2 - 1; dz = hrnd() * 2 - 1; a1 = hrnd(); a2 = 0.5 + hrnd() * 0.9;
       for (e = 0; e < 2; e++) { pos.push(0, 0, 0); aS.push(s); aE.push(e); aPh.push(a1); aSp.push(a2); aDir.push(dx, dy, dz); }
     }
     g = keep(new THREE.BufferGeometry()); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('aS', new THREE.Float32BufferAttribute(aS, 1)); g.setAttribute('aE', new THREE.Float32BufferAttribute(aE, 1));
     g.setAttribute('aPh', new THREE.Float32BufferAttribute(aPh, 1)); g.setAttribute('aSp', new THREE.Float32BufferAttribute(aSp, 1)); g.setAttribute('aDir', new THREE.Float32BufferAttribute(aDir, 3));
-    add(new THREE.LineSegments(g, keep(new THREE.ShaderMaterial({ uniforms: { uHit: HITS, uVent: VENT, uT: TIME, uLen: { value: VENT_LEN }, uOn: VON, uCol: { value: C_H } }, vertexShader: VSV, fragmentShader: FSV, transparent: true, depthTest: false, depthWrite: false }))), 6);
-    hs = (seed0 ^ Date.now()) | 0;
+    add(new THREE.LineSegments(g, keep(new THREE.ShaderMaterial({ uniforms: U({}), vertexShader: VSV, fragmentShader: FSV, transparent: true, depthTest: false, depthWrite: false }))), 6);
   }
   function rnd() { rs |= 0; rs = rs + 0x6D2B79F5 | 0; var t = Math.imul(rs ^ rs >>> 15, 1 | rs); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
   function keep(x) { res.push(x); return x; }
@@ -2049,7 +2290,7 @@ el.appendChild(d);
     o = o || {};
     return keep(new THREE.ShaderMaterial({ uniforms: { uCol: { value: c }, uHi: { value: C_H }, uOp: { value: op }, uBack: { value: back }, uSize: { value: o.pt || 1 }, uBar: { value: BAR },
       uDash: { value: new THREE.Vector3(o.dash ? o.dash[0] : 0, o.dash ? o.dash[1] : 0, 0) }, uDmg: { value: o.dmg ? DMG : CALM }, uPick: o.lit ? PICK : NOPICK, uLit: { value: o.lit || 0 },
-      uHit: o.dmg ? HITS : NOHITS, uT: TIME, uFail: o.dmg ? FAIL : NOFAIL, uSweep: o.dmg ? SWEEP : NOSWEEP },
+      uHit: o.dmg ? HITS : NOHITS, uFx: o.dmg ? FX : NOFX, uOff: OFF, uT: TIME, uLost: o.dmg ? LOST : NOLOST, uSweep: o.dmg ? SWEEP : NOSWEEP },
       vertexShader: VS, fragmentShader: o.pt ? FP : FL, transparent: true, depthTest: !!o.test, depthWrite: false }));
   }
   function geo(arr, dist, own) {
@@ -2177,7 +2418,6 @@ el.appendChild(d);
     drop(); rdr.dispose(); try { rdr.forceContextLoss(); } catch (e) { /* ignore */ }
     if (cv && cv.parentNode) cv.parentNode.removeChild(cv);
     svg.textContent = ''; Array.prototype.slice.call(over.querySelectorAll('span')).forEach(function (s) { over.removeChild(s); });
-    if (warnEl) warnEl.textContent = ''; lastSig = -1;
     rdr = cv = cam = null; drag = null; ptrs = {};
   }
   function size() {
@@ -2223,66 +2463,38 @@ el.appendChild(d);
     ln(s[0], a, 13, b, 13); [0, 1, 2, 3].forEach(function (k) { var x = a + (b - a) * k / 3; ln(s[k + 1], x, 9, x, 17); });
     s[5].setAttribute('x', (a + 3).toFixed(1)); s[5].setAttribute('y', 10); s[6].setAttribute('x', ((a + b) / 2).toFixed(1)); s[6].setAttribute('y', 10); s[6].setAttribute('text-anchor', 'middle'); s[7].setAttribute('x', (b - 3).toFixed(1)); s[7].setAttribute('y', 10); s[7].setAttribute('text-anchor', 'end');
   }
-  // hull damage, read from the page's own hull state (hullLevels: dmg and crit, 0..1; or the ShipView.debugHull override).
-  // every loss of hull is a strike at a random point: a breach opens there (a dark ragged patch with a bright rim) and vents, with a shake.
-  // as hull falls more breaches stay open, edges drop out and flare, sparks pop, a scan sweep crosses now and then, the picture flickers, twitches and tears,
-  // and at critical hull one section fails. warnings for whatever is damaged are listed under the view. nothing at all at full hull.
+  // damage. what is drawn on the ship comes only from the shared damage list (see "ship damage" in the first script), so every device shows the same:
+  // hull breach (dark ragged patch, bright rim, venting when serious), fire (flare and sparks), power surge (edges drop out), system offline (section dark, pulsing),
+  // structural (section twitches), coolant leak (venting dashes; plasma drive only). severity 1..3 makes each larger.
+  // the hull level (hullLevels: dmg and crit, 0..1; or the ShipView.debugHull override) only sets the mood: shake on a hit, flicker, tear bars, the scan sweep.
+  // at hull 0 the ship is lost: everything goes dark. the list of damages under the view is drawn by renderDamageList in the first script.
   function levels() { return dbg || (typeof hullLevels !== 'undefined' && hullLevels ? hullLevels : null); }
-  // a strike: opens a breach at a random point (in section sec if given). with all four open, the oldest one moves
-  function strike(sec) {
-    var s = -1, o = 1e9, i;
-    for (i = 0; i < 4; i++) if (!tgt[i]) { s = i; break; }
-    if (s < 0) for (i = 0; i < 4; i++) if (born[i] < o) { o = born[i]; s = i; }
-    placeHit(s, sec); hold[s] = HIT_HOLD; lastSec = hitSec[s]; newSlot = s;
-  }
-  // what a breach in each section reads as. anything else is a plain hull breach, named by where it is
-  var WARN = { plasma: 'plasma drive breached // containment failing', bridge: 'bridge struck', crew: 'crew quarters open to void', defense: 'defense array damaged', broadside: 'broadside battery damaged',
-    prow: 'prow armour breached', engines: 'engines damaged', cargo: 'cargo bays venting', wings: 'wing lances damaged', hangar: 'hangar deck breached', lance: 'prow lance damaged', battery2: 'aft battery damaged' };
-  function warn(d, c) {
-    var pct = Math.round((1 - Math.pow(Math.max(0, d), 1 / 1.8)) * 100), sig = pct + failId * 1000 + newSlot * 77 + (c > 0 ? 500000 : 0), out = [], seenW = {}, i, k, x, t, s;
-    for (i = 0; i < 4; i++) if (tgt[i]) sig += (hitSec[i] + 2) * (i + 1) * 7919 + born[i] * 13;
-    if (sig === lastSig || !warnEl) return;
-    lastSig = sig;
-    for (k = 0; k < 4; k++) {   // newest breach first
-      i = -1; for (x = 0; x < 4; x++) if (tgt[x] && !seenW['s' + x] && (i < 0 || born[x] > born[i])) i = x;
-      if (i < 0) break;
-      seenW['s' + i] = 1; t = null;
-      callouts.forEach(function (q) { if (q.n === hitSec[i]) t = WARN[q.m.id] || (q.m.label + ' damaged'); });
-      if (!t) { x = HITS.value[i].x; t = 'hull breach // ' + (x < -1.5 ? 'stern' : (x > 1.5 ? 'bow' : 'midships')); }
-      if (!seenW[t]) { seenW[t] = 1; out.push([t, i === newSlot ? 'sv-new' : '']); }
-    }
-    if (failId >= 0) callouts.forEach(function (q) { if (q.n === failId) out.unshift([q.m.label + ' offline', 'sv-new']); });
-    if (out.length || d >= 0.04) out.unshift(['hull ' + pct + '%' + (c > 0 ? ' // critical' : ''), c > 0 ? 'sv-new' : 'sv-dim']);
-    warnEl.textContent = '';
-    out.forEach(function (o) { s = document.createElement('span'); s.textContent = '// ' + o[0]; if (o[1]) s.className = o[1]; warnEl.appendChild(s); });
-  }
+  function source() { return inj || (typeof dmgState !== 'undefined' && dmgState && dmgState.list ? dmgState.list : []); }
   function damage(dt) {
-    var hl = levels(), d = hl ? hl.dmg : 0, c = hl ? hl.crit : 0, k = 1 - Math.exp(-dt * 6), n = 0, open = 0, i, s, o, v, sh;
-    if (prevD >= 0 && d - prevD > 1e-6 && pool) { strike(-1); shake = Math.min(1, 0.4 + (d - prevD) * 5); }   // hull lost since the last frame: a hit
+    var hl = levels(), d = hl ? hl.dmg : 0, c = hl ? hl.crit : 0, lost = d >= 0.999, k = 1 - Math.exp(-dt * 6), any = false, i, o, v, sh, a;
+    if (pool && pool.length) slotSync(source());
+    if (prevD >= 0 && d - prevD > 1e-6) shake = Math.max(shake, Math.min(1, 0.4 + (d - prevD) * 5));   // hull lost since the last frame: a hit
     prevD = d;
-    if (d < 0.04 && !(hold[0] > 0 || hold[1] > 0 || hold[2] > 0 || hold[3] > 0)) {   // full hull: exactly the undamaged picture
-      DMG.set(0, 0, 0); BAR.set(0, 0, 0); ship.position.set(baseX, 0, 0); mEdge.uniforms.uOp.value = 0.95;
-      for (i = 0; i < 4; i++) { HITS.value[i].w = 0; tgt[i] = 0; }
-      SPARK.value = 0; VON.value = 0; SWEEP.value.set(0, 0); setFail(-1); shake = 0; newSlot = -1; warn(d, c); return;
+    if (lost !== wasLost) { wasLost = lost; LOST.value = lost ? 1 : 0; marks(); }
+    for (i = 0; i < SLOTS; i++) if (slot[i] && slot[i].on) { any = true; v = HITS.value[i]; v.w += (tgt[i] - v.w) * k; }
+    if (!any && d < 0.04) {   // no damage and full hull: exactly the undamaged picture
+      DMG.set(0, 0, 0); BAR.set(0, 0, 0); ship.position.set(baseX, 0, 0); mEdge.uniforms.uOp.value = 0.95; SWEEP.value.set(0, 0); shake = 0; return;
     }
     if (!calm) TIME.value += dt;
-    // breaches: BREACH_AT sets how many stay open for this much damage. a fresh strike is held open for HIT_HOLD seconds whatever the damage
-    for (i = 0; i < 4; i++) { if (d >= BREACH_AT[i]) n = i + 1; if (tgt[i]) open++; if (hold[i] > 0) hold[i] -= dt; }
-    for (i = 0; i < 4 && open < n; i++) if (!tgt[i]) { placeHit(i, -1); open++; }
-    while (open > n) {   // too many (repairs, or a held strike has run out): the oldest closes
-      s = -1; o = 1e9; for (i = 0; i < 4; i++) if (tgt[i] && hold[i] <= 0 && born[i] < o) { o = born[i]; s = i; }
-      if (s < 0) break;
-      tgt[s] = 0; open--;
+    DMG.x = lost ? 0.35 : 0;   // edges drop out all over only on a lost ship; otherwise each damage does its own
+    if (calm) {   // reduced motion: the damage shows, but nothing flickers, shakes, sparks or sweeps (coolant keeps a still spray so it can be told apart)
+      DMG.z = 0; BAR.set(0, 0, 0); ship.position.set(baseX, 0, 0); mEdge.uniforms.uOp.value = 0.95; SWEEP.value.set(0, 0); shake = 0;
+      for (i = 0; i < SLOTS; i++) { FX.value[i].z = 0; if (slot[i] && slot[i].type !== 'coolant') VENT.value[i].w = 0; }
+      return;
     }
-    for (i = 0; i < 4; i++) { v = HITS.value[i]; if (tgt[i]) v.w += (tgt[i] - v.w) * k; else v.w = v.w < 0.02 ? 0 : v.w * (1 - k); }
-    // section failure at critical hull: the last section struck, else the one with the newest breach
-    if (c > FAIL_AT) { if (failId < 0) setFail(lastSec >= 0 ? lastSec : (callouts.length ? callouts[Math.floor(hrnd() * callouts.length)].n : -1)); }
-    else if (failId >= 0) setFail(-1);
-    warn(d, c);
-    DMG.x = d * 0.2 + c * 0.25;
-    if (calm) { DMG.z = 0; BAR.set(0, 0, 0); ship.position.set(baseX, 0, 0); mEdge.uniforms.uOp.value = 0.95; SPARK.value = 0; VON.value = 0; SWEEP.value.set(0, 0); shake = 0; return; }   // reduced motion: the damage shows, but nothing flickers, shakes or sweeps
     tSeed -= dt; if (tSeed <= 0) { DMG.y = rnd(); tSeed = 0.12 + rnd() * Math.max(0.2, 1.6 - d - c * 0.5); }
-    DMG.z = d * 0.03 + c * 0.07;
+    DMG.z = lost ? 0.05 : 0;
+    // structural damage: its section twitches in short bursts, more often and further as it worsens
+    for (i = 0; i < SLOTS; i++) {
+      o = slot[i]; if (!o || !o.on || o.type !== 'structural') continue;
+      if (twB[i] > 0) { twB[i] -= dt; a = TWITCH[o.sev] || TWITCH[1]; OFF.value[i].set((rnd() - 0.5) * a, (rnd() - 0.5) * a * 2, (rnd() - 0.5) * a); }
+      else { OFF.value[i].set(0, 0, 0); twT[i] -= dt; if (twT[i] <= 0) { twB[i] = 0.08 + rnd() * 0.2; twT[i] = (0.5 + rnd() * 3) / o.sev; } }
+    }
     tBar -= dt;
     if (tBar <= 0) {
       if (BAR.y) { BAR.set(0, 0, 0); tBar = (0.4 + rnd() * 5) / (1 + d * 4 + c * 6); }
@@ -2294,7 +2506,6 @@ el.appendChild(d);
     ship.position.y = (rnd() < d * 0.08 ? (rnd() - 0.5) * 0.08 * (d + c) : 0) + (rnd() - 0.5) * sh;
     if (shake > 0.5) BAR.set((rnd() * 2 - 1) * 2, 0.25, (rnd() - 0.5) * 0.9);
     mEdge.uniforms.uOp.value = 0.95 * (rnd() < d * 0.12 + c * 0.2 ? 0.55 + rnd() * 0.3 : 1);
-    SPARK.value = d * SPARK_RATE[0] + c * SPARK_RATE[1]; VON.value = 1;
     // scan sweep: a bright line runs stern to bow, the edges behind it lit for a moment
     if (SWEEP.value.y > 0) { SWEEP.value.x += SWEEP_SPEED * dt; if (SWEEP.value.x > span / 2 + SWEEP_W + 0.5) { SWEEP.value.set(0, 0); tSweep = SWEEP_EVERY[0] + rnd() * (SWEEP_EVERY[1] - SWEEP_EVERY[0]); } }
     else if (d >= 0.04) { tSweep -= dt; if (tSweep <= 0) SWEEP.value.set(-span / 2 - 0.5, SWEEP_W); }
@@ -2333,11 +2544,15 @@ el.appendChild(d);
     install: function (id, on) { if (!(id in INSTALLED)) return false; INSTALLED[id] = !!on; if (rdr) { drop(); build(); } return true; },
     installed: function () { return JSON.parse(JSON.stringify(INSTALLED)); },
     project: function (x, y, z) { return rdr ? scr(v3.fromArray(P(x, y, z)).applyMatrix4(ship.matrixWorld)) : null; },   // schematic units to canvas pixels
-    // damage hooks. hit(id): open a breach on a section ('' = anywhere) with a shake; it closes after HIT_HOLD seconds unless the hull is that damaged anyway.
-    // debugHull(percent): show the wireframe as if hull were at that percent, without touching the page or the database; debugHull(null) returns to the real value.
-    hit: function (id) { var n = -1; if (!rdr || !pool) return false; callouts.forEach(function (c) { if (c.m.id === id) n = c.n; }); strike(n); shake = 1; return true; },
+    sections: function () { return MODULES.filter(fitted).map(asView).filter(function (m) { return m.label && m.at; }).map(function (m) { return { id: m.id, label: m.label }; }); },   // where damage can land
+    pick: function (id) { picked = picked === id ? null : id; if (rdr) light(); return picked; },   // light a section (again = clear), as a tap on its label does
+    // damage hooks, all local to this device: nothing here touches the page's data or the database.
+    // inject(list): draw these damages ([{id, section, type, sev}]) instead of the shared list; inject(null) returns to the shared list.
+    // hit(section, type, sev): add one test damage to what is drawn, with a shake. debugHull(percent): the mood as if hull were at that percent; debugHull(null) = real value.
+    inject: function (list) { inj = list ? list.map(function (d, i) { return { id: String(d.id || 't' + i), section: d.section, type: d.type || 'breach', sev: d.sev || 1 }; }) : null; return inj; },
+    hit: function (id, type, sev) { inj = source().slice(0, SLOTS - 1).concat([{ id: 'hit' + Date.now().toString(36), section: id, type: type || 'breach', sev: sev || 1 }]); shake = 1; return true; },
     debugHull: function (pct) { dbg = pct === null || pct === undefined ? null : (typeof hullLevelsFor === 'function' ? hullLevelsFor(pct, 100) : { dmg: Math.pow(1 - pct / 100, 1.8), crit: 0 }); return dbg; },
-    state: function () { return { hits: HITS.value.map(function (v) { return +v.w.toFixed(2); }), fail: failId, sweep: SWEEP.value.y > 0, spark: +SPARK.value.toFixed(2), live: !!rdr, running: !!raf, mode: mode, res: res.length, callouts: callouts.map(function (c) { return c.m.id + ':' + c.el.style.visibility; }), picked: picked, zoom: zoomT }; }
+    state: function () { return { slots: slot.map(function (o, i) { return o ? { id: o.id, type: o.type, sev: o.sev, on: o.on, at: HITS.value[i].toArray().map(function (x) { return +x.toFixed(3); }) } : null; }).filter(Boolean), lost: wasLost, injected: !!inj, sweep: SWEEP.value.y > 0, live: !!rdr, running: !!raf, mode: mode, res: res.length, callouts: callouts.map(function (c) { return c.m.id + ':' + c.el.style.visibility; }), picked: picked, zoom: zoomT }; }
   };
 })();
 </script>
