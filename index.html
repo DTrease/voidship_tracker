@@ -1018,6 +1018,8 @@ window.__astroReady = true; if(typeof startChartSync === 'function') startChartS
 // CSS turns those into static, scanlines, blur, a rolling bar and glitch-bar rate.
 // The loop below adds the random faults: jitter, tearing, dropouts, vertical slips, garbled labels.
 let hullLevels = {dmg:0, crit:0};
+const DMG_FX = 0.5;                  // strength of the screen faults from hull damage: 1 = full, 0 = none. the ship wireframe's own flicker uses it too
+let fxLevels = {dmg:0, crit:0};      // hullLevels scaled by DMG_FX: what the CSS and the glitch loop use
 let damageTimer = null;
 
 function hullLevelsFor(hull, hullMax){
@@ -1035,18 +1037,21 @@ return {
 
 function applyHullDamage(hull, hullMax){
 hullLevels = hullLevelsFor(hull, hullMax);
+// what the screen shows is the hull level turned down by DMG_FX; a lost ship (hull 0) still gets the full effect
+const k = hullLevels.dmg >= 0.999 ? 1 : DMG_FX;
+fxLevels = {dmg: hullLevels.dmg * k, crit: hullLevels.crit * k};
 const root = document.documentElement;
-root.style.setProperty('--dmg', hullLevels.dmg.toFixed(3));
-root.style.setProperty('--crit', hullLevels.crit.toFixed(3));
+root.style.setProperty('--dmg', fxLevels.dmg.toFixed(3));
+root.style.setProperty('--crit', fxLevels.crit.toFixed(3));
 root.classList.toggle('hull-hurt', hullLevels.dmg > 0.04);
 clearTimeout(damageTimer); damageTimer = null;      // re-pace the loop for the new severity
 scheduleDamageGlitch();
 }
 
 function scheduleDamageGlitch(){
-if(hullLevels.dmg < 0.08 || damageTimer !== null) return;
+if(fxLevels.dmg < 0.08 || damageTimer !== null) return;
 // mean gap falls from ~9s (light damage) to under 1s (critical); exponential gaps = bursts and lulls
-const meanGap = 14000 / (1 + hullLevels.dmg*6 + hullLevels.crit*10);
+const meanGap = 14000 / (1 + fxLevels.dmg*6 + fxLevels.crit*10);
 const gap = Math.max(150, -meanGap * Math.log(1 - Math.random()));
 damageTimer = setTimeout(()=>{
   damageTimer = null;
@@ -1081,7 +1086,7 @@ for(let i=0;i<n;i++){
 }
 
 function runDamageGlitch(force){
-const dmg = hullLevels.dmg, crit = hullLevels.crit;
+const dmg = fxLevels.dmg, crit = fxLevels.crit;
 // the nastier faults only exist once the hull is critical
 const menu = ['jitter','jitter','tear','dim','burst'];
 if(dmg > 0.35) menu.push('dim','tear','burst');
@@ -2507,6 +2512,7 @@ el.appendChild(d);
     if (prevD >= 0 && d - prevD > 1e-6) shake = Math.max(shake, Math.min(1, 0.4 + (d - prevD) * 5));   // hull lost since the last frame: a hit
     prevD = d;
     if (lost !== wasLost) { wasLost = lost; LOST.value = lost ? 1 : 0; marks(); }
+    if (!lost && typeof DMG_FX === 'number') { d *= DMG_FX; c *= DMG_FX; }   // the flicker, tear bars and sweep follow the page's turned-down level
     for (i = 0; i < SLOTS; i++) if (slot[i] && slot[i].on) { any = true; v = HITS.value[i]; v.w += (tgt[i] - v.w) * k; }
     if (!any && d < 0.04) {   // no damage and full hull: exactly the undamaged picture
       DMG.set(0, 0, 0); BAR.set(0, 0, 0); ship.position.set(baseX, 0, 0); mEdge.uniforms.uOp.value = 0.95; SWEEP.value.set(0, 0); shake = 0; return;
