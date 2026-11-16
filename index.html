@@ -175,10 +175,13 @@ padding:7px 10px;font-family:inherit;font-size:var(--fs-s);width:100%;margin-top
 .die-select{background-color:var(--panel2);border:1px solid var(--border);color:var(--green);
 font-family:var(--term);font-size:var(--fs-m);padding:6px 20px 6px 6px;width:auto;max-width:72px;caret-color:var(--green)}
 .die-select:focus{outline:none;border-color:var(--green);box-shadow:0 0 6px rgba(57,255,107,.5)}
-.cargo-bay{border:1px solid var(--border);padding:8px;margin-bottom:6px}
-.cargo-bay .bay-head{color:var(--dim);font-size:var(--fs-s);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
-.cargo-bay .bay-row{display:flex;gap:8px;flex-wrap:wrap}
-.cargo-bay .bay-row input[type=text]{flex:1;min-width:90px}
+.cargo-bay{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.cargo-bay:last-child{margin-bottom:0}
+.cargo-bay .bay-head{color:var(--dim);font-size:var(--fs-s);text-transform:uppercase;letter-spacing:.04em;width:1.2rem;flex:none}
+.cargo-bay .bay-row{display:flex;gap:6px;flex:1;min-width:0}
+.cargo-bay .bay-row input[type=text]{flex:1;min-width:0}
+.cargo-bay .bay-row input[type=number]{width:3.2rem!important;max-width:3.2rem!important;padding-left:2px;padding-right:2px}
+.cargo-bay .bay-row input[type=text]:last-child{flex:none;width:6.2rem;max-width:6.2rem!important}
 .cargo-bay .bay-row input[type=number]{max-width:70px}
 .log-entry{border-bottom:1px solid var(--border);padding:6px 0;font-size:var(--fs-m)}
 .log-entry .t{color:var(--dim);font-size:var(--fs-s)}
@@ -1208,7 +1211,7 @@ el.innerHTML='';
 ['A','B','C','D'].forEach(h=>{
 const bay = v[h] || {};
 const wrap = document.createElement('div'); wrap.className='cargo-bay';
-const head = document.createElement('div'); head.className='bay-head'; head.textContent='Bay '+h;
+const head = document.createElement('div'); head.className='bay-head'; head.textContent=h;
 const row = document.createElement('div'); row.className='bay-row';
 
 const descInp = document.createElement('input'); descInp.type='text';
