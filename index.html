@@ -237,6 +237,11 @@ box-shadow:0 0 6px var(--green);animation:blink 1.4s infinite}
 #sv-over polygon{fill:var(--green)}
 #sv-over text{fill:var(--dim);font-family:var(--term);font-size:11px;letter-spacing:.06em}
 #sv-over span{position:absolute;left:0;top:0;white-space:nowrap;font-size:14px;line-height:1;letter-spacing:.06em;text-transform:uppercase;color:var(--green);text-shadow:0 0 4px rgba(57,255,107,.6);padding:0 2px;border:1px solid transparent;background:rgba(2,10,4,.55);pointer-events:auto;cursor:pointer}
+#sv-warn{display:flex;flex-wrap:wrap;gap:0 .8rem;margin:4px 0 0;font-size:var(--fs-s);letter-spacing:.04em;color:var(--green)}
+#sv-warn:empty{display:none}
+#sv-warn .sv-dim{color:var(--dim)}
+#sv-warn .sv-new{color:var(--hi);animation:textGlitch .6s steps(5)}
+@media (prefers-reduced-motion:reduce){#sv-warn .sv-new{animation:none}}
 #sv-over span.sv-fail{color:var(--dim);animation:textGlitch .8s steps(5) infinite}
 @media (prefers-reduced-motion:reduce){#sv-over span.sv-fail{animation:none}}
 #sv-over span.sv-on{color:var(--hi);border-color:var(--green);background:rgba(57,255,107,.1)}
@@ -684,6 +689,7 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
 <div class="panel">
 <h2>Ship Schematic</h2>
 <div id="sv-box"><div id="sv-over"><svg id="sv-svg" aria-hidden="true"></svg></div><div id="sv-foot">schem ref vt-2 // wireframe // not to scale</div><div id="sv-off">// wireframe offline</div></div>
+<div id="sv-warn" aria-live="polite"></div>
 <div class="sv-ctl"><span class="gc-dim gc-sm">view //</span>
 <button class="gc-btn" id="sv-b-side" type="button" aria-pressed="true">side</button>
 <button class="gc-btn" id="sv-b-top" type="button" aria-pressed="false">top</button>
@@ -1999,32 +2005,31 @@ el.appendChild(d);
   // shared uniforms: breach points (xyz in ship space, w = radius, 0 = closed), venting directions, a clock, the failed section, the sweep (x, width), spark chance, venting on
   var HITS = { value: v4s() }, NOHITS = { value: v4s() }, VENT = { value: [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] }, TIME = { value: 0 },
       FAIL = { value: -1 }, NOFAIL = { value: -1 }, SWEEP = { value: new THREE.Vector2() }, NOSWEEP = { value: new THREE.Vector2() }, SPARK = { value: 0 }, VON = { value: 0 };
-  var tgt = [0, 0, 0, 0], hold = [0, 0, 0, 0], hitSec = [-1, -1, -1, -1], pool = null, poolOwn = null, baseX = 0, shake = 0, prevD = -1, tSweep = 5, failId = -1, lastSec = -1, dbg = null, hs = 1, slotN = 0;
+  var tgt = [0, 0, 0, 0], hold = [0, 0, 0, 0], hitSec = [-1, -1, -1, -1], pool = null, poolOwn = null, baseX = 0, shake = 0, prevD = -1, tSweep = 5, failId = -1, lastSec = -1, dbg = null, hs = (Date.now() ^ 0x5bd1e995) | 0, born = [0, 0, 0, 0], tick = 0, newSlot = -1, lastSig = -1, warnEl = document.getElementById('sv-warn');
   function hrnd() { hs |= 0; hs = hs + 0x6D2B79F5 | 0; var t = Math.imul(hs ^ hs >>> 15, 1 | hs); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
   // sparks: points that pop and fade. venting: short dashes streaming out of each breach. both are drawn over the hull.
   var VSS = 'attribute float aPh; attribute float aSp; attribute float aSeed; uniform float uT; uniform float uSpark; uniform float uSize; varying float vA; void main(){ float q = uT * aSp + aPh; float l = fract(q) / 0.22; float on = step(fract(sin(floor(q) * 12.9898 + aSeed * 78.233) * 43758.5453), uSpark) * step(l, 1.0); vA = on * (1.0 - l); gl_PointSize = uSize * (0.5 + 1.5 * (1.0 - l)) * on + 0.01; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
   var FSS = 'uniform vec3 uCol; varying float vA; void main(){ if (vA <= 0.0) discard; vec2 q = abs(gl_PointCoord - 0.5) * 2.0; float star = max(0.0, 1.0 - min(q.x, q.y) * 7.0) * (1.0 - max(q.x, q.y)); float core = max(0.0, 1.0 - length(q) * 2.2); gl_FragColor = vec4(uCol, vA * max(star, core)); }';
   var VSV = 'attribute float aS; attribute float aE; attribute float aPh; attribute float aSp; attribute vec3 aDir; uniform vec4 uHit[4]; uniform vec3 uVent[4]; uniform float uT; uniform float uLen; uniform float uOn; varying float vA; void main(){ vec4 h = uHit[0]; vec3 vd = uVent[0]; for (int i = 1; i < 4; i++) { if (abs(aS - float(i)) < 0.5) { h = uHit[i]; vd = uVent[i]; } } float t = fract(uT * aSp + aPh); vec3 dir = normalize(vd + aDir * 0.45); vec3 p = h.xyz + dir * (h.w * 0.3 + t * uLen + aE * 0.1 * (1.0 - t * 0.6)); vA = uOn * step(0.05, h.w) * (1.0 - t) * 0.9; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }';
   var FSV = 'uniform vec3 uCol; varying float vA; void main(){ if (vA <= 0.01) discard; gl_FragColor = vec4(uCol, vA); }';
-  // opens breach i at a point on the hull: in section sec if given (-1 = anywhere). damage breaches always open in the same places; manual hits land at random
-  function placeHit(i, sec, manual) {
+  // opens breach i at a random point on the hull: in section sec if given (-1 = anywhere)
+  function placeHit(i, sec) {
     if (!pool || !pool.length) return;
-    if (!manual) hs = 9001 + i * 7919;
     var n = pool.length / 3, v = HITS.value[i], k = 0, j, y, z, l;
     for (j = 0; j < 300; j++) { k = Math.floor(hrnd() * n); if (sec < 0 || poolOwn[k] === sec) break; }
     v.set(pool[k * 3], pool[k * 3 + 1], pool[k * 3 + 2], 0.001);
     y = v.y; z = v.z; l = Math.sqrt(y * y + z * z); if (l < 0.05) { y = 1; z = 0; l = 1; }
     VENT.value[i].set(0.15, y / l, z / l).normalize();   // vents outward from the ship's axis
-    tgt[i] = BREACH_R[0] + hrnd() * (BREACH_R[1] - BREACH_R[0]); hitSec[i] = poolOwn[k];
+    tgt[i] = BREACH_R[0] + hrnd() * (BREACH_R[1] - BREACH_R[0]); hitSec[i] = poolOwn[k]; born[i] = ++tick;
   }
   function setFail(n) { if (n === failId && FAIL.value === n) return; failId = n; FAIL.value = n; callouts.forEach(function (c) { c.el.classList.toggle('sv-fail', n >= 0 && c.n === n); }); }
   // the extra draw objects (two in all), rebuilt with the ship and disposed with it
   function fx(src) {
     var i, k, s, e, g, n = 90, p = [], ph = new Float32Array(n), sp = new Float32Array(n), sd = new Float32Array(n), VN = 14, pos = [], aS = [], aE = [], aPh = [], aSp = [], aDir = [], dx, dy, dz, a1, a2;
     pool = src.e.length ? src.e : src.t; poolOwn = src.e.length ? src.eo : src.to; baseX = ship.position.x;
-    HITS.value.forEach(function (v) { v.set(0, 0, 0, 0); }); tgt = [0, 0, 0, 0]; hold = [0, 0, 0, 0]; failId = -1; FAIL.value = -1; SWEEP.value.set(0, 0); lastSec = -1;
+    HITS.value.forEach(function (v) { v.set(0, 0, 0, 0); }); tgt = [0, 0, 0, 0]; hold = [0, 0, 0, 0]; failId = -1; FAIL.value = -1; SWEEP.value.set(0, 0); lastSec = -1; newSlot = -1; lastSig = -1;
     if (!pool.length) return;
-    hs = 4242;
+    var seed0 = hs; hs = 4242;   // the spark points are the same every time; strikes are not
     for (i = 0; i < n; i++) { k = Math.floor(hrnd() * pool.length / 3) * 3; p.push(pool[k], pool[k + 1], pool[k + 2]); ph[i] = hrnd(); sp[i] = 0.8 + hrnd() * 1.7; sd[i] = hrnd(); }
     g = keep(new THREE.BufferGeometry()); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); g.setAttribute('aPh', new THREE.BufferAttribute(ph, 1)); g.setAttribute('aSp', new THREE.BufferAttribute(sp, 1)); g.setAttribute('aSeed', new THREE.BufferAttribute(sd, 1));
     add(new THREE.Points(g, keep(new THREE.ShaderMaterial({ uniforms: { uT: TIME, uSpark: SPARK, uSize: { value: 9 * PR }, uCol: { value: C_H } }, vertexShader: VSS, fragmentShader: FSS, transparent: true, depthTest: false, depthWrite: false }))), 6);
@@ -2035,6 +2040,7 @@ el.appendChild(d);
     g = keep(new THREE.BufferGeometry()); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('aS', new THREE.Float32BufferAttribute(aS, 1)); g.setAttribute('aE', new THREE.Float32BufferAttribute(aE, 1));
     g.setAttribute('aPh', new THREE.Float32BufferAttribute(aPh, 1)); g.setAttribute('aSp', new THREE.Float32BufferAttribute(aSp, 1)); g.setAttribute('aDir', new THREE.Float32BufferAttribute(aDir, 3));
     add(new THREE.LineSegments(g, keep(new THREE.ShaderMaterial({ uniforms: { uHit: HITS, uVent: VENT, uT: TIME, uLen: { value: VENT_LEN }, uOn: VON, uCol: { value: C_H } }, vertexShader: VSV, fragmentShader: FSV, transparent: true, depthTest: false, depthWrite: false }))), 6);
+    hs = (seed0 ^ Date.now()) | 0;
   }
   function rnd() { rs |= 0; rs = rs + 0x6D2B79F5 | 0; var t = Math.imul(rs ^ rs >>> 15, 1 | rs); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
   function keep(x) { res.push(x); return x; }
@@ -2171,6 +2177,7 @@ el.appendChild(d);
     drop(); rdr.dispose(); try { rdr.forceContextLoss(); } catch (e) { /* ignore */ }
     if (cv && cv.parentNode) cv.parentNode.removeChild(cv);
     svg.textContent = ''; Array.prototype.slice.call(over.querySelectorAll('span')).forEach(function (s) { over.removeChild(s); });
+    if (warnEl) warnEl.textContent = ''; lastSig = -1;
     rdr = cv = cam = null; drag = null; ptrs = {};
   }
   function size() {
@@ -2217,29 +2224,63 @@ el.appendChild(d);
     s[5].setAttribute('x', (a + 3).toFixed(1)); s[5].setAttribute('y', 10); s[6].setAttribute('x', ((a + b) / 2).toFixed(1)); s[6].setAttribute('y', 10); s[6].setAttribute('text-anchor', 'middle'); s[7].setAttribute('x', (b - 3).toFixed(1)); s[7].setAttribute('y', 10); s[7].setAttribute('text-anchor', 'end');
   }
   // hull damage, read from the page's own hull state (hullLevels: dmg and crit, 0..1; or the ShipView.debugHull override).
-  // as hull falls: edges drop out and flare, breaches open (dark ragged patches with bright rims) and vent, sparks pop, a scan sweep crosses now and then,
-  // the picture flickers, twitches and tears, a sudden drop shakes it, and at critical hull one section fails. nothing at all at full hull.
+  // every loss of hull is a strike at a random point: a breach opens there (a dark ragged patch with a bright rim) and vents, with a shake.
+  // as hull falls more breaches stay open, edges drop out and flare, sparks pop, a scan sweep crosses now and then, the picture flickers, twitches and tears,
+  // and at critical hull one section fails. warnings for whatever is damaged are listed under the view. nothing at all at full hull.
   function levels() { return dbg || (typeof hullLevels !== 'undefined' && hullLevels ? hullLevels : null); }
+  // a strike: opens a breach at a random point (in section sec if given). with all four open, the oldest one moves
+  function strike(sec) {
+    var s = -1, o = 1e9, i;
+    for (i = 0; i < 4; i++) if (!tgt[i]) { s = i; break; }
+    if (s < 0) for (i = 0; i < 4; i++) if (born[i] < o) { o = born[i]; s = i; }
+    placeHit(s, sec); hold[s] = HIT_HOLD; lastSec = hitSec[s]; newSlot = s;
+  }
+  // what a breach in each section reads as. anything else is a plain hull breach, named by where it is
+  var WARN = { plasma: 'plasma drive breached // containment failing', bridge: 'bridge struck', crew: 'crew quarters open to void', defense: 'defense array damaged', broadside: 'broadside battery damaged',
+    prow: 'prow armour breached', engines: 'engines damaged', cargo: 'cargo bays venting', wings: 'wing lances damaged', hangar: 'hangar deck breached', lance: 'prow lance damaged', battery2: 'aft battery damaged' };
+  function warn(d, c) {
+    var pct = Math.round((1 - Math.pow(Math.max(0, d), 1 / 1.8)) * 100), sig = pct + failId * 1000 + newSlot * 77 + (c > 0 ? 500000 : 0), out = [], seenW = {}, i, k, x, t, s;
+    for (i = 0; i < 4; i++) if (tgt[i]) sig += (hitSec[i] + 2) * (i + 1) * 7919 + born[i] * 13;
+    if (sig === lastSig || !warnEl) return;
+    lastSig = sig;
+    for (k = 0; k < 4; k++) {   // newest breach first
+      i = -1; for (x = 0; x < 4; x++) if (tgt[x] && !seenW['s' + x] && (i < 0 || born[x] > born[i])) i = x;
+      if (i < 0) break;
+      seenW['s' + i] = 1; t = null;
+      callouts.forEach(function (q) { if (q.n === hitSec[i]) t = WARN[q.m.id] || (q.m.label + ' damaged'); });
+      if (!t) { x = HITS.value[i].x; t = 'hull breach // ' + (x < -1.5 ? 'stern' : (x > 1.5 ? 'bow' : 'midships')); }
+      if (!seenW[t]) { seenW[t] = 1; out.push([t, i === newSlot ? 'sv-new' : '']); }
+    }
+    if (failId >= 0) callouts.forEach(function (q) { if (q.n === failId) out.unshift([q.m.label + ' offline', 'sv-new']); });
+    if (out.length || d >= 0.04) out.unshift(['hull ' + pct + '%' + (c > 0 ? ' // critical' : ''), c > 0 ? 'sv-new' : 'sv-dim']);
+    warnEl.textContent = '';
+    out.forEach(function (o) { s = document.createElement('span'); s.textContent = '// ' + o[0]; if (o[1]) s.className = o[1]; warnEl.appendChild(s); });
+  }
   function damage(dt) {
-    var hl = levels(), d = hl ? hl.dmg : 0, c = hl ? hl.crit : 0, k = 1 - Math.exp(-dt * 6), n = 0, i, v, sh;
+    var hl = levels(), d = hl ? hl.dmg : 0, c = hl ? hl.crit : 0, k = 1 - Math.exp(-dt * 6), n = 0, open = 0, i, s, o, v, sh;
+    if (prevD >= 0 && d - prevD > 1e-6 && pool) { strike(-1); shake = Math.min(1, 0.4 + (d - prevD) * 5); }   // hull lost since the last frame: a hit
+    prevD = d;
     if (d < 0.04 && !(hold[0] > 0 || hold[1] > 0 || hold[2] > 0 || hold[3] > 0)) {   // full hull: exactly the undamaged picture
       DMG.set(0, 0, 0); BAR.set(0, 0, 0); ship.position.set(baseX, 0, 0); mEdge.uniforms.uOp.value = 0.95;
       for (i = 0; i < 4; i++) { HITS.value[i].w = 0; tgt[i] = 0; }
-      SPARK.value = 0; VON.value = 0; SWEEP.value.set(0, 0); setFail(-1); prevD = d; shake = 0; return;
+      SPARK.value = 0; VON.value = 0; SWEEP.value.set(0, 0); setFail(-1); shake = 0; newSlot = -1; warn(d, c); return;
     }
     if (!calm) TIME.value += dt;
-    // breaches: one more opens at each BREACH_AT step, and closes again if the hull is repaired
-    for (i = 0; i < 4; i++) if (d >= BREACH_AT[i]) n = i + 1;
-    for (i = 0; i < 4; i++) {
-      v = HITS.value[i]; if (hold[i] > 0) hold[i] -= dt;
-      if (i < n || hold[i] > 0) { if (!tgt[i]) placeHit(i, -1, false); v.w += (tgt[i] - v.w) * k; }
-      else { tgt[i] = 0; v.w = v.w < 0.02 ? 0 : v.w * (1 - k); }
+    // breaches: BREACH_AT sets how many stay open for this much damage. a fresh strike is held open for HIT_HOLD seconds whatever the damage
+    for (i = 0; i < 4; i++) { if (d >= BREACH_AT[i]) n = i + 1; if (tgt[i]) open++; if (hold[i] > 0) hold[i] -= dt; }
+    for (i = 0; i < 4 && open < n; i++) if (!tgt[i]) { placeHit(i, -1); open++; }
+    while (open > n) {   // too many (repairs, or a held strike has run out): the oldest closes
+      s = -1; o = 1e9; for (i = 0; i < 4; i++) if (tgt[i] && hold[i] <= 0 && born[i] < o) { o = born[i]; s = i; }
+      if (s < 0) break;
+      tgt[s] = 0; open--;
     }
-    // section failure at critical hull: the last section hit, else the one with the first breach
-    if (c > FAIL_AT) { if (failId < 0) setFail(lastSec >= 0 ? lastSec : (hitSec[0] >= 0 ? hitSec[0] : (callouts.length ? callouts[Math.floor(hrnd() * callouts.length)].n : -1))); }
+    for (i = 0; i < 4; i++) { v = HITS.value[i]; if (tgt[i]) v.w += (tgt[i] - v.w) * k; else v.w = v.w < 0.02 ? 0 : v.w * (1 - k); }
+    // section failure at critical hull: the last section struck, else the one with the newest breach
+    if (c > FAIL_AT) { if (failId < 0) setFail(lastSec >= 0 ? lastSec : (callouts.length ? callouts[Math.floor(hrnd() * callouts.length)].n : -1)); }
     else if (failId >= 0) setFail(-1);
+    warn(d, c);
     DMG.x = d * 0.2 + c * 0.25;
-    if (calm) { DMG.z = 0; BAR.set(0, 0, 0); ship.position.set(baseX, 0, 0); mEdge.uniforms.uOp.value = 0.95; SPARK.value = 0; VON.value = 0; SWEEP.value.set(0, 0); prevD = d; return; }   // reduced motion: the damage shows, but nothing flickers, shakes or sweeps
+    if (calm) { DMG.z = 0; BAR.set(0, 0, 0); ship.position.set(baseX, 0, 0); mEdge.uniforms.uOp.value = 0.95; SPARK.value = 0; VON.value = 0; SWEEP.value.set(0, 0); shake = 0; return; }   // reduced motion: the damage shows, but nothing flickers, shakes or sweeps
     tSeed -= dt; if (tSeed <= 0) { DMG.y = rnd(); tSeed = 0.12 + rnd() * Math.max(0.2, 1.6 - d - c * 0.5); }
     DMG.z = d * 0.03 + c * 0.07;
     tBar -= dt;
@@ -2247,9 +2288,8 @@ el.appendChild(d);
       if (BAR.y) { BAR.set(0, 0, 0); tBar = (0.4 + rnd() * 5) / (1 + d * 4 + c * 6); }
       else if (d >= 0.04) { BAR.set((rnd() * 2 - 1) * 2, 0.06 + c * 0.2 + rnd() * 0.1, (rnd() - 0.5) * (0.3 + d * 0.6)); tBar = 0.05 + rnd() * 0.1; }
     }
-    // a hit (hull dropping suddenly, or ShipView.hit): a short judder and a sharper tear
-    if (prevD >= 0 && d - prevD > SHAKE_DROP) shake = 1;
-    prevD = d; shake *= Math.exp(-dt * 5); sh = shake > 0.02 ? SHAKE_AMP * shake : 0;
+    // the judder and sharper tear after a hit
+    shake *= Math.exp(-dt * 5); sh = shake > 0.02 ? SHAKE_AMP * shake : 0;
     ship.position.x = baseX + (rnd() - 0.5) * sh;
     ship.position.y = (rnd() < d * 0.08 ? (rnd() - 0.5) * 0.08 * (d + c) : 0) + (rnd() - 0.5) * sh;
     if (shake > 0.5) BAR.set((rnd() * 2 - 1) * 2, 0.25, (rnd() - 0.5) * 0.9);
@@ -2295,7 +2335,7 @@ el.appendChild(d);
     project: function (x, y, z) { return rdr ? scr(v3.fromArray(P(x, y, z)).applyMatrix4(ship.matrixWorld)) : null; },   // schematic units to canvas pixels
     // damage hooks. hit(id): open a breach on a section ('' = anywhere) with a shake; it closes after HIT_HOLD seconds unless the hull is that damaged anyway.
     // debugHull(percent): show the wireframe as if hull were at that percent, without touching the page or the database; debugHull(null) returns to the real value.
-    hit: function (id) { var n = -1, s = -1, i; if (!rdr || !pool) return false; callouts.forEach(function (c) { if (c.m.id === id) n = c.n; }); for (i = 0; i < 4; i++) if (!tgt[i]) { s = i; break; } if (s < 0) s = slotN++ % 4; hs = (performance.now() * 1000) | 0; placeHit(s, n, true); hold[s] = HIT_HOLD; lastSec = hitSec[s]; shake = 1; return true; },
+    hit: function (id) { var n = -1; if (!rdr || !pool) return false; callouts.forEach(function (c) { if (c.m.id === id) n = c.n; }); strike(n); shake = 1; return true; },
     debugHull: function (pct) { dbg = pct === null || pct === undefined ? null : (typeof hullLevelsFor === 'function' ? hullLevelsFor(pct, 100) : { dmg: Math.pow(1 - pct / 100, 1.8), crit: 0 }); return dbg; },
     state: function () { return { hits: HITS.value.map(function (v) { return +v.w.toFixed(2); }), fail: failId, sweep: SWEEP.value.y > 0, spark: +SPARK.value.toFixed(2), live: !!rdr, running: !!raf, mode: mode, res: res.length, callouts: callouts.map(function (c) { return c.m.id + ':' + c.el.style.visibility; }), picked: picked, zoom: zoomT }; }
   };
