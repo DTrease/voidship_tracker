@@ -1145,7 +1145,7 @@ const DMG_RULES = {
   P_STEEP: 0.184, // chance = 1 / (1 + e^(-(loss - P_MID) * P_STEEP)): 1 point ~1%, 10 ~6%, 25 = 50%, 40 ~94%, 50 = 99%
   WORSEN: 0.5,    // chance that damage worsens an existing one rather than adding a new one
   TYPES: ['breach', 'fire'],   // types a new damage can be. for now only these two; surge, structural and coolant (plasma drive only) still draw if stored
-  OFFLINE: 0      // chance that a damage reaching severity 3 becomes "system offline" (off for now; was 0.35)
+  OFFLINE_AT: 3   // a damage at this severity takes its section offline. it keeps its type: the list names the cause and the wireframe draws it at full size over the dark section
 };
 const DMG_TYPES = {breach:'hull breach', fire:'fire', surge:'power surge', offline:'system offline', structural:'structural', coolant:'coolant leak'};
 const DMG_SEV = ['', 'minor', 'serious', 'critical'];
@@ -1213,7 +1213,6 @@ parts.forEach(cost=>{
   let d;
   if(open.length && (list.length >= R.CAP || rng() < R.WORSEN)){
     d = pick(open); d.sev++; d.cost += cost;
-    if(d.sev === 3 && rng() < R.OFFLINE) d.type = 'offline';
   } else if(list.length < R.CAP){
     const sec = pick(sections), types = R.TYPES.filter(t=> t !== 'offline' && (t !== 'coolant' || sec === 'plasma'));   // offline only comes by worsening; coolant only leaks from the reactor
     d = {id:'d' + Date.now().toString(36) + Math.floor(rng() * 1679616).toString(36), section:sec, type:pick(types), sev:1, cost:cost, t:Date.now()};
@@ -1316,7 +1315,7 @@ dmgState.list.forEach(d=>{
   const row = document.createElement('div'), name = document.createElement('button'), rep = document.createElement('button');
   row.className = 'sv-dl';
   name.type = 'button'; name.className = 'sv-dn' + (Date.now() - d.t < 8000 ? ' sv-new' : '');
-  name.textContent = '// ' + DMG_SECTIONS[d.section] + ': ' + DMG_TYPES[d.type] + ' (' + DMG_SEV[d.sev] + ') -' + num(d.cost) + ' hull';
+  name.textContent = '// ' + DMG_SECTIONS[d.section] + ': ' + DMG_TYPES[d.type] + ' (' + DMG_SEV[d.sev] + ')' + (d.sev >= DMG_RULES.OFFLINE_AT && d.type !== 'offline' ? ' // offline' : '') + ' -' + num(d.cost) + ' hull';
   name.addEventListener('click', ()=>{ if(window.ShipView && ShipView.pick) ShipView.pick(d.section); });
   rep.type = 'button'; rep.className = 'gc-btn gc-add';
   rep.textContent = (dmgArmed === d.id ? 'confirm +' : 'repair +') + num(d.cost);
@@ -2200,7 +2199,9 @@ el.appendChild(d);
   // aM: which section an edge belongs to; uPick = the section picked (-1 none): its edges turn bright and the rest dim.
   var VS = 'attribute float aD; attribute float aR; attribute float aM; varying float vF; varying float vD; varying float vR; varying float vM; varying vec3 vP; uniform float uSize; uniform vec3 uBar; uniform vec4 uHit[12]; uniform vec4 uFx[12]; uniform vec3 uOff[12]; void main(){ vec3 p = position; for (int i = 0; i < 12; i++) { if (abs(uFx[i].x - 5.0) < 0.5 && (abs(aM - uFx[i].y) < 0.5 || distance(position, uHit[i].xyz) < uHit[i].w)) p += uOff[i]; } vec4 mv = modelViewMatrix * vec4(p, 1.0); vec4 c = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0); vF = (mv.z - c.z) / 1.2; vD = aD; vR = aR; vM = aM; vP = position; if (abs(mv.y - uBar.x) < uBar.y) mv.x += uBar.z; gl_PointSize = uSize; gl_Position = projectionMatrix * mv; }';
   var FH = 'varying float vF; varying float vD; varying float vR; varying float vM; uniform vec3 uCol; uniform vec3 uHi; uniform float uOp; uniform float uBack; uniform vec3 uDash; uniform vec3 uDmg; uniform float uPick; uniform float uLit; varying vec3 vP; uniform vec4 uHit[12]; uniform vec4 uFx[12]; uniform float uT; uniform float uLost; uniform vec2 uSweep; void main(){ if (uDash.x > 0.0 && mod(vD + uDash.z, uDash.x + uDash.y) > uDash.x) discard; if (fract(vR + uDmg.y) < uDmg.x) discard; float a = uOp * mix(uBack, 1.0, smoothstep(-1.0, 1.0, vF)); vec3 c = uCol; if (fract(vR * 7.31 + uDmg.y * 3.7) < uDmg.z) { c = uHi; a = 1.0; } if (uPick > -0.5) { if (abs(vM - uPick) < 0.5) { c = uHi; a = max(a, uLit); } else a *= 0.45; } '
-    // the stored damages, one per slot. uHit = place and radius, uFx = (type, section, spark rate, -)
+    // sections taken offline by a critical damage go dark and pulse first, so the damage that did it still shows bright on top
+    + 'for (int i = 0; i < 12; i++) { if (uFx[i].w > 0.5 && abs(vM - uFx[i].y) < 0.5) a *= 0.08 + 0.92 * pow(max(0.0, sin(uT * 3.0 + float(i))), 8.0); } '
+    // the stored damages, one per slot. uHit = place and radius, uFx = (type, section, spark rate, 1 = section offline)
     + 'for (int i = 0; i < 12; i++) { float k = uFx[i].x; if (k < 0.5) continue; float fi = float(i); '
     + 'if (abs(k - 4.0) < 0.5) { if (abs(vM - uFx[i].y) < 0.5) a *= 0.08 + 0.92 * pow(max(0.0, sin(uT * 3.0 + fi)), 8.0); continue; } '   // 4 system offline: the whole section dark, with a pulse
     + 'float dd = distance(vP, uHit[i].xyz); float rr = uHit[i].w * (0.7 + 0.6 * fract(vR * 3.17 + fi * 0.37)); '
@@ -2227,7 +2228,8 @@ el.appendChild(d);
   // every damage drawn comes from the shared list (the page's dmgState, or ShipView.inject for tests): one slot each, up to SLOTS.
   var SLOTS = 12,                            // must match the 12s in the shaders
       KIND = { breach: 1, fire: 2, surge: 3, offline: 4, structural: 5, coolant: 6 },
-      DMG_R = [0, 0.4, 0.62, 0.9],           // radius by severity 1..3, in ship units (the ship is about 8.6 long)
+      OFFLINE_AT = 3, OFFLINE_R = 1.25,      // severity that takes the section offline (as DMG_RULES.OFFLINE_AT), and how much larger that damage is drawn
+      DMG_R = [0, 0.4, 0.62, 0.9],          // radius by severity 1..3, in ship units (the ship is about 8.6 long)
       VENT_LEN = { breach: [0, 0.5, 0.95, 1.5], fire: [0, 0.35, 0.6, 0.9], coolant: [0, 0.6, 0.9, 1.3] },   // how far the dashes fly, by severity (0 = none): venting from a breach, flames rising from a fire
       SPARK_RATE = { fire: [0, 0.45, 0.65, 0.9], breach: [0, 0.1, 0.18, 0.3], surge: [0, 0.08, 0.14, 0.2] },   // chance that a spark point fires each cycle, by severity
       TWITCH = [0, 0.02, 0.035, 0.055],      // structural: size of the twitch, by severity
@@ -2273,8 +2275,9 @@ el.appendChild(d);
       if (d.sev > o.sev) hit = true;
       o.sev = d.sev; o.type = d.type;
       if (!o.on) return;
-      tgt[s] = DMG_R[d.sev] || DMG_R[1];
-      FX.value[s].set(KIND[d.type] || 1, o.sec, SPARK_RATE[d.type] ? SPARK_RATE[d.type][d.sev] : 0, 0);
+      o.off = d.sev >= OFFLINE_AT;   // critical: the section is offline, and the damage that did it is drawn larger
+      tgt[s] = (DMG_R[d.sev] || DMG_R[1]) * (o.off ? OFFLINE_R : 1);
+      FX.value[s].set(KIND[d.type] || 1, o.sec, SPARK_RATE[d.type] ? SPARK_RATE[d.type][d.sev] : 0, o.off && d.type !== 'offline' ? 1 : 0);
       VENT.value[s].w = VENT_LEN[d.type] ? VENT_LEN[d.type][d.sev] : 0;
       if (d.type === 'fire') { VENT.value[s].x = 0.1; VENT.value[s].y = 0.99; VENT.value[s].z = 0; }   // flames rise; a breach vents outward (set in place)
       if (first) HITS.value[s].w = tgt[s];   // already there when the page opens: no growing in
@@ -2284,7 +2287,7 @@ el.appendChild(d);
   }
   // labels: a section that is offline reads as failed; with the ship lost they all do
   function marks() {
-    callouts.forEach(function (c) { c.el.classList.toggle('sv-fail', wasLost || slot.some(function (o) { return o && o.type === 'offline' && o.sec === c.n; })); });
+    callouts.forEach(function (c) { c.el.classList.toggle('sv-fail', wasLost || slot.some(function (o) { return o && (o.off || o.type === 'offline') && o.sec === c.n; })); });
   }
   // the extra draw objects (two in all), rebuilt with the ship and disposed with it
   function fx(src) {
