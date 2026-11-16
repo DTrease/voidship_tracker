@@ -18,7 +18,7 @@ if (/[?&]map=1(&|$)/.test(location.search)) { document.documentElement.classList
 --term:'VT323','VT323 Dots',monospace;   /* the only font stack on the page */
 --fs-s:.75rem; --fs-m:1rem;                 /* body text sizes: small / base */
 --dmg:0; --crit:0;                          /* hull damage: set by script. dmg 0..1 builds steadily; crit 0..1 only below 25% hull */
---noise-base:calc(.07 + var(--dmg)*.2 + var(--crit)*.3);
+--noise-base:calc(.05 + var(--dmg)*.2 + var(--crit)*.3);
 --gap:10px;                                 /* space between panels, groups and titles */
 --pad:12px 14px;                            /* panel padding */
 }
@@ -39,12 +39,12 @@ input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus
   -webkit-text-fill-color:var(--green);-webkit-box-shadow:0 0 0 1000px var(--panel2) inset;
   caret-color:var(--green);transition:background-color 9999s ease-in-out 0s}
 html{font-size:117%}
-@keyframes flicker{0%,96%,100%{opacity:1}97%{opacity:.85}98%{opacity:1}99%{opacity:.9}}
+@keyframes flicker{0%,98%,100%{opacity:1}98.5%{opacity:.92}99%{opacity:1}99.5%{opacity:.95}}
 @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
 @keyframes jitter{0%,88%,100%{transform:translate(0,0)}89%{transform:translate(-.5px,.5px)}
 90%{transform:translate(.5px,0)}91%{transform:translate(0,-.5px)}92%{transform:translate(0,0)}}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--term);
-padding:16px 12px 40px;min-height:100vh;position:relative;animation:flicker 6s infinite;
+padding:16px 12px 40px;min-height:100vh;position:relative;animation:flicker 11s infinite;
 filter:blur(calc(.1px + var(--dmg)*.12px + var(--crit)*.15px));
 text-shadow:1px 0 1.6px rgba(57,255,107,.35), -0.8px 0 1.6px rgba(57,255,107,.18),
 0 0 1px rgba(57,255,107,.3)}
@@ -60,15 +60,15 @@ radial-gradient(ellipse at center,rgba(0,0,0,0) 52%,rgba(0,0,0,.65) 100%)}
 background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0.041 0 0 0 0 1 0 0 0 0 0.147 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 animation:staticShift .5s steps(1) infinite}
 .noise-overlay{animation-duration:calc(.5s - var(--dmg)*.3s - var(--crit)*.1s)}
-@keyframes glitchBar{0%,96.5%,100%{opacity:0;transform:translateY(0) scaleY(1)}
-97%{opacity:.5;transform:translateY(-2px) scaleY(1.4)}
-97.6%{opacity:0}
-98.3%{opacity:.35;transform:translateY(3px) scaleY(.8)}
-98.6%{opacity:0}}
+@keyframes glitchBar{0%,98.2%,100%{opacity:0;transform:translateY(0) scaleY(1)}
+98.5%{opacity:.3;transform:translateY(-2px) scaleY(1.4)}
+98.8%{opacity:0}
+99.2%{opacity:.2;transform:translateY(3px) scaleY(.8)}
+99.4%{opacity:0}}
 .glitch-bar{position:fixed;left:0;right:0;top:38%;height:3px;pointer-events:none;z-index:17;
-background:rgba(57,255,107,.5);mix-blend-mode:screen;animation:glitchBar 9s infinite}
-.glitch-bar{animation-duration:calc(9s / (1 + var(--dmg)*7 + var(--crit)*8));height:calc(3px + var(--crit)*4px)}
-.glitch-bar.b2{top:71%;height:calc(2px + var(--crit)*3px);animation-duration:calc(13s / (1 + var(--dmg)*7 + var(--crit)*8));animation-delay:2.4s}
+background:rgba(57,255,107,.5);mix-blend-mode:screen;animation:glitchBar 20s infinite}
+.glitch-bar{animation-duration:calc(20s / (1 + var(--dmg)*7 + var(--crit)*8));height:calc(3px + var(--crit)*4px)}
+.glitch-bar.b2{top:71%;height:calc(2px + var(--crit)*3px);animation-duration:calc(29s / (1 + var(--dmg)*7 + var(--crit)*8));animation-delay:2.4s}
 
 /* hull damage layers: invisible and switched off entirely until the hull is hurt (html.hull-hurt) */
 .dmg-scan,.dmg-roll{display:none}
@@ -132,7 +132,7 @@ html.hull-hurt .dmg-scan,html.hull-hurt .dmg-roll{display:block}
 h1,h2{font-family:var(--term);font-weight:400;margin:0;text-transform:uppercase}
 h1{font-size:1.9rem;color:var(--green);letter-spacing:.14em;text-align:center;
 text-shadow:0 0 4px var(--green),0 0 9px rgba(57,255,107,.45),
-1.1px 0 2px rgba(57,255,107,.4),-0.9px 0 2px rgba(57,255,107,.2);animation:jitter 4.5s infinite}
+1.1px 0 2px rgba(57,255,107,.4),-0.9px 0 2px rgba(57,255,107,.2);animation:jitter 9s infinite}
 h1::before{content:'▓▓ '} h1::after{content:' ▓▓'}
 .sub{text-align:center;color:var(--dim);font-size:var(--fs-s);margin:4px 0 16px;letter-spacing:.05em}
 .wrap{max-width:640px;margin:0 auto;position:relative;z-index:1}
@@ -288,14 +288,14 @@ box-shadow:0 0 6px var(--green);animation:blink 1.4s infinite}
 .roll-hist-verdict{flex:1;text-align:right;letter-spacing:.06em;text-transform:uppercase;font-size:var(--fs-s)}
 .roll-hist-time{color:var(--dim);font-size:var(--fs-s);min-width:52px;text-align:right}
 .roll-hist-roller{text-align:right;color:var(--dim);font-size:var(--fs-s);margin-top:1px}
-@keyframes interferenceBurst{0%{opacity:var(--noise-base)}8%{opacity:calc(var(--noise-base) + .43)}16%{opacity:var(--noise-base)}26%{opacity:calc(var(--noise-base) + .38)}
-  36%{opacity:var(--noise-base)}50%{opacity:calc(var(--noise-base) + .33)}64%{opacity:var(--noise-base)}78%{opacity:calc(var(--noise-base) + .23)}100%{opacity:var(--noise-base)}}
+@keyframes interferenceBurst{0%{opacity:var(--noise-base)}8%{opacity:calc(var(--noise-base) + .26)}16%{opacity:var(--noise-base)}26%{opacity:calc(var(--noise-base) + .22)}
+  36%{opacity:var(--noise-base)}50%{opacity:calc(var(--noise-base) + .18)}64%{opacity:var(--noise-base)}78%{opacity:calc(var(--noise-base) + .12)}100%{opacity:var(--noise-base)}}
 .noise-overlay.burst{animation:staticShift .5s steps(1) infinite, interferenceBurst .5s steps(2) 1}
 .noise-overlay.burst.strong{animation:staticShift .5s steps(1) infinite, interferenceBurst .9s steps(2) 1}
 @keyframes glitchBarBurst{0%{opacity:0;transform:translateY(0) scaleY(1)}
-  8%{opacity:.6;transform:translateY(-3px) scaleY(1.6)}16%{opacity:0}
-  30%{opacity:.5;transform:translateY(3px) scaleY(.7)}40%{opacity:0}
-  55%{opacity:.4;transform:translateY(-2px) scaleY(1.3)}66%{opacity:0}100%{opacity:0}}
+  8%{opacity:.38;transform:translateY(-3px) scaleY(1.6)}16%{opacity:0}
+  30%{opacity:.3;transform:translateY(3px) scaleY(.7)}40%{opacity:0}
+  55%{opacity:.24;transform:translateY(-2px) scaleY(1.3)}66%{opacity:0}100%{opacity:0}}
 @keyframes shipShake{
   0%,100%{transform:translate(0,0) rotate(0)}
   10%{transform:translate(-7px,4px) rotate(-.7deg)}
@@ -308,7 +308,7 @@ box-shadow:0 0 6px var(--green);animation:blink 1.4s infinite}
   80%{transform:translate(3px,-2px) rotate(.2deg)}
   90%{transform:translate(-1px,1px) rotate(0)}
 }
-body.shake{animation:flicker 6s infinite, shipShake .55s cubic-bezier(.36,.07,.19,.97) both}
+body.shake{animation:flicker 11s infinite, shipShake .55s cubic-bezier(.36,.07,.19,.97) both}
 /* ===== navigation: starmap (everything prefixed gc-) ===== */
 #gc-root,#gc-root *,#gc-root *::before,#gc-root *::after{box-sizing:border-box}
 #gc-root{font-family:'VT323','VT323 Dots',monospace;font-size:1rem;line-height:1.15;font-weight:400;font-style:normal;color:var(--text);
@@ -1018,7 +1018,7 @@ window.__astroReady = true; if(typeof startChartSync === 'function') startChartS
 // CSS turns those into static, scanlines, blur, a rolling bar and glitch-bar rate.
 // The loop below adds the random faults: jitter, tearing, dropouts, vertical slips, garbled labels.
 let hullLevels = {dmg:0, crit:0};
-const DMG_FX = 0.5;                  // strength of the screen faults from hull damage: 1 = full, 0 = none. the ship wireframe's own flicker uses it too
+const DMG_FX = 0.4;                 // strength of the screen faults from hull damage: 1 = full, 0 = none. the ship wireframe's own flicker uses it too
 let fxLevels = {dmg:0, crit:0};      // hullLevels scaled by DMG_FX: what the CSS and the glitch loop use
 let damageTimer = null;
 
@@ -1736,8 +1736,8 @@ return -meanMs * Math.log(1 - Math.random());
 
 // ---- idle glitches: rare, always on, even with a healthy hull ----
 // (the damage system supplies far more of both once the hull is hurt, so these stand down then)
-const IDLE_ROLL_MEAN_MS = 150000;   // a faint line rolls down the screen about every 2.5 min on average
-const IDLE_TEAR_MEAN_MS = 90000;    // the display slides left at an angle about every 1.5 min on average
+const IDLE_ROLL_MEAN_MS = 300000;   // a faint line rolls down the screen about every 5 min on average
+const IDLE_TEAR_MEAN_MS = 200000;   // the display slides left at an angle about every 3.3 min on average
 
 function idleRoll(){
 const el = document.getElementById('idleRoll');
@@ -1749,7 +1749,7 @@ document.getElementById('idleRoll').addEventListener('animationend', e=> e.curre
 
 function idleTear(){
 // the damage "tear" at zero crit, but always sliding to the left
-nudgeDisplay(-(3 + Math.random()*6), 0, (Math.random() < 0.5 ? -1 : 1) * (0.8 + Math.random()*2), 70 + Math.random()*90);
+nudgeDisplay(-(2 + Math.random()*4), 0, (Math.random() < 0.5 ? -1 : 1) * (0.5 + Math.random()*1.2), 70 + Math.random()*90);
 }
 
 function scheduleIdle(fn, meanMs){
