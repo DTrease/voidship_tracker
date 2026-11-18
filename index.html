@@ -228,7 +228,7 @@ text-transform:inherit;font-weight:400;color:inherit;text-shadow:inherit;text-al
 box-shadow:0 0 6px var(--green);animation:blink 1.4s infinite}
 .sub.offline .status-dot{animation:none;background:var(--dim);box-shadow:none}
 /* ship wireframe (sv-): the 3D schematic in Voidship Status */
-#sv-box{position:relative;width:100%;aspect-ratio:920/500;min-height:250px;background:var(--bg);border:1px solid var(--border);overflow:hidden}
+#sv-box{position:relative;width:100%;aspect-ratio:920/530;min-height:280px;background:var(--bg);border:1px solid var(--border);overflow:hidden}
 #sv-box canvas{display:block;width:100%;height:100%;touch-action:pan-y;cursor:grab;outline:none}
 #sv-over{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 #sv-over svg{position:absolute;inset:0;width:100%;height:100%}
@@ -253,11 +253,17 @@ box-shadow:0 0 6px var(--green);animation:blink 1.4s infinite}
 #sv-over span.sv-fail{color:var(--dim);animation:textGlitch .8s steps(5) infinite}
 @media (prefers-reduced-motion:reduce){#sv-over span.sv-fail{animation:none}}
 #sv-over span.sv-on{color:var(--hi);border-color:var(--green);background:rgba(57,255,107,.1)}
-#sv-foot{position:absolute;right:6px;bottom:3px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);pointer-events:none}
+/* control bar: icon buttons along the box's bottom edge (the label layout keeps this strip clear, SV_BAR in size()), footer text at its right */
+#sv-bar{position:absolute;left:4px;right:6px;bottom:4px;display:flex;align-items:flex-end;gap:3px;z-index:2;pointer-events:none}
+#sv-bar .gc-ib{width:26px;height:26px}
+#sv-bar .gc-ib svg{width:15px;height:15px}
+#sv-bar .sv-gap{margin-left:7px}
+#sv-b-pause .sv-i-play,#sv-b-pause[aria-pressed="true"] .sv-i-pause{display:none}
+#sv-b-pause[aria-pressed="true"] .sv-i-play{display:inline}
+#sv-foot{margin-left:auto;padding-left:8px;white-space:nowrap;font-size:11px;line-height:1;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);pointer-events:none}
+@media (max-width:520px){#sv-foot .sv-long{display:none}}
 #sv-off{display:none;position:absolute;inset:0;place-items:center;color:var(--dim)}
 #sv-box.sv-nogl #sv-off{display:grid}
-.sv-ctl{display:flex;flex-wrap:wrap;gap:.3rem;margin:6px 0 0;align-items:center}
-.sv-ctl .gc-btn{font-family:var(--term);font-size:var(--fs-m);text-transform:lowercase;text-shadow:inherit}
 
 .dice-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:4px}
 .die-btn{background:none;border:1px solid var(--green-dim);color:var(--green);cursor:pointer;
@@ -696,17 +702,18 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
 
 <div class="panel">
 <h2>Ship Schematic</h2>
-<div id="sv-box"><div id="sv-over"><svg id="sv-svg" aria-hidden="true"></svg></div><div id="sv-foot">schem ref vt-2 // wireframe // not to scale</div><div id="sv-off">// wireframe offline</div></div>
+<div id="sv-box"><div id="sv-over"><svg id="sv-svg" aria-hidden="true"></svg></div><div id="sv-off">// wireframe offline</div>
+<div id="sv-bar">
+<button class="gc-ib" id="sv-b-side" type="button" aria-pressed="true" title="side view" aria-label="side view"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 11V8h3V5h2v3h5l4 1.5-4 1.5z"/></svg></button>
+<button class="gc-ib" id="sv-b-top" type="button" aria-pressed="false" title="top view" aria-label="top view"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M1 6.5h3l1-2.5h2l1 2.5h3l4 1.5-4 1.5H8l-1 2.5H5l-1-2.5H1z"/></svg></button>
+<button class="gc-ib" id="sv-b-front" type="button" aria-pressed="false" title="front view" aria-label="front view"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 4l4 3v4l-4 2.5-4-2.5V7zM7 4V1.5h2V4M2 9h2M12 9h2"/></svg></button>
+<button class="gc-ib" id="sv-b-free" type="button" aria-pressed="false" title="free view, turning" aria-label="free view, turning"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v13M13.5 8A5.5 2.5 0 1 1 8 5.5M6.2 3.8L8 5.5 6.2 7.2"/></svg></button>
+<button class="gc-ib sv-gap" id="sv-b-pause" type="button" aria-pressed="false" title="pause turning" aria-label="pause turning"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="sv-i-pause" d="M5.5 3.5v9M10.5 3.5v9"/><path class="sv-i-play" d="M5 3.5l7 4.5-7 4.5z"/></svg></button>
+<button class="gc-ib sv-gap" id="sv-b-zout" type="button" title="zoom out" aria-label="zoom out"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.3 10.3L14 14M5 7h4"/></svg></button>
+<button class="gc-ib" id="sv-b-zin" type="button" title="zoom in" aria-label="zoom in"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.3 10.3L14 14M5 7h4M7 5v4"/></svg></button>
+<div id="sv-foot">schem ref vt-2<span class="sv-long"> // wireframe // not to scale</span></div>
+</div></div>
 <div id="sv-warn" aria-live="polite"></div>
-<div class="sv-ctl"><span class="gc-dim gc-sm">view //</span>
-<button class="gc-btn" id="sv-b-side" type="button" aria-pressed="true">side</button>
-<button class="gc-btn" id="sv-b-top" type="button" aria-pressed="false">top</button>
-<button class="gc-btn" id="sv-b-front" type="button" aria-pressed="false">front</button>
-<button class="gc-btn" id="sv-b-free" type="button" aria-pressed="false">free</button>
-<button class="gc-btn gc-add" id="sv-b-pause" type="button" aria-pressed="false">pause</button>
-<span class="gc-dim gc-sm">zoom //</span>
-<button class="gc-btn" id="sv-b-zout" type="button" aria-label="zoom out">-</button>
-<button class="gc-btn" id="sv-b-zin" type="button" aria-label="zoom in">+</button></div>
 <div class="row desig"><label for="gc-sname">Designation</label>
 <input type="text" id="gc-sname" maxlength="40" autocomplete="off" placeholder="pala imperatoris"></div>
 </div>
@@ -2456,12 +2463,13 @@ el.appendChild(d);
     svg.textContent = ''; Array.prototype.slice.call(over.querySelectorAll('span')).forEach(function (s) { over.removeChild(s); });
     rdr = cv = cam = null; drag = null; ptrs = {};
   }
+  var SV_BAR = 30;   // px kept clear at the bottom of the box for #sv-bar (26px buttons + 4px inset)
   function size() {
     var w = box.clientWidth, h = box.clientHeight, s, cy;
     if (!w || !h) return false;
     if (w !== W || h !== H) {
       W = w; H = h; rdr.setSize(w, h, false);
-      TIERS = w >= 560 ? 1 : 2; TOP = 20 + 17 * TIERS; BOT = 16 + 17 * TIERS;   // room for the label rows: one each side, two on a phone
+      TIERS = w >= 560 ? 1 : 2; TOP = 20 + 17 * TIERS; BOT = 16 + 17 * TIERS + SV_BAR;   // room for the label rows (one each side, two on a phone) and the control bar
       s = Math.min((w - 16) / (span + 0.5), (h - TOP - BOT) / 4.25); cy = TOP + (h - TOP - BOT) / 2;   // the ship sits in the band left free by the label rows
       cam.left = -w / 2 / s; cam.right = w / 2 / s; cam.top = cy / s; cam.bottom = -(h - cy) / s; cam.updateProjectionMatrix(); cam.updateMatrixWorld();
       callouts.forEach(function (c) { c.w = 0; });
@@ -2472,7 +2480,7 @@ el.appendChild(d);
   // labels sit in two rows above and two below the ship, each joined to its section by a leader with an arrowhead; re-laid every frame as the ship turns
   function layout() {
     // rows: 0, 1 above the ship (outer, inner), 2, 3 below (outer, inner). the inner rows exist only on narrow screens (TIERS = 2).
-    var end = [0, 0, 0, 0], ys = [18, 35, H - 32, H - 49], flat = mode === 'side' || mode === 'top', mid = TOP + (H - TOP - BOT) / 2, a, b, s;
+    var end = [0, 0, 0, 0], ys = [18, 35, H - 32 - SV_BAR, H - 49 - SV_BAR], flat = mode === 'side' || mode === 'top', mid = TOP + (H - TOP - BOT) / 2, a, b, s;
     callouts.forEach(function (c) { var p = scr(v3.copy(c.p).applyMatrix4(ship.matrixWorld)); c.ax = p[0]; c.ay = p[1]; if (!c.w) c.w = c.el.offsetWidth || 90; });
     // left to right: each label goes over its section if there is room, else just right of the last label in the row that needs the smaller shift;
     // only when its own side is full does it cross to the other side of the ship
