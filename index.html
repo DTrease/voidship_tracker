@@ -246,7 +246,10 @@ box-shadow:0 0 6px var(--green);animation:blink 1.4s infinite}
 #sv-warn .gc-btn{flex:none;white-space:nowrap;font-family:var(--term);font-size:var(--fs-s);text-transform:lowercase;text-shadow:inherit;padding:.15rem .45rem;min-height:1.6rem}
 #sv-warn .sv-dim,#hullMsg{color:var(--dim)}
 #hullMsg{font-size:var(--fs-s);letter-spacing:.04em;margin:-2px 0 4px}
-.hull-hit{justify-content:flex-start}
+.hull-hit{justify-content:flex-start;flex-wrap:wrap;row-gap:4px}
+.hull-hit label{white-space:nowrap}
+.hull-hit .hit-btns{display:flex;gap:4px;align-items:center;margin-left:auto}
+.hull-hit input[type=number]{width:3.4rem}
 .hull-hit .gc-btn{font-family:var(--term);font-size:var(--fs-m);text-transform:lowercase;text-shadow:inherit;white-space:nowrap}
 #sv-warn .sv-new{color:var(--hi);animation:textGlitch .6s steps(5)}
 @media (prefers-reduced-motion:reduce){#sv-warn .sv-new{animation:none}}
@@ -724,9 +727,12 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
 <div class="bar hull"><div id="hullBar" style="width:0%"></div></div></div>
 <input id="hull" type="number" onchange="hullEdit(this)"> / <input id="hullMax" type="number" onchange="hullMaxEdit(this)">
 <select id="hullQuality" class="die-select" onchange="saveStatus(this)"></select></div>
-<div class="row hull-hit"><label for="hullHit">Damage</label>
-<input id="hullHit" type="number" min="0" inputmode="numeric" placeholder="0" onkeydown="if(event.key==='Enter'){event.preventDefault();hullHit();}">
-<button class="gc-btn gc-add" type="button" onclick="hullHit()">apply damage</button></div>
+<div class="row hull-hit"><label for="hullHit">Incoming Damage</label>
+<span class="hit-btns">
+<button class="gc-btn gc-add" type="button" title="25 hull" onclick="hullHit(HIT_MAJOR)">major</button>
+<button class="gc-btn gc-add" type="button" title="10 hull" onclick="hullHit(HIT_MINOR)">minor</button>
+<input id="hullHit" type="number" min="0" inputmode="numeric" placeholder="n" aria-label="custom damage points" onkeydown="if(event.key==='Enter'){event.preventDefault();hullHit();}">
+<button class="gc-btn gc-add" type="button" title="n hull, from the field" onclick="hullHit()">custom</button></span></div>
 <div id="hullMsg" aria-live="polite"></div>
 <div class="row"><div class="stat"><label>Shields</label>
 <div class="bar shields"><div id="shieldsBar" style="width:0%"></div></div></div>
@@ -1273,12 +1279,13 @@ hullMsg('// hit -' + (Math.round(loss * 100) / 100) + ' hull // ' + (r.count ? '
 dmgWrite(up);
 return true;
 }
-// the damage field: enter the points, then "apply damage" (or enter)
-function hullHit(){
-const el = document.getElementById('hullHit'), v = Number(el.value);
-if(el.value.trim() === '' || !(v > 0)){ hullMsg('// enter damage points'); return; }
+// incoming damage: major and minor are fixed hits; custom takes the points typed in the field (enter also applies it)
+const HIT_MAJOR = 25, HIT_MINOR = 10;
+function hullHit(n){
+const el = document.getElementById('hullHit'), custom = n === undefined, v = custom ? Number(el.value) : n;
+if(custom && (el.value.trim() === '' || !(v > 0))){ hullMsg('// enter damage points'); return; }
 if(!curStatus || !(Number(curStatus.hull) > 0)){ hullMsg('// no hull left'); return; }
-if(applyHit(v)) el.value = '';
+if(applyHit(v) && custom) el.value = '';
 }
 
 // hull max. lowering it below the hull trims the hull to fit; that is not a hit, so nothing is rolled
