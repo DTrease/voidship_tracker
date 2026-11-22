@@ -237,22 +237,35 @@ box-shadow:0 0 6px var(--green);animation:blink 1.4s infinite}
 #sv-over polygon{fill:var(--green)}
 #sv-over text{fill:var(--dim);font-family:var(--term);font-size:11px;letter-spacing:.06em}
 #sv-over span{position:absolute;left:0;top:0;white-space:nowrap;font-size:14px;line-height:1;letter-spacing:.06em;text-transform:uppercase;color:var(--green);text-shadow:0 0 4px rgba(57,255,107,.6);padding:0 2px;border:1px solid transparent;background:rgba(2,10,4,.55);pointer-events:auto;cursor:pointer}
-#sv-warn{margin:4px 0 0;font-size:var(--fs-s);letter-spacing:.04em;color:var(--green)}
-#sv-warn:empty,#hullMsg:empty{display:none}
-#sv-warn .sv-hd{display:flex;flex-wrap:wrap;gap:0 .8rem}
-#sv-warn .sv-dl{display:flex;align-items:center;gap:.5rem;margin-top:3px}
-#sv-warn .sv-dn{flex:1;min-width:0;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer;color:var(--green);font-family:var(--term);font-size:var(--fs-s);letter-spacing:.04em;text-transform:lowercase;text-shadow:inherit}
-#sv-warn .sv-dn:hover,#sv-warn .sv-dn:focus-visible{color:var(--hi);outline:none}
-#sv-warn .gc-btn{flex:none;white-space:nowrap;font-family:var(--term);font-size:var(--fs-s);text-transform:lowercase;text-shadow:inherit;padding:.15rem .45rem;min-height:1.6rem}
-#sv-warn .sv-dim,#hullMsg{color:var(--dim)}
-#hullMsg{font-size:var(--fs-s);letter-spacing:.04em;margin:-2px 0 4px}
+#hullMsg:empty{display:none}
+#hullMsg{color:var(--dim);font-size:var(--fs-s);letter-spacing:.04em;margin:-2px 0 4px}
+/* void shield: one shield, raised or down */
+.pip{display:block;width:46px;height:10px;margin-top:4px;border:1px dashed var(--green-dim)}
+.pip.on{border:1px solid var(--green);background:rgba(57,255,107,.28);box-shadow:0 0 6px rgba(57,255,107,.5)}
+#shieldsTog{min-width:4.6rem;font-family:var(--term);font-size:var(--fs-s);text-transform:uppercase;letter-spacing:.06em;text-shadow:inherit}
+/* components: status comes from the stored damage, the same records the wireframe draws */
+.comp-sec{display:flex;align-items:center;gap:10px;font-size:var(--fs-s);color:var(--dim);letter-spacing:.14em;margin:12px 0 8px;text-transform:uppercase}
+.comp-sec:first-child{margin-top:0}
+.comp-sec::before{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--border))}
+.comp-sec::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+.comp-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:3px}
+.comp-n{flex:1;min-width:0;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer;color:var(--text);font-family:var(--term);font-size:var(--fs-m);line-height:1.1;text-shadow:inherit}
+.comp-n:hover,.comp-n:focus-visible{color:var(--hi);outline:none}
+.comp-n small{color:var(--dim);font-size:var(--fs-s)}
+.comp-n small::before{content:' // '}
+.comp-t{flex:none;font-family:var(--term);font-size:var(--fs-s);letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border:1px solid transparent;background:none;color:var(--dim);white-space:nowrap;text-shadow:inherit}
+button.comp-t{cursor:pointer}
+.comp-t.s1{border:1px dashed var(--green-dim);color:var(--green);background:rgba(57,255,107,.06)}
+.comp-t.s2{border:1px solid var(--green);color:var(--hi);background:rgba(57,255,107,.16)}
+.comp-t.s3{border:1px solid var(--green);color:var(--hi);background:rgba(57,255,107,.28);box-shadow:0 0 6px rgba(57,255,107,.5);animation:blink 1.2s steps(1) infinite}
+.comp-t.ask{border:1px dashed var(--green);color:var(--green);background:none;box-shadow:none;animation:none}
+.comp-t.new{animation:textGlitch .6s steps(5)}
+@media (prefers-reduced-motion:reduce){.comp-t.s3,.comp-t.new{animation:none}}
 .hull-hit{justify-content:flex-start;flex-wrap:wrap;row-gap:4px}
 .hull-hit label{white-space:nowrap}
 .hull-hit .hit-btns{display:flex;gap:4px;align-items:center;margin-left:auto}
 .hull-hit input[type=number]{width:3.4rem}
 .hull-hit .gc-btn{font-family:var(--term);font-size:var(--fs-m);text-transform:lowercase;text-shadow:inherit;white-space:nowrap}
-#sv-warn .sv-new{color:var(--hi);animation:textGlitch .6s steps(5)}
-@media (prefers-reduced-motion:reduce){#sv-warn .sv-new{animation:none}}
 #sv-over span.sv-fail{color:var(--dim);animation:textGlitch .8s steps(5) infinite}
 @media (prefers-reduced-motion:reduce){#sv-over span.sv-fail{animation:none}}
 #sv-over span.sv-on{color:var(--hi);border-color:var(--green);background:rgba(57,255,107,.1)}
@@ -276,6 +289,11 @@ box-shadow:0 0 6px var(--green);animation:blink 1.4s infinite}
 .die-btn:active{box-shadow:0 0 14px rgba(57,255,107,.7)}
 .die-icon{width:34px;height:34px;object-fit:contain;
   filter:drop-shadow(0 0 3px rgba(57,255,107,.4))}
+.die-pair{display:flex;gap:1px}
+.die-pair .die-icon{width:24px}
+.d100-row{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:6px;color:var(--dim);font-size:var(--fs-s);letter-spacing:.08em}
+.d100-row input{width:4.5em;text-align:center}
+.verdict.plain{color:var(--dim)}
 .dice-result{margin-top:var(--gap);padding-top:var(--gap);border-top:1px dashed var(--border);
   text-align:center;min-height:4.2em;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
 .dice-result .roll-die{color:var(--dim);font-size:var(--fs-s);letter-spacing:.08em}
@@ -716,32 +734,36 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
 <button class="gc-ib" id="sv-b-zin" type="button" title="zoom in" aria-label="zoom in"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.3 10.3L14 14M5 7h4M7 5v4"/></svg></button>
 <div id="sv-foot">schem ref vt-2<span class="sv-long"> // wireframe // not to scale</span></div>
 </div></div>
-<div id="sv-warn" aria-live="polite"></div>
 <div class="row desig"><label for="gc-sname">Designation</label>
 <input type="text" id="gc-sname" maxlength="40" autocomplete="off" placeholder="pala imperatoris"></div>
 </div>
 
 <div class="panel">
 <h2>Hull &amp; Systems</h2>
-<div class="row"><div class="stat"><label>Hull</label>
+<div class="row"><div class="stat"><label>Hull Integrity</label>
 <div class="bar hull"><div id="hullBar" style="width:0%"></div></div></div>
 <input id="hull" type="number" onchange="hullEdit(this)"> / <input id="hullMax" type="number" onchange="hullMaxEdit(this)">
 <select id="hullQuality" class="die-select" onchange="saveStatus(this)"></select></div>
 <div class="row hull-hit"><label for="hullHit">Incoming Damage</label>
 <span class="hit-btns">
-<button class="gc-btn gc-add" type="button" title="25 hull" onclick="hullHit(HIT_MAJOR)">major</button>
-<button class="gc-btn gc-add" type="button" title="10 hull" onclick="hullHit(HIT_MINOR)">minor</button>
+<button class="gc-btn gc-add" type="button" id="hitMajor" onclick="hullHit(hitSize(HIT_MAJOR))">major</button>
+<button class="gc-btn gc-add" type="button" id="hitMinor" onclick="hullHit(hitSize(HIT_MINOR))">minor</button>
 <input id="hullHit" type="number" min="0" inputmode="numeric" placeholder="n" aria-label="custom damage points" onkeydown="if(event.key==='Enter'){event.preventDefault();hullHit();}">
 <button class="gc-btn gc-add" type="button" title="n hull, from the field" onclick="hullHit()">custom</button></span></div>
 <div id="hullMsg" aria-live="polite"></div>
-<div class="row"><div class="stat"><label>Shields</label>
-<div class="bar shields"><div id="shieldsBar" style="width:0%"></div></div></div>
-<input id="shields" type="number" onchange="saveStatus(this)"> / <input id="shieldsMax" type="number" onchange="saveStatus(this)">
+<div class="row"><div class="stat"><label>Void Shield</label>
+<span class="pip" id="shieldsPip"></span></div>
+<button class="gc-btn" type="button" id="shieldsTog" aria-pressed="false" onclick="toggleShield()">down</button>
 <select id="shieldsQuality" class="die-select" onchange="saveStatus(this)"></select></div>
 <div class="row"><div class="stat"><label>Fuel</label>
 <div class="bar fuel"><div id="fuelBar" style="width:0%"></div></div></div>
 <input id="fuel" type="number" onchange="saveStatus(this)"> / <input id="fuelMax" type="number" onchange="saveStatus(this)">
 <select id="fuelQuality" class="die-select" onchange="saveStatus(this)"></select></div>
+</div>
+
+<div class="panel">
+<h2>Components</h2>
+<div id="compList"></div>
 </div>
 </section>
 
@@ -807,7 +829,11 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
 <img class="die-icon" src="data:image/png;base64,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" alt="d12">d12</button>
 <button class="die-btn" onclick="rollDie(20)">
 <img class="die-icon" src="data:image/png;base64,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" alt="d20">d20</button>
+<button class="die-btn" onclick="rollDie(100)">
+<span class="die-pair"><img class="die-icon" alt=""><img class="die-icon" alt=""></span>d100</button>
 </div>
+<div class="d100-row"><label for="d100Target">d100 target</label>
+<input id="d100Target" type="number" min="1" max="100" inputmode="numeric" placeholder="--"></div>
 <div class="dice-result" id="diceResult">
 <div class="roll-die">// awaiting roll</div>
 </div>
@@ -934,7 +960,7 @@ window.addEventListener('DOMContentLoaded', boot);
 }
 
 const DEFAULTS = {
-status:{hull:100,hullMax:100,hullQuality:'d10',shields:100,shieldsMax:100,shieldsQuality:'d10',fuel:100,fuelMax:100,fuelQuality:'d10'},
+status:{hull:35,hullMax:35,hullQuality:'d10',shields:1,shieldsMax:1,shieldsQuality:'d10',fuel:100,fuelMax:100,fuelQuality:'d10'},   // hull integrity on the sword-class scale (rogue trader ch.8); one void shield, 1 = raised
 location:{name:'',coords:'',date:'6.122.008.M31',notes:''},
 crew:{
 c1:{desc:'Rogue Trader Jude Sparrow',quality:'d10',qty:1},
@@ -1129,7 +1155,7 @@ return fx;
 function renderStatus(v){
 curStatus = Object.assign({}, v);
 let held = false;                   // a field is being edited right now, so it can't be refreshed yet
-['hull','hullMax','shields','shieldsMax','fuel','fuelMax'].forEach(k=>{
+['hull','hullMax','fuel','fuelMax'].forEach(k=>{
 const el=document.getElementById(k);
 if(document.activeElement!==el) el.value = v[k]; else held = true;
 });
@@ -1139,10 +1165,18 @@ if(document.activeElement!==el) fillDieSelect(el, v[k]); else held = true;
 });
 if(held) pendingBlur.set('status', ()=>renderStatus(v)); else pendingBlur.delete('status');
 document.getElementById('hullBar').style.width = Math.min(100,(v.hull/v.hullMax)*100)+'%';
-document.getElementById('shieldsBar').style.width = Math.min(100,(v.shields/v.shieldsMax)*100)+'%';
+const up = Number(v.shields) > 0, tog = document.getElementById('shieldsTog');   // one shield: any value above 0 is raised (older records held 0..100)
+document.getElementById('shieldsPip').classList.toggle('on', up);
+tog.textContent = up ? 'raised' : 'down'; tog.setAttribute('aria-pressed', up ? 'true' : 'false');
 document.getElementById('fuelBar').style.width = Math.min(100,(v.fuel/v.fuelMax)*100)+'%';
+const mj = document.getElementById('hitMajor'), mn = document.getElementById('hitMinor');
+mj.title = hitSize(HIT_MAJOR) + ' hull'; mn.title = hitSize(HIT_MINOR) + ' hull';
 applyHullDamage(v.hull, v.hullMax);
-renderDamageList();
+renderComponents();
+}
+function toggleShield(){
+const up = curStatus && Number(curStatus.shields) > 0;
+dmgWrite({'status/shields': up ? 0 : 1, 'status/shieldsMax': 1});
 }
 function saveStatus(el){
 // Save ONLY the field that changed. Writing every field would let a stale value in some other
@@ -1159,8 +1193,8 @@ dmgWrite({['status/'+el.id]: el.tagName === 'SELECT' ? el.value : +el.value});
 const DMG_RULES = {
   CAP: 12,        // most damages kept; at the cap, new damage worsens an existing one
   MARKS: [0.75, 0.5, 0.25],   // a hit that takes hull below one of these fractions of max always makes a damage (one for each mark crossed)
-  P_MID: 25,      // on top of that, every hit rolls once for one more damage: an s-curve, 50% at P_MID points
-  P_STEEP: 0.184, // chance = 1 / (1 + e^(-(loss - P_MID) * P_STEEP)): 1 point ~1%, 10 ~6%, 25 = 50%, 40 ~94%, 50 = 99%
+  P_MID: 0.25,    // on top of that, every hit rolls once for one more damage: an s-curve, 50% at a hit of P_MID x hull max
+  P_STEEP: 18.4,  // chance = 1 / (1 + e^(-(loss/max - P_MID) * P_STEEP)). on a 35 hull: 1 point ~2%, 4 ~8%, 9 = 50%, 14 ~94%
   WORSEN: 0.5,    // chance that damage worsens an existing one rather than adding a new one
   TYPES: ['breach', 'fire'],   // types a new damage can be. for now only these two; surge, structural and coolant (plasma drive only) still draw if stored
   OFFLINE_AT: 3   // a damage at this severity takes its section offline. it keeps its type: the list names the cause and the wireframe draws it at full size over the dark section
@@ -1176,10 +1210,33 @@ let curStatus = null;                                // last status seen
 let dmgDetached = false;                             // tests: true = nothing here is written to the database
 let dmgArmed = null, dmgArmTimer = null, hullMsgTimer = null;
 
-// sections damage can land in: what the wireframe has fitted, else the ten fixed ones
+// the ship's components (rogue trader ch.8, the most basic type of each), and the wireframe section each sits in.
+// a component shows the damage stored in its section; the four cargo bays share one section and split it by dmgBay
+const COMPONENTS = [
+  {sup:0, type:'jovian 2 plasma drive', at:'plasma'},
+  {sup:0, type:'strelov 1 warp engine', at:'engines'},
+  {sup:0, type:'geller field', at:'engines'},
+  {sup:0, type:'single void shield', at:'defense'},
+  {sup:0, type:'combat bridge', at:'bridge'},
+  {sup:0, type:'m-1.r life sustainer', at:'crew'},
+  {sup:0, type:'voidsmen quarters', at:'crew'},
+  {sup:0, type:'m-100 auger array', at:'prow'},
+  {sup:1, type:'sunsear laser battery', at:'broadside', loc:'broadside'},
+  {sup:1, type:'cargo bay a', at:'cargo', bay:0, loc:'cargo bays'},
+  {sup:1, type:'cargo bay b', at:'cargo', bay:1, loc:'cargo bays'},
+  {sup:1, type:'cargo bay c', at:'cargo', bay:2, loc:'cargo bays'},
+  {sup:1, type:'cargo bay d', at:'cargo', bay:3, loc:'cargo bays'},
+  {sup:1, type:'launch bay', at:'hangar'}
+];
+// which cargo bay (0..3, a..d) a damage in the cargo section is in: from its id, so every device and the wireframe agree
+function dmgBay(id){ let h = 2166136261; for(let i=0;i<id.length;i++){ h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) % 4; }
+window.dmgBay = dmgBay;
+
+// sections damage can land in: what the wireframe has fitted, else the fixed ones; only those with a component, so every damage shows in the list
 function dmgSections(){
-try { if(window.ShipView && ShipView.sections){ const s = ShipView.sections(); if(s && s.length) return s.map(x=>x.id).filter(id=>DMG_SECTIONS[id]); } } catch(e){ /* fall through */ }
-return Object.keys(DMG_SECTIONS).filter(id=>!DMG_UPGRADES[id]);
+const has = id=> DMG_SECTIONS[id] && COMPONENTS.some(c=>c.at === id);
+try { if(window.ShipView && ShipView.sections){ const s = ShipView.sections(); if(s && s.length){ const r = s.map(x=>x.id).filter(has); if(r.length) return r; } } } catch(e){ /* fall through */ }
+return Object.keys(DMG_SECTIONS).filter(id=>!DMG_UPGRADES[id] && has(id));
 }
 
 // one write for hull and damage together, so nobody sees one without the other
@@ -1210,7 +1267,7 @@ Object.keys(dmgRaw.list).forEach(id=>{
 });
 list.sort((a,b)=> b.t - a.t || (a.id < b.id ? 1 : -1));
 dmgState = {list:list, pool:dmgRaw.pool};
-renderDamageList();
+renderComponents();
 }
 
 // rolls what a loss of hull does. pure: returns the new list and pool, and the records that changed
@@ -1221,7 +1278,8 @@ const R = DMG_RULES, list = state.list.map(d=>Object.assign({}, d)), changed = {
 let pool = state.pool || 0, n = 0;
 const pick = a=> a[Math.min(a.length - 1, Math.floor(rng() * a.length))];
 if(max > 0 && isFinite(prev)) R.MARKS.forEach(m=>{ if(prev >= m * max && prev - loss < m * max) n++; });
-if(rng() < 1 / (1 + Math.exp(-(loss - R.P_MID) * R.P_STEEP))) n++;
+const scale = max > 0 ? max : 100;   // the curve is in fractions of hull max, so it holds for any hull size
+if(rng() < 1 / (1 + Math.exp(-(loss / scale - R.P_MID) * R.P_STEEP))) n++;
 if(!n) return {list:list, pool:pool + loss, changed:changed, count:0};
 const total = pool + loss, share = Math.floor(total / n);
 for(let i=0;i<n;i++) parts.push(i ? share : total - share * (n - 1));
@@ -1279,8 +1337,9 @@ hullMsg('// hit -' + (Math.round(loss * 100) / 100) + ' hull // ' + (r.count ? '
 dmgWrite(up);
 return true;
 }
-// incoming damage: major and minor are fixed hits; custom takes the points typed in the field (enter also applies it)
-const HIT_MAJOR = 25, HIT_MINOR = 10;
+// incoming damage: major and minor are a quarter and a tenth of hull max (9 and 4 on a 35 hull); custom takes the points typed in the field (enter also applies it)
+const HIT_MAJOR = 0.25, HIT_MINOR = 0.1;
+function hitSize(f){ const m = curStatus && Number(curStatus.hullMax) > 0 ? Number(curStatus.hullMax) : DEFAULTS.status.hullMax; return Math.max(1, Math.round(m * f)); }
 function hullHit(n){
 const el = document.getElementById('hullHit'), custom = n === undefined, v = custom ? Number(el.value) : n;
 if(custom && (el.value.trim() === '' || !(v > 0))){ hullMsg('// enter damage points'); return; }
@@ -1308,39 +1367,50 @@ function repairTap(id){
 clearTimeout(dmgArmTimer);
 if(dmgArmed === id){ dmgArmed = null; repairDamage(id); return; }
 dmgArmed = id;
-dmgArmTimer = setTimeout(()=>{ dmgArmed = null; renderDamageList(); }, 4000);
-renderDamageList();
+dmgArmTimer = setTimeout(()=>{ dmgArmed = null; renderComponents(); }, 4000);
+renderComponents();
 }
 
-// the damage list under the ship: hull line, then one line per damage, newest first
-function renderDamageList(){
-const el = document.getElementById('sv-warn');
+// the components panel: one row per component, "type // location", with the worst damage in its section (or bay) as its status.
+// tapping a damage asks "repair +n?", a second tap repairs it. tapping the name lights the section on the wireframe.
+function renderComponents(){
+const el = document.getElementById('compList');
 if(!el) return;
-if(holdRender('sv-warn', null, renderDamageList)) return;
-const st = curStatus || {}, hull = Number(st.hull), max = Number(st.hullMax) > 0 ? Number(st.hullMax) : 100;
+if(holdRender('comps', null, renderComponents)) return;
+const st = curStatus || {}, hull = Number(st.hull);
 const known = st.hull !== null && st.hull !== undefined && String(st.hull).trim() !== '' && isFinite(hull);
-const pct = known ? Math.round(Math.max(0, Math.min(1, hull / max)) * 100) : 100, lost = known && hull <= 0;
+document.documentElement.classList.toggle('ship-lost', known && hull <= 0);
 const num = n=> String(Math.round(n * 100) / 100);
-const span = (t, cls)=>{ const s = document.createElement('span'); s.textContent = t; if(cls) s.className = cls; return s; };
-document.documentElement.classList.toggle('ship-lost', lost);
+const short = {breach:'breach', fire:'fire', surge:'surge', offline:'offline', structural:'structural', coolant:'coolant'};
 el.textContent = '';
-if(!dmgState.list.length && !dmgState.pool && !(known && hull < max)) return;
-const hd = document.createElement('div'); hd.className = 'sv-hd';
-if(lost) hd.appendChild(span('// ship lost', 'sv-new'));
-hd.appendChild(span('// hull ' + pct + '%' + (hullLevels.crit > 0 && !lost ? ' // critical' : ''), hullLevels.crit > 0 && !lost ? 'sv-new' : 'sv-dim'));
-if(dmgState.pool) hd.appendChild(span('// unattributed -' + num(dmgState.pool) + ' hull', 'sv-dim'));
-el.appendChild(hd);
-dmgState.list.forEach(d=>{
-  const row = document.createElement('div'), name = document.createElement('button'), rep = document.createElement('button');
-  row.className = 'sv-dl';
-  name.type = 'button'; name.className = 'sv-dn' + (Date.now() - d.t < 8000 ? ' sv-new' : '');
-  name.textContent = '// ' + DMG_SECTIONS[d.section] + ': ' + DMG_TYPES[d.type] + ' (' + DMG_SEV[d.sev] + ')' + (d.sev >= DMG_RULES.OFFLINE_AT && d.type !== 'offline' ? ' // offline' : '') + ' -' + num(d.cost) + ' hull';
-  name.addEventListener('click', ()=>{ if(window.ShipView && ShipView.pick) ShipView.pick(d.section); });
-  rep.type = 'button'; rep.className = 'gc-btn gc-add';
-  rep.textContent = (dmgArmed === d.id ? 'confirm +' : 'repair +') + num(d.cost);
-  rep.setAttribute('aria-pressed', dmgArmed === d.id ? 'true' : 'false');
-  rep.addEventListener('click', ()=>repairTap(d.id));
-  row.appendChild(name); row.appendChild(rep); el.appendChild(row);
+[0, 1].forEach(sup=>{
+  const h = document.createElement('div'); h.className = 'comp-sec'; h.textContent = sup ? '[ supplemental ]' : '[ essential ]'; el.appendChild(h);
+  COMPONENTS.filter(c=>c.sup === sup).forEach(c=>{
+    const ds = dmgState.list.filter(d=> d.section === c.at && (c.bay === undefined || dmgBay(d.id) === c.bay))
+      .sort((a,b)=> b.sev - a.sev || b.t - a.t);
+    const row = document.createElement('div'), name = document.createElement('button'), loc = document.createElement('small');
+    row.className = 'comp-row';
+    name.type = 'button'; name.className = 'comp-n'; name.textContent = c.type;
+    loc.textContent = c.loc || DMG_SECTIONS[c.at]; name.appendChild(loc);
+    name.addEventListener('click', ()=>{ if(window.ShipView && ShipView.pick) ShipView.pick(c.at); });
+    row.appendChild(name);
+    const d = ds[0];
+    if(!d){ const t = document.createElement('span'); t.className = 'comp-t'; t.textContent = 'intact'; row.appendChild(t); }
+    else {
+      const t = document.createElement('button'), off = d.sev >= DMG_RULES.OFFLINE_AT && d.type !== 'offline';
+      t.type = 'button';
+      if(dmgArmed === d.id){ t.className = 'comp-t ask'; t.textContent = 'repair +' + num(d.cost) + '?'; }
+      else {
+        t.className = 'comp-t s' + d.sev + (Date.now() - d.t < 8000 ? ' new' : '');
+        t.textContent = short[d.type] + (off ? ' // off' : '') + (ds.length > 1 ? ' +' + (ds.length - 1) : '');
+      }
+      t.title = DMG_TYPES[d.type] + ' (' + DMG_SEV[d.sev] + ') -' + num(d.cost) + ' hull';
+      t.setAttribute('aria-pressed', dmgArmed === d.id ? 'true' : 'false');
+      t.addEventListener('click', ()=>repairTap(d.id));
+      row.appendChild(t);
+    }
+    el.appendChild(row);
+  });
 });
 }
 
@@ -1491,17 +1561,44 @@ if(window.crypto && window.crypto.getRandomValues){
 return Math.floor(Math.random()*max);
 }
 
+// d100: roll under the target field. 1 always crit success, 100 always crit failure.
+// Degrees (+n / -n) = tens of difference from target. Target goes into verdictText
+// (no new database field, so the rolls rule is unchanged).
+function d100Verdict(roll){
+const f = document.getElementById('d100Target');
+const t = f ? parseInt(f.value, 10) : NaN;
+const has = t >= 1 && t <= 100;
+const vs = has ? ' // VS '+t : '';
+if(roll === 1) return ['crit', 'CRITICAL SUCCESS'+vs];
+if(roll === 100) return ['critfail', 'CRITICAL FAILURE'+vs];
+if(!has) return ['plain', '// no target'];
+const deg = Math.floor(Math.abs(t - roll) / 10);
+return roll <= t ? ['success', 'SUCCESS'+(deg ? ' +'+deg : '')+vs] : ['fail', 'FAILURE'+(deg ? ' -'+deg : '')+vs];
+}
+// d100 button shows two d10 icons (percentile pair), copied from the d10 button.
+(function(){
+const d10 = document.querySelector('.die-btn[onclick="rollDie(10)"] .die-icon');
+if(d10) document.querySelectorAll('.die-pair .die-icon').forEach(i=>{ i.src = d10.src; });
+})();
+
 function rollDie(sides){
 const roll = secureRandomInt(sides)+1;
-const critFail = roll === 1;
-const crit = roll === sides && !critFail;
-const success = roll >= 5;
 const resultEl = document.getElementById('diceResult');
 let verdictText, verdictClass;
-if(critFail){ verdictText = 'CRITICAL FAILURE'; verdictClass = 'critfail'; }
-else if(crit){ verdictText = 'CRITICAL SUCCESS'; verdictClass = 'crit'; }
-else if(success){ verdictText = 'SUCCESS'; verdictClass = 'success'; }
-else { verdictText = 'FAILURE'; verdictClass = 'fail'; }
+if(sides === 100){
+  [verdictClass, verdictText] = d100Verdict(roll);
+} else {
+  const critFail = roll === 1;
+  const crit = roll === sides && !critFail;
+  const success = roll >= 5;
+  if(critFail){ verdictText = 'CRITICAL FAILURE'; verdictClass = 'critfail'; }
+  else if(crit){ verdictText = 'CRITICAL SUCCESS'; verdictClass = 'crit'; }
+  else if(success){ verdictText = 'SUCCESS'; verdictClass = 'success'; }
+  else { verdictText = 'FAILURE'; verdictClass = 'fail'; }
+}
+const critFail = verdictClass === 'critfail';
+const crit = verdictClass === 'crit';
+const success = verdictClass === 'success' || verdictClass === 'plain';
 resultEl.innerHTML =
   '<div class="roll-die">d'+sides+' roll</div>'+
   '<div class="roll-num">'+roll+'</div>'+
@@ -2268,6 +2365,14 @@ el.appendChild(d);
   var VSV = 'attribute float aS; attribute float aE; attribute float aPh; attribute float aSp; attribute vec3 aDir; uniform vec4 uHit[12]; uniform vec4 uFx[12]; uniform vec4 uVent[12]; uniform float uT; varying float vA; void main(){ ' + PICKSLOT + 'float t = fract(uT * aSp + aPh); vec3 dir = normalize(vd.xyz + aDir * 0.45); vec3 p = h.xyz + dir * (h.w * 0.3 + t * vd.w + aE * 0.1 * (1.0 - t * 0.6)); vA = step(0.01, vd.w) * step(0.5, f.x) * step(0.05, h.w) * (1.0 - t) * 0.9; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0); }';
   var FSV = 'uniform vec3 uCol; varying float vA; void main(){ if (vA <= 0.01) discard; gl_FragColor = vec4(uCol, vA); }';
   function clearSlot(i) { slot[i] = null; tgt[i] = 0; twT[i] = 0; twB[i] = 0; HITS.value[i].set(0, 0, 0, 0); FX.value[i].set(0, 0, 0, 0); OFF.value[i].set(0, 0, 0); VENT.value[i].set(0, 1, 0, 0); }
+  // the cargo section split stern to bow into four equal lengths: bay 0 (a) aftmost, bay 3 (d) foremost
+  function bayPts(pts, b) {
+    var lo = Infinity, hi = -Infinity, out = [], j, x;
+    for (j = 0; j < pts.length; j++) { x = pool[pts[j] * 3]; if (x < lo) lo = x; if (x > hi) hi = x; }
+    var w = (hi - lo) / 4 || 1, a = lo + w * b, z = a + w;
+    for (j = 0; j < pts.length; j++) { x = pool[pts[j] * 3]; if (x >= a && (x < z || b === 3)) out.push(pts[j]); }
+    return out.length ? out : pts;
+  }
   // puts damage d in slot i, at a place inside its section worked out from its id: the same on every device
   function place(i, d) {
     var c = null, pts, v = HITS.value[i], k, y, z, l;
@@ -2275,6 +2380,7 @@ el.appendChild(d);
     slot[i] = { id: d.id, section: d.section, sev: 0, type: '', sec: c ? c.n : -5, on: !!c };   // a section that is not fitted is listed but not drawn
     if (!c) return;
     pts = secPts[c.n];
+    if (pts && pts.length && d.section === 'cargo' && window.dmgBay) pts = bayPts(pts, window.dmgBay(d.id));   // keep a cargo damage inside its own bay, as the components list names it
     if (pts && pts.length) { k = pts[hashId(d.id) % pts.length] * 3; v.set(pool[k], pool[k + 1], pool[k + 2], 0.001); } else v.set(c.p.x, c.p.y, c.p.z, 0.001);
     y = v.y; z = v.z; l = Math.sqrt(y * y + z * z); if (l < 0.05) { y = 1; z = 0; l = 1; }
     VENT.value[i].set(0.15, y / l, z / l, 0); l = Math.sqrt(0.0225 + 1); VENT.value[i].x /= l; VENT.value[i].y /= l; VENT.value[i].z /= l;   // vents outward from the ship's axis
@@ -2518,7 +2624,7 @@ el.appendChild(d);
   // hull breach (dark ragged patch, bright rim, venting when serious), fire (flare and sparks), power surge (edges drop out), system offline (section dark, pulsing),
   // structural (section twitches), coolant leak (venting dashes; plasma drive only). severity 1..3 makes each larger.
   // the hull level (hullLevels: dmg and crit, 0..1; or the ShipView.debugHull override) only sets the mood: shake on a hit, flicker, tear bars, the scan sweep.
-  // at hull 0 the ship is lost: everything goes dark. the list of damages under the view is drawn by renderDamageList in the first script.
+  // at hull 0 the ship is lost: everything goes dark. the damages themselves are listed in the components panel (renderComponents in the first script).
   function levels() { return dbg || (typeof hullLevels !== 'undefined' && hullLevels ? hullLevels : null); }
   function source() { return inj || (typeof dmgState !== 'undefined' && dmgState && dmgState.list ? dmgState.list : []); }
   function damage(dt) {
@@ -3432,9 +3538,19 @@ el.appendChild(d);
   }
   function parseBody(s) { var q = s.split('|'), k = q[1] || 'r'; return { name: q[0], type: HOME[q[0]] || (k === 'g' ? 'gas giant' : (k === 'b' ? 'asteroid belt' : 'rock world')), moons: q[2] ? q[2].split(',') : [], note: q[3] || NOTE[q[0]] || '' }; }
   function placeStar(id) { return saved['p:' + id] ? saved['p:' + id].star : (SYS[id][0] || genStarName(hashStr('p:' + id))); }
+  // every star (local field '#' keys and named 'n:' stars) gets a fixed system worked out from its key on
+  // demand; nothing is stored until someone edits or rerolls it. Cache holds only stars actually looked at.
+  var auto = {};
+  function autoDef(key) {
+    if (auto[key]) return auto[key];
+    if (key.slice(0, 2) !== 'n:' && key.indexOf('#') < 1) return null;   // 'v:' grid points are not stars
+    var h = hashStr(key), d = genSystem(starLabel(key), genClass(h), hashStr('sys:' + key));
+    d.bodies.forEach(function (b) { b.note = 'auspex return // ' + b.note; });
+    return (auto[key] = d);
+  }
   function sysDef(key) {
     if (saved[key]) return saved[key];
-    if (key.slice(0, 2) !== 'p:') return null;
+    if (key.slice(0, 2) !== 'p:') return autoDef(key);
     var id = key.slice(2), d = SYS[id]; if (!d) return null;
     return canon[id] || (canon[id] = fillDef(id, { star: d[0] || genStarName(hashStr(key)), cls: CLS[id] || genClass(hashStr(key)), note: '', bodies: d[1].map(parseBody) }));
   }
@@ -3760,9 +3876,10 @@ el.appendChild(d);
   function sysControls(key) {
     var row = $('gc-sysctl'); if (!key) { row.hidden = true; $('gc-bCfg').hidden = true; return; }
     var isPlace = key.slice(0, 2) === 'p:', has = !!saved[key];
-    $('gc-bGen').hidden = isPlace; if (armed !== 'gc-bGen') $('gc-bGen').textContent = has ? 'regenerate' : 'generate system';
-    $('gc-bCfg').hidden = false; $('gc-bCfg').textContent = (has || isPlace) ? 'edit record' : 'configure';   // sits on the view / move row
-    $('gc-bErase').hidden = !has; if (armed !== 'gc-bErase') $('gc-bErase').textContent = isPlace ? 'restore record' : 'erase record';
+    var star = !isPlace && !!sysDef(key);   // a star with an on-demand survey
+    $('gc-bGen').hidden = isPlace; if (armed !== 'gc-bGen') $('gc-bGen').textContent = star ? 'regenerate' : 'generate system';
+    $('gc-bCfg').hidden = false; $('gc-bCfg').textContent = (has || isPlace || star) ? 'edit record' : 'configure';   // sits on the view / move row
+    $('gc-bErase').hidden = !has; if (armed !== 'gc-bErase') $('gc-bErase').textContent = (isPlace || star) ? 'restore record' : 'erase record';
     row.hidden = isPlace && !has;   // nothing left in this row for an unedited lore system
   }
   function fillTarget(title, sub, text, reg, shipTxt, hideMove, viewTxt) {
@@ -3773,7 +3890,7 @@ el.appendChild(d);
   var REG = {};
   function starTarget(s) {
     var def = sysDef(s.key), w = worldOf(s), on = ship.star === s.key;
-    fillTarget(starName(s), def ? 'surveyed // ' + def.cls : 'uncharted star // ' + genClass(hashStr(s.key)),
+    fillTarget(starName(s), def ? (saved[s.key] ? 'surveyed // ' : 'auspex return // ') + def.cls : 'uncharted star // ' + genClass(hashStr(s.key)),
       def ? (def.bodies.length + (def.bodies.length === 1 ? ' body' : ' bodies') + ' on record' + (def.note ? ' // ' + def.note : '')) : 'no survey on record.',
       'local group: ' + focus.name, on ? (ship.body ? 'ship in system' : 'ship on station') : ly(w.distanceTo(shipP)), on && !ship.body, def && tier === 1 ? 'view system' : 'view');
     sysControls(s.key);
@@ -3819,7 +3936,7 @@ el.appendChild(d);
   $('gc-bErase').addEventListener('click', function () {
     var s = currentStar(); if (!s || !saved[s.key]) return;
     if (!confirmArm('gc-bErase')) return;
-    delete saved[s.key]; saveSystems(); afterSystemChange(s); status('// record struck');
+    delete saved[s.key]; saveSystems(); afterSystemChange(s); status(sysDef(s.key) ? '// record restored' : '// record struck');
   });
   var editStar = null;
   function addRow(b, into) {   // into: a container for a single fixed row (object edit); default is the system form's list
