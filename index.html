@@ -439,6 +439,7 @@ a.gc-btn{display:inline-flex;align-items:center;text-decoration:none}
 .gc-sw.gc-p0{background:repeating-linear-gradient(45deg,rgba(57,255,107,.28) 0 2px,rgba(57,255,107,.04) 2px 6px)}
 .gc-sw.gc-p1{background:rgba(57,255,107,.16)}
 .gc-sw.gc-p2{background:radial-gradient(rgba(57,255,107,.28) 1.2px,rgba(57,255,107,.04) 1.6px) 0 0/6px 6px}
+.gc-sw.gc-ruin{border:1px dashed var(--green);background:none}   /* the ruinstorm: an outline, not a fill */
 .gc-sw.gc-p3{background:linear-gradient(rgba(57,255,107,.28) 1px,transparent 1px) 0 0/6px 6px,linear-gradient(90deg,rgba(57,255,107,.28) 1px,rgba(57,255,107,.04) 1px) 0 0/6px 6px}
 
 #gc-root [hidden]{display:none!important}
@@ -455,6 +456,8 @@ a.gc-btn{display:inline-flex;align-items:center;text-decoration:none}
 #gc-root input[type=range]{border:0;padding:0;box-shadow:none}
 #gc-root{margin-bottom:var(--gap)}
 .gc-ovl{align-items:center;margin-top:.6rem;padding-top:.5rem;border-top:1px dashed var(--border)}
+#gc-jumpLy{width:6rem;max-width:6rem}
+#gc-jumpInfo{margin:.3rem 0 0}
 .gc-ovl+.gc-ovl{margin-top:.35rem;padding-top:0;border-top:0}   /* systems // sits right under overlays // */
 
 #gc-root #locDate{text-transform:none;max-width:12rem}
@@ -633,10 +636,11 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
     <div class="gc-keybox" id="gc-key" hidden>
       <span class="gc-dim gc-sm">dominions //</span>
       <ul class="gc-key">
-        <li><span class="gc-sw gc-p0"></span>warmaster</li>
+        <li><span class="gc-sw gc-p0"></span>traitor held</li>
         <li><span class="gc-sw gc-p1"></span>imperial</li>
-        <li><span class="gc-sw gc-p2"></span>unaligned</li>
+        <li><span class="gc-sw gc-p2"></span>contested</li>
         <li><span class="gc-sw gc-p3"></span>xenos</li>
+        <li><span class="gc-sw gc-ruin"></span>ruinstorm</li>
       </ul>
     </div>
     <p id="gc-status">// drag: turn // pinch: zoom // 2 fingers: slide</p>
@@ -736,6 +740,16 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
     <div class="gc-ctl">
       <button class="gc-btn gc-add" id="gc-bPlace" type="button" aria-pressed="false">set position on chart</button>
       <button class="gc-btn" id="gc-bShipFly" type="button">view ship</button>
+      <button class="gc-btn gc-add" id="gc-bJump" type="button" aria-pressed="false">jump planner</button>
+    </div>
+    <div id="gc-jump" hidden>
+      <div class="gc-ctl">
+        <span class="gc-dim gc-sm">range //</span>
+        <input type="number" id="gc-jumpLy" min="1" max="75000" step="1" inputmode="numeric" placeholder="ly" aria-label="jump range in light years">
+        <button class="gc-btn" id="gc-jumpGo" type="button">show</button>
+        <button class="gc-btn" id="gc-jumpOff" type="button">clear</button>
+      </div>
+      <p class="gc-dim gc-sm" id="gc-jumpInfo"></p>
     </div>
     </div>
   </div>
@@ -3074,15 +3088,21 @@ el.appendChild(d);
   var segOn = true, SEG_W = SEG_LINES.map(function (L) { return L.map(function (q) { return V(q[0], q[1], 0); }); });
   (function () { var ring = [], j, t; for (j = 0; j <= 120; j++) { t = j / 120 * Math.PI * 2; ring.push(new THREE.Vector3(SOL.x + 10.4 * Math.cos(t), 0, SOL.z + 10.4 * Math.sin(t))); } SEG_W.push(ring); })();   // the solar ring
 
-  // dominions: one green, told apart by hatch. 0 warmaster (diagonal), 1 imperial (flat), 2 unaligned (dots), 3 xenos (grid)
-  // blobs sit on the same worlds as before at their map positions (isstvan, chemos, olympia, prospero, ullanor, colchis, barbarus, nostramo //
-  // sol, inwit, calth, nuceria, baal, nocturne, chogoris, fenris, medusa, deliverance, caliban); unaligned and xenos on the map's outer regions
+  // dominions at 008.M31 (about a year after isstvan v): five plain kinds, one green, told apart by hatch.
+  // 0 traitor held (diagonal), 1 imperial (flat), 2 contested (dots), 3 xenos (grid); the ruinstorm is a dashed outline (RUIN, drawDom).
+  // shapes follow heresy canon (traitors round isstvan, terra holding, war in ultramar, signus, beta-garmon, phall, caliban); every edge is an estimate (tier 4).
+  // ghoul and halo stars as xenos: 40k lore read back (tier 2). worlds outside every zone are undeclared or out of contact
   var DOMS = [
-    { blobs: [[-7.3, 33.1, 13], [-7.4, -6.6, 10], [11.1, 2.5, 9], [-12.4, 0.4, 10], [-13.0, 8.0, 6], [-41.3, 8.3, 6], [-28.7, -25.4, 5], [24.0, 23.3, 7]], labels: [[-6.3, 39.1, 'warmaster']] },
-    { blobs: [[-26.0, 0.0, 13], [-20.0, -11.5, 9], [20.9, -20.2, 12], [30.0, -13.0, 8], [1.3, 13.9, 6], [-1.5, -14.1, 6], [2.6, -7.2, 6], [-19.6, 7.7, 4], [-36.5, 15.6, 4], [-14.0, -23.2, 5], [-30.1, 18.1, 4]], labels: [[-27.0, -10.0, 'imperial']] },
-    { blobs: [[-48.9, -5.8, 10], [-42.3, -22.1, 9], [-22.2, -32.4, 12], [-0.8, -33.0, 12], [18.5, -31.2, 9], [-44.0, 17.1, 6]], labels: [[-46.3, -14.4, 'unaligned'], [-4.7, -34.8, 'unaligned']] },
-    { blobs: [[33.0, 27.8, 8], [4.7, -19.8, 7], [-43.3, 30.7, 8], [-0.2, 36.4, 6], [0.0, 0.0, 7], [41.5, -12.8, 5]], labels: [[33.6, 30.7, 'ghoul stars // xenos'], [4.8, -22.2, 'charadon // orks'], [-43.3, 32.7, 'halo stars // xenos'], [0.1, -4.1, 'core wilds // xenos']] }
+    { blobs: [[-7.3, 33.1, 7], [-2.5, 30.5, 5.5], [-11.5, 29, 4.5], [-9, 24.5, 4], [11.1, 2.5, 3.5], [-7.4, -6.6, 3]], labels: [[-5.5, 39.5, 'traitor held']] },
+    { blobs: [[-26, 0, 11], [-20, -11.5, 5], [-14, -23.2, 4], [-19.6, 7.7, 4], [-36.5, 15.6, 4], [1.3, 13.9, 4], [-1.5, -14.1, 4], [2.6, -7.2, 4]], labels: [[-26, -12, 'imperial']] },
+    { blobs: [[21, -21.5, 4.5], [18.5, -24, 3], [24.5, -19, 3], [36.8, 1.6, 4], [-20, -3, 2.5], [3, 15, 2.5], [-30.1, 18.1, 3]], labels: [[21.5, -27.5, 'contested']] },
+    { blobs: [[35, 29, 6], [40, 23, 4], [4.7, -20, 4.5], [-44, 33, 5.5]], labels: [[35.5, 33, 'unknown xenos'], [4.8, -23.5, 'orks'], [-44, 37, 'mixed xenos']] }   // ghoul stars / charadon / halo stars
   ];
+  // the ruinstorm: raised after calth, it cuts the galaxy in two and seals the east off from terra (ultramar, signus and baal inside).
+  // a dashed outline over the eastern half, west edge through the core; it is new at 008 and spreads ~009-011. edge estimated (tier 4)
+  // drawn as a storm: a rough circle centred on calth, where it was raised (user's choice), its rim wobbled by a few waves. radius ~26k ly takes in ultramar and signus
+  var RUIN = (function () { var c = byId.calth.p, ce = c.x, cn = -c.z, pts = [], k, t, r; for (k = 0; k < 72; k++) { t = k / 72 * Math.PI * 2;
+    r = 26 * (1 + 0.09 * Math.sin(3 * t + 1.1) + 0.06 * Math.sin(5 * t + 2.3) + 0.035 * Math.sin(11 * t + 0.4)); pts.push([ce + r * Math.cos(t), cn + r * Math.sin(t)]); } return pts; })();
   var domMesh = (function () {
     // each dominion is a soft field baked into one channel of a small texture; the shader finds the edge,
     // so borders stay sharp at any zoom, and the hatch is drawn in screen pixels.
@@ -3175,6 +3195,7 @@ el.appendChild(d);
   var shipItem = makeItem({ name: ship.name, side: 't', cls: 'gc-ship', p: shipP, id: 'ship', ship: true, lead: true, onTap: function () { flyTo(shipP, 60); } });
   PLACES.forEach(function (pl) { makeItem({ name: pl.name, side: pl.side, p: pl.p, id: pl.id, group: pl.group, lead: true, onTap: function () { openPlace(pl.id, false); } }); });
   DOMS.forEach(function (D) { D.labels.forEach(function (Lb) { makeItem({ name: Lb[2], side: 'c', cls: 'gc-static gc-dom', p: V(Lb[0], Lb[1], 0), group: 'dom' }); }); });
+  makeItem({ name: 'ruinstorm', side: 'c', cls: 'gc-static gc-dom', p: V(30, 0, 0), group: 'dom' });
   SEG_LABELS.forEach(function (Lb) { makeItem({ name: Lb[2], side: 'c', cls: 'gc-static gc-seg', p: V(Lb[0], Lb[1], 0), group: 'seg' }); });
   REG_LABELS.forEach(function (Lb) { makeItem({ name: Lb[2], side: 'c', cls: 'gc-static gc-reg', p: V(Lb[0], Lb[1], 0), group: 'seg' }); });
   ARMS.forEach(function (A) { var q = armPoint(A.rs, A.label); makeItem({ name: A.name, side: 'c', cls: 'gc-static gc-guide', p: V(q[0], q[1], 0), group: 'guides' }); });
@@ -3500,9 +3521,19 @@ el.appendChild(d);
     });
     ictx.setLineDash([]); ictx.lineDashOffset = 0;
   }
+  // dominions (galaxy view, with the overlay): the ruinstorm's dashed outline
+  function scr(p) { v3.copy(p).applyMatrix4(camera.matrixWorldInverse); if (v3.z > -0.05) return null; v3.applyMatrix4(camera.projectionMatrix); return [(v3.x * 0.5 + 0.5) * W, (-v3.y * 0.5 + 0.5) * H]; }
+  function drawDom(now) {
+    if (!domMesh.visible || tier !== 0) return;
+    var pts = RUIN.map(function (q) { return scr(V(q[0], q[1], 0)); });
+    if (pts.some(function (p) { return !p; })) return;
+    ictx.strokeStyle = 'rgba(57,255,107,.9)'; ictx.lineWidth = 1.5; ictx.setLineDash([3, 3]); ictx.lineDashOffset = calm ? 0 : -(now / 300) % 6;
+    ictx.beginPath(); ictx.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(function (p) { ictx.lineTo(p[0], p[1]); }); ictx.closePath(); ictx.stroke();
+    ictx.setLineDash([]); ictx.lineDashOffset = 0;
+  }
   function layout(now) {
     ictx.setTransform(DPR, 0, 0, DPR, 0, 0); ictx.clearRect(0, 0, W, H);
-    drawBorders(now);
+    drawBorders(now); drawDom(now);
     placed.length = 0; placed.push([0, 0, W, 26]);
     for (var i = 0; i < items.length; i++) {
       var it = items[i], vis = it.on && it.tier === tier;
@@ -3645,7 +3676,7 @@ el.appendChild(d);
     if (!g) return def;
     def.bodies.forEach(function (b) { used[b.name] = 1; });
     for (h = hashStr('gen:' + id), k = 0; k < 80; k++) {
-      pool = genSystem(def.star, def.cls, h + k).bodies.filter(function (b) { return !used[b.name]; });
+      pool = genSystem(def.star, def.cls, h + k, xenoCtx('p:' + id)).bodies.filter(function (b) { return !used[b.name]; });
       if (pool.length >= g[0] + g[1]) break;
     }
     pool.forEach(function (b) { b.note = 'auspex return // ' + b.note; });
@@ -3803,7 +3834,7 @@ el.appendChild(d);
     if (hk === 'compliance') hk = 'compliance ' + (800 + Math.floor(R() * 200)) + '.m30';
     return (s ? s + ' // ' : '') + hk;
   }
-  function genSystem(star, cls, sd) {
+  function genSystem(star, cls, sd, ctx) {   // ctx: where the star is, for the xenos roll (xenoCtx); none = base rates
     var R = mkRnd(sd), odd = /hole|neutron|pulsar|wolf|proto/.test(cls), n = odd ? Math.floor(R() * 4) : 1 + Math.floor((R() + R()) * 5), used = {}, bodies = [];
     if (!odd && R() < 0.07) n += 3;
     var stem = star.replace(/^the /, '').replace(/^(saint|lord|captain|magos|old) /, '').split('\'s')[0];
@@ -3819,7 +3850,42 @@ el.appendChild(d);
       bodies.push({ name: name, type: type, moons: moons, note: bodyNote(R, type) });
     }
     for (var i = 0; i < n; i++) one(i);
-    return { star: star, cls: cls, note: R() < 0.4 ? pick(R, SYSNOTE) : '', bodies: bodies };
+    var out = { star: star, cls: cls, note: R() < 0.4 ? pick(R, SYSNOTE) : '', bodies: bodies };
+    xenoRoll(bodies, sd, ctx);
+    return out;
+  }
+  // ---- xenos infestation: a small seeded chance per generated planet, its own random stream so nothing else about the star changes ----
+  // base chance by planet type, times a regional multiplier (xenoCtx); species weighted by best guess of how common each is in 008.M31.
+  // heresy canon: orks, hrud, aeldari, khrave, dark eldar, rangdan. read back from 40k (tier 2): necrontyr, slaugth, tarellians. none of the 41st-millennium races
+  var XHAB = /civilised|hive|agri|feral|feudal|death|jungle|ocean|desert|shrine|knight|fortress|pleasure|cemetery|penal|war world|forge|quarantined/,
+      XLOW = /giant|dwarf|belt|debris|station|hulk|shattered/, XNONE = /xenos world|tomb world|maiden world|daemon world/;
+  var XSP = ['ork', 38, 'unknown xenos', 14, 'hrud', 12, 'aeldari', 10, 'khrave', 6, 'dark eldar', 5, 'necrontyr', 5, 'rangdan', 4, 'slaugth', 3, 'tarellian', 3];
+  var XSP_HALO = ['ork', 15].concat(XSP.slice(2));   // the halo stars: a broader mix
+  var XSEV = ['traces', 50, 'infestation', 35, 'overrun', 15];
+  function xenoRoll(bodies, sd, ctx) {
+    var R = mkRnd(sd ^ 0x5bd1e995), mult = ctx ? ctx.mult : 1, zone = ctx ? ctx.zone : null;
+    bodies.forEach(function (b) {
+      var t = b.type, base = XNONE.test(t) ? 0 : (XHAB.test(t) ? 0.05 : (XLOW.test(t) ? 0.01 : 0.02)), sp;
+      if (!(R() < base * mult)) return;
+      if (zone === 'charadon' && R() < 0.8) sp = 'ork';
+      else if (zone === 'ghoul' && R() < 0.5) sp = 'unknown xenos';
+      else sp = wpick(R, zone === 'halo' ? XSP_HALO : XSP);
+      b.note = (b.note ? b.note + ' // ' : '') + sp + ' ' + wpick(R, XSEV);
+    });
+  }
+  // where a star is, for the xenos roll: segmentum solar x0.3, beyond the rims x2, inside a xenos region x4 with its own species mix
+  var RIMS = { 'northern rim': 1, 'ghoul stars': 1, 'eastern fringe': 1, 'veiled region': 1 }, XZONE = ['ghoul', 'ghoul', 'charadon', 'halo'];
+  function xenoCtx(key) {
+    if (!key) return null;
+    var id = key.slice(0, 2) === 'p:' ? key.slice(2) : (key.slice(0, 2) === 'n:' ? 'sol' : key.split('#')[0]), pl = byId[id], p, q, mult = 1, zone = null, i, b;
+    if (pl) p = pl.p;
+    else if (id.slice(0, 2) === 'v:') { q = id.split(':').map(parseFloat); if (!isFinite(q[1]) || !isFinite(q[2])) return null; p = V(q[1], q[2], 0); }
+    else return null;
+    for (i = 0; i < DOMS[3].blobs.length; i++) { b = DOMS[3].blobs[i]; if (Math.hypot(p.x - b[0], -p.z - b[1]) < b[2]) { zone = XZONE[i]; break; } }
+    if (zone) mult = 4;
+    else if (Math.hypot(p.x - SOL.x, p.z - SOL.z) < 10.4) mult = 0.3;
+    else if (pl && RIMS[pl.region]) mult = 2;
+    return { mult: mult, zone: zone };
   }
 
   // ---------------- saved systems (this browser; hooks at the bottom for firebase) ----------------
@@ -3852,7 +3918,7 @@ el.appendChild(d);
   function autoDef(key) {
     if (auto[key]) return auto[key];
     if (key.slice(0, 2) !== 'n:' && key.indexOf('#') < 1) return null;   // 'v:' grid points are not stars
-    var h = hashStr(key), d = genSystem(starLabel(key), genClass(h), hashStr('sys:' + key));
+    var h = hashStr(key), d = genSystem(starLabel(key), genClass(h), hashStr('sys:' + key), xenoCtx(key));
     d.bodies.forEach(function (b) { b.note = 'auspex return // ' + b.note; });
     return (auto[key] = d);
   }
@@ -4149,6 +4215,48 @@ el.appendChild(d);
     flyTo(shipP, 20);
   }
 
+  // ---- jump planner: a wireframe sphere of the chosen range round the ship (galaxy and local views) ----
+  // travel times from the campaign fit of the time displacement table (docs/CAMPAIGN.md): hours per ly, warp 0.024-0.096, real 0.72-4.32
+  var jumpR = 0;
+  var jumpGeo = (function () {
+    var p = [], i, j, a, b, la, lo, N = 48;
+    for (i = -2; i <= 2; i++) { la = i * Math.PI / 6; for (j = 0; j < N; j++) { a = j / N * 2 * Math.PI; b = (j + 1) / N * 2 * Math.PI;   // latitude rings
+      p.push(Math.cos(la) * Math.cos(a), Math.sin(la), Math.cos(la) * Math.sin(a), Math.cos(la) * Math.cos(b), Math.sin(la), Math.cos(la) * Math.sin(b)); } }
+    for (i = 0; i < 6; i++) { lo = i * Math.PI / 6; for (j = 0; j < N; j++) { a = j / N * 2 * Math.PI; b = (j + 1) / N * 2 * Math.PI;   // meridians
+      p.push(Math.cos(a) * Math.cos(lo), Math.sin(a), Math.cos(a) * Math.sin(lo), Math.cos(b) * Math.cos(lo), Math.sin(b), Math.cos(b) * Math.sin(lo)); } }
+    var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); return g;
+  })();
+  var jumpMat = new THREE.LineBasicMaterial({ color: 0x39ff6b, transparent: true, opacity: 0.55, depthTest: false });
+  var jumpG = new THREE.LineSegments(jumpGeo, jumpMat), jumpL = new THREE.LineSegments(jumpGeo.clone(), jumpMat);
+  jumpG.visible = jumpL.visible = false; jumpG.renderOrder = jumpL.renderOrder = 5; jumpG.frustumCulled = jumpL.frustumCulled = false; scene.add(jumpG);
+  function jumpSync() {   // each frame: keep the sphere on the ship, in whichever view is showing
+    jumpG.visible = jumpR > 0 && tier === 0;
+    if (jumpG.visible) { jumpG.position.copy(shipP); jumpG.scale.setScalar(jumpR / 1000); }
+    jumpL.visible = jumpR > 0 && tier === 1 && !!sceneL && !!focus;
+    if (jumpL.visible) { if (jumpL.parent !== sceneL) sceneL.add(jumpL); jumpL.position.copy(shipP).sub(focus.p).multiplyScalar(1000); jumpL.scale.setScalar(jumpR); }
+  }
+  function span(h) {   // hours, said plainly
+    if (h < 1) return Math.max(1, Math.round(h * 60)) + ' min';
+    if (h < 48) return Math.round(h) + ' hrs';
+    var d = h / 24; if (d < 14) return Math.round(d) + ' days';
+    if (d < 90) return Math.round(d / 7) + ' weeks';
+    if (d < 730) return Math.round(d / 30) + ' months';
+    return Math.round(d / 365) + ' years';
+  }
+  function showJump(ly) {
+    jumpR = ly;
+    $('gc-jumpInfo').textContent = 'warp ' + span(ly * 0.024) + ' - ' + span(ly * 0.096) + ' // real ' + span(ly * 0.72) + ' - ' + span(ly * 4.32);
+    if (ly * 3 <= 1900) { var f = shipFocus(); goLocal(f, Math.max(60, ly * 3)); refreshTierShip(); if (shipItemL.on) goal.target.copy(shipItemL.p); }   // short jumps read best in the local view
+    else { if (tier !== 0) { goGalaxy(); cur.radius = goal.radius = 20; } goal.target.copy(shipP); goal.radius = Math.max(2.2, ly / 1000 * 3); clampGoal(); }
+    status('// jump range ' + ly.toLocaleString('en-US') + ' ly');
+  }
+  function clearJump() { jumpR = 0; $('gc-jumpInfo').textContent = ''; status(''); }
+  $('gc-bJump').addEventListener('click', function () { var on = toggle(this); $('gc-jump').hidden = !on; if (on) $('gc-jumpLy').focus(); else clearJump(); });
+  function goJump() { var v = Math.round(+$('gc-jumpLy').value); if (!(v > 0)) { status('// enter a range in ly'); return; } showJump(Math.min(75000, v)); }
+  $('gc-jumpGo').addEventListener('click', goJump);
+  $('gc-jumpLy').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); goJump(); } });
+  $('gc-jumpOff').addEventListener('click', function () { $('gc-jumpLy').value = ''; clearJump(); });
+
   // ---- selection: stars and bodies ----
   function setSelStar(s) {
     selStar = s; if (!s) { selItem.on = false; return; }
@@ -4239,7 +4347,7 @@ el.appendChild(d);
   $('gc-bGen').addEventListener('click', function () {
     var s = currentStar(); if (!s || s.place) return;
     if (saved[s.key] && !confirmArm('gc-bGen')) return;
-    saved[s.key] = genSystem(starName(s), saved[s.key] ? saved[s.key].cls : genClass(hashStr(s.key)), (Math.random() * 4294967296) | 0);
+    saved[s.key] = genSystem(starName(s), saved[s.key] ? saved[s.key].cls : genClass(hashStr(s.key)), (Math.random() * 4294967296) | 0, xenoCtx(s.key));
     saveSystems(); afterSystemChange(s); status('// survey logged // ' + saved[s.key].bodies.length + ' bodies');
   });
   $('gc-bErase').addEventListener('click', function () {
@@ -4749,6 +4857,7 @@ el.appendChild(d);
     var sp = Math.sin(cur.phi);
     camera.position.set(cur.target.x + cur.radius * sp * Math.sin(cur.theta), cur.target.y + cur.radius * Math.cos(cur.phi), cur.target.z + cur.radius * sp * Math.cos(cur.theta));
     camera.lookAt(cur.target);
+    jumpSync();
     renderer.render(tier === 0 ? scene : (tier === 1 ? sceneL : sceneS), camera);
     footer();
     layout(now);
@@ -4768,6 +4877,13 @@ el.appendChild(d);
   };
   api.flyTo = function (id) { if (byId[id]) openPlace(id, true); };
   api.vizState = function () { return viz ? viz.state() : null; };
+  // testing: share of n generated systems round a place (or 'n:' / 'v:' key) with at least one xenos note, and the species seen
+  api.xenoTest = function (key, n) {
+    var ctx = xenoCtx(key), hit = 0, seen = {}, i;
+    for (i = 0; i < (n || 2000); i++) { var d = genSystem('test', 'yellow dwarf', hashStr(key + '#' + i), ctx), any = false;
+      d.bodies.forEach(function (b) { var m = / \/\/ ([a-z ]+) (traces|infestation|overrun)$/.exec(b.note); if (m) { any = true; seen[m[1]] = (seen[m[1]] || 0) + 1; } }); if (any) hit++; }
+    return { ctx: ctx, share: +(hit / (n || 2000)).toFixed(3), species: seen };
+  };
   api.getSystems = function () { return JSON.parse(JSON.stringify(saved)); };
   api.setSystems = function (o) { saved = loadSystems(o); saveSystems(true); afterSystemChange(sysCtx ? sysCtx.star : null); };
   window.GalChart = api;
