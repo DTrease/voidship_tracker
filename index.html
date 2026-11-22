@@ -3213,7 +3213,10 @@ el.appendChild(d);
   var shipItem = makeItem({ name: ship.name, side: 't', cls: 'gc-ship', p: shipP, id: 'ship', ship: true, lead: true, onTap: function () { flyTo(shipP, 60); } });
   PLACES.forEach(function (pl) { makeItem({ name: pl.name, side: pl.side, p: pl.p, id: pl.id, group: pl.group, lead: true, onTap: function () { openPlace(pl.id, false); } }); });
   DOMS.forEach(function (D) { D.labels.forEach(function (Lb) { makeItem({ name: Lb[2], side: 'c', cls: 'gc-static gc-dom', p: V(Lb[0], Lb[1], 0), group: 'dom' }); }); });
-  makeItem({ name: 'ruinstorm', side: 'c', cls: 'gc-static gc-dom', p: V(30, 0, 0), group: 'dom' });
+  (function () {   // the ruinstorm's label sits on its own rim at the bottom right (the most south-easterly point, just outside), so it is clear which line it names
+    var se = RUIN[0]; RUIN.forEach(function (q) { if (q[0] - q[1] > se[0] - se[1]) se = q; });
+    makeItem({ name: 'ruinstorm', side: 'c', cls: 'gc-static gc-dom', p: V(se[0] + 1, se[1] - 1, 0), group: 'dom' });
+  })();
   makeItem({ name: 'xersinia prohibited zone', side: 'c', cls: 'gc-static gc-dom', p: V(CORDON_C[0], CORDON_C[1], 0), group: 'dom' });
   SEG_LABELS.forEach(function (Lb) { makeItem({ name: Lb[2], side: 'c', cls: 'gc-static gc-seg', p: V(Lb[0], Lb[1], 0), group: 'seg' }); });
   REG_LABELS.forEach(function (Lb) { makeItem({ name: Lb[2], side: 'c', cls: 'gc-static gc-reg', p: V(Lb[0], Lb[1], 0), group: 'seg' }); });
