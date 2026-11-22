@@ -270,6 +270,9 @@ button.comp-t{cursor:pointer}
 .comp-t.s2{border:1px solid var(--green);color:var(--hi);background:rgba(57,255,107,.16)}
 .comp-t.s3{border:1px solid var(--green);color:var(--hi);background:rgba(57,255,107,.28);box-shadow:0 0 6px rgba(57,255,107,.5);animation:blink 1.2s steps(1) infinite}
 .comp-t.ask{border:1px dashed var(--green);color:var(--green);background:none;box-shadow:none;animation:none}
+.comp-t.ask:hover,.comp-t.ask:focus-visible{background:rgba(57,255,107,.1);outline:none}
+.comp-menu{flex:none;display:flex;gap:4px}
+.comp-t:not(.ask):hover{color:var(--green)}
 .comp-t.new{animation:textGlitch .6s steps(5)}
 @media (prefers-reduced-motion:reduce){.comp-t.s3,.comp-t.new{animation:none}}
 .hull-hit{justify-content:flex-start;flex-wrap:wrap;row-gap:4px}
@@ -1227,7 +1230,7 @@ let dmgState = {list:[], pool:0};                    // parsed: list newest firs
 let dmgRaw = {list:{}, pool:0};                      // as stored
 let curStatus = null;                                // last status seen
 let dmgDetached = false;                             // tests: true = nothing here is written to the database
-let dmgArmed = null, dmgArmTimer = null, hullMsgTimer = null;
+let hullMsgTimer = null;
 
 // the ship's components (rogue trader ch.8, the most basic type of each), and the wireframe section each sits in.
 // a component shows the damage stored in its section; the four cargo bays share one section and split it by dmgBay
@@ -1375,7 +1378,7 @@ el.value = nv;
 if(!known){ dmgWrite({'status/hull': nv}); return; }
 if(nv === prev) return;
 if(nv > prev){
-  if(nv === max){ dmgArmed = null; dmgWrite({'status/hull': max, 'damage/list': null, 'damage/pool': 0}); return; }
+  if(nv === max){ compMenu = null; dmgWrite({'status/hull': max, 'damage/list': null, 'damage/pool': 0}); return; }
   el.value = prev;
   hullMsg('// refused // repair damage or set hull to max');
   return;
@@ -1419,34 +1422,64 @@ const up = {['damage/list/' + id]: null};
 if(isFinite(hull)) up['status/hull'] = max > 0 ? Math.max(hull, Math.min(max, hull + d.cost)) : hull + d.cost;
 dmgWrite(up);
 }
-// repair asks for a second tap on the same button
-function repairTap(id){
-clearTimeout(dmgArmTimer);
-if(dmgArmed === id){ dmgArmed = null; repairDamage(id); return; }
-dmgArmed = id;
-dmgArmTimer = setTimeout(()=>{ dmgArmed = null; renderComponents(); }, 4000);
-renderComponents();
-}
 
 // the components panel: one row per component, "type // location", with the worst damage in its section (or bay) as its status.
-// tapping a damage asks "repair +n?", a second tap repairs it. tapping the name lights the section on the wireframe.
+// tapping the status opens its menu (see openCompMenu). tapping the name lights the section on the wireframe.
 // built-in rows are fixed slots ([data-st]); rows added on the page go in #compAdded. only those rows are rebuilt here,
 // the cargo, craft and feature fields between them belong to their own renderers
+// tapping a status opens a short menu in its place: repair / worsen when damaged, fire / breach when intact; x or 5 s closes it.
+// damage set by hand costs a minor hit of hull per severity step (4 on a 35 hull: 4, 8, 12 in all); the points go on the damage, so repair gives them back
+let compMenu = null, compMenuTimer = null;
+function compStep(){ const h = curStatus ? Number(curStatus.hull) : NaN; return isFinite(h) ? Math.max(0, Math.min(hitSize(HIT_MINOR), h)) : 0; }
+function openCompMenu(id){
+clearTimeout(compMenuTimer);
+compMenu = compMenu === id ? null : id;
+if(compMenu) compMenuTimer = setTimeout(()=>{ compMenu = null; renderComponents(); }, 5000);
+renderComponents();
+}
+function compDamage(c, type){
+if(dmgState.list.length >= DMG_RULES.CAP){ hullMsg('// damage limit reached // repair first'); return; }
+let id, n = 0;
+do { id = 'm' + Date.now().toString(36) + Math.floor(Math.random() * 1679616).toString(36); } while(c.bay !== undefined && dmgBay(id) !== c.bay && ++n < 400);   // a cargo bay: pick an id that lands in that bay
+const loss = compStep(), up = {['damage/list/' + id]: {section:c.at, type:type, sev:1, cost:loss, t:Date.now()}};
+if(loss) up['status/hull'] = Number(curStatus.hull) - loss;
+hullMsg('// ' + type + ' // ' + (c.loc || DMG_SECTIONS[c.at]) + ' -' + loss + ' hull');
+dmgWrite(up);
+}
+function compWorsen(d){
+const loss = compStep(), up = {['damage/list/' + d.id]: {section:d.section, type:d.type, sev:Math.min(3, d.sev + 1), cost:d.cost + loss, t:d.t}};
+if(loss) up['status/hull'] = Number(curStatus.hull) - loss;
+hullMsg('// ' + d.type + ' worse // ' + DMG_SECTIONS[d.section] + ' -' + loss + ' hull');
+dmgWrite(up);
+}
 function compTag(c){
 const num = n=> String(Math.round(n * 100) / 100);
 const ds = dmgState.list.filter(d=> d.section === c.at && (c.bay === undefined || dmgBay(d.id) === c.bay)).sort((a,b)=> b.sev - a.sev || b.t - a.t);
 const d = ds[0];
-if(!d){ const t = document.createElement('span'); t.className = 'comp-t'; t.textContent = 'intact'; return t; }
-const t = document.createElement('button'), off = d.sev >= DMG_RULES.OFFLINE_AT && d.type !== 'offline';
-t.type = 'button';
-if(dmgArmed === d.id){ t.className = 'comp-t ask'; t.textContent = 'repair +' + num(d.cost) + '?'; }
-else {
-  t.className = 'comp-t s' + d.sev + (Date.now() - d.t < 8000 ? ' new' : '');
-  t.textContent = d.type + (off ? ' // off' : '') + (ds.length > 1 ? ' +' + (ds.length - 1) : '');
+const btn = (text, cls, fn, title)=>{ const b = document.createElement('button'); b.type = 'button'; b.className = 'comp-t ' + cls; b.textContent = text; if(title) b.title = title;
+  b.addEventListener('click', ()=>{ clearTimeout(compMenuTimer); compMenu = null; fn(); renderComponents(); }); return b; };
+if(compMenu === c.id){
+  const m = document.createElement('span'), k = compStep(), cost = k ? ' -' + k : '';
+  m.className = 'comp-menu';
+  if(d){
+    m.appendChild(btn(d.cost > 0 ? 'repair +' + num(d.cost) : 'repair', 'ask', ()=>repairDamage(d.id)));
+    if(d.sev < 3) m.appendChild(btn('worsen' + cost, 'ask', ()=>compWorsen(d), k + ' hull'));
+  } else {
+    m.appendChild(btn('fire' + cost, 'ask', ()=>compDamage(c, 'fire'), k + ' hull'));
+    m.appendChild(btn('breach' + cost, 'ask', ()=>compDamage(c, 'breach'), k + ' hull'));
+  }
+  m.appendChild(btn('x', 'ask', ()=>{}, 'close'));
+  return m;
 }
+const t = document.createElement('button');
+t.type = 'button';
+t.setAttribute('aria-haspopup', 'true');
+t.addEventListener('click', ()=>openCompMenu(c.id));
+if(!d){ t.className = 'comp-t'; t.textContent = 'intact'; t.title = 'damage'; return t; }
+const off = d.sev >= DMG_RULES.OFFLINE_AT && d.type !== 'offline';
+t.className = 'comp-t s' + d.sev + (Date.now() - d.t < 8000 ? ' new' : '');
+t.textContent = d.type + (off ? ' // off' : '') + (ds.length > 1 ? ' +' + (ds.length - 1) : '');
 t.title = DMG_TYPES[d.type] + ' (' + DMG_SEV[d.sev] + ') -' + num(d.cost) + ' hull';
-t.setAttribute('aria-pressed', dmgArmed === d.id ? 'true' : 'false');
-t.addEventListener('click', ()=>repairTap(d.id));
 return t;
 }
 function fillCompRow(row, c){
