@@ -397,6 +397,8 @@ body.shake{animation:flicker 11s infinite, shipShake .55s cubic-bezier(.36,.07,.
 .gc-mk.gc-sel .gc-nm{color:var(--hi);border-color:var(--green);background:rgba(57,255,107,.1)}
 .gc-mk.gc-static .gc-nm{pointer-events:none;cursor:default;font-size:11px;color:var(--dim);background:none}
 .gc-mk.gc-dom .gc-nm{font-size:.75rem;color:var(--green)}
+.gc-mk.gc-seg .gc-nm{font-size:1rem;letter-spacing:.2em;color:var(--green);background:none;text-shadow:0 0 5px rgba(57,255,107,.6)}   /* segmentum names, like the map's large lettering */
+.gc-mk.gc-reg .gc-nm{font-size:.75rem;letter-spacing:.1em;color:var(--green);background:none;text-shadow:0 0 4px rgba(57,255,107,.45)}
 .gc-mk.gc-guide .gc-nm{font-size:.75rem;color:var(--green);background:rgba(2,10,4,.7);text-shadow:0 0 4px rgba(57,255,107,.6)}   /* guides overlay: ring distances and arm names, readable over the star field */
 .gc-mk.gc-ship .gc-hit{pointer-events:none}
 .gc-mk.gc-ship .gc-nm{color:var(--hi);border-color:var(--green);background:rgba(57,255,107,.28);box-shadow:0 0 8px rgba(57,255,107,.3)}
@@ -618,11 +620,13 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
     </div>
     <div class="gc-ctl gc-ovl">
       <span class="gc-dim gc-sm">overlays //</span>
+      <button class="gc-btn" id="gc-bSeg" type="button" aria-pressed="true">segmentums</button>
       <button class="gc-btn" id="gc-bGuides" type="button" aria-pressed="false">guides</button>
       <button class="gc-btn" id="gc-bDom" type="button" aria-pressed="false">dominions</button>
       <button class="gc-btn" id="gc-bCa" type="button" aria-pressed="false">campaign</button>
       <button class="gc-btn" id="gc-bLm" type="button" aria-pressed="false">other locations</button>
       <button class="gc-btn" id="gc-bHw" type="button" aria-pressed="false">astartes homeworlds</button>
+      <button class="gc-btn" id="gc-bFw" type="button" aria-pressed="false">forge worlds</button>
     </div>
     <div class="gc-keybox" id="gc-key" hidden>
       <span class="gc-dim gc-sm">dominions //</span>
@@ -643,6 +647,8 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
     <ul class="gc-list" id="gc-listD"></ul>
     <h3 class="gc-gtitle">[ legiones astartes ]</h3>
     <ul class="gc-list" id="gc-listB"></ul>
+    <h3 class="gc-gtitle">[ forge worlds ]</h3>
+    <ul class="gc-list" id="gc-listF"></ul>
     <div id="gc-savedwrap" hidden>
       <h3 class="gc-gtitle">[ surveyed systems ]</h3>
       <ul class="gc-list" id="gc-listC"></ul>
@@ -2844,39 +2850,95 @@ el.appendChild(d);
   var SOL = V(-SUN_R, 0, 0.02);
   // id, name, sub, region, e, n, u, label side, text, group
   var RAW = [
-    ['rattigon', 'rattigon', 'mycifur', 'ultima', 30, -3, 0, 'r', 'system with one inhabited planet, mycifur.', 'a'],
-    ['a34', 'a3.4 waystation', 'deep space object', 'ultima', 28.6, -4.2, 0, 'l', 'adeptus astra telepathica repeater waystation.', 'a'],
+    // positions and regions from the official horus heresy map (docs/ref/HH_MAP.md). places it does not show keep earlier estimates
+    ['rattigon', 'rattigon', 'mycifur', 'ultima segmentum', 30, -3, 0, 'r', 'system with one inhabited planet, mycifur.', 'a'],
+    ['a34', 'a3.4 waystation', 'deep space object', 'ultima segmentum', 28.6, -4.2, 0, 'l', 'adeptus astra telepathica repeater waystation.', 'a'],
     ['sol', 'sol', 'terra // luna // mars', 'segmentum solar', -26, 0, 0.02, 'l', 'home system of humanity and seat of the imperium, in segmentum solar. the most heavily defended system in the galaxy.', 'a'],
-    ['eye', 'cygnus x-1 warp maelstrom', 'the eye of terror', 'segmentum obscurus', -34, 17, 0.3, 'l', 'vast warp rift in segmentum obscurus, charted by imperial scholars as cygnus x-1.', 'o'],
-    ['calth', 'calth', 'veridian star', 'ultramar // ultima', 36, -20, -0.12, 'l', 'ultramar system of the world calth, where the word bearers ambushed the ultramarines.', 'a'],
-    ['isstvan', 'isstvan', 'eight worlds', 'ultima // obscurus border', 5, 30, 0.15, 'r', 'system with two habitable worlds, isstvan iii and isstvan v, on the segmentum obscurus side of the galaxy. horus staged the first betrayals of the heresy here.', 'a'],
-    ['ullanor', 'ullanor', 'site of the triumph', 'segmentum solar', -13, 8, -0.05, 'r', 'system of the ork world ullanor, centre of the empire broken in the ullanor crusade. site of the triumph of ullanor, where horus was named warmaster.', 'o'],
-    ['nikaea', 'nikaea', 'site of the council', 'segmentum tempestus', -30, -24, 0.2, 'r', 'system of the volcanic world nikaea, where the council of nikaea was held.', 'o'],
-    // other locations added later. positions are estimates (lore gives a segmentum at most); 'position unrecorded' = lore gives no region at all
-    ['davin', 'davin', 'the serpent lodge', 'ultima', 17, 21, 0.05, 'l', 'system of the feral world davin. horus was struck down on its moon and given to the serpent lodge.', 'o'],
-    ['laeran', 'laeran', 'cleansing of laeran', 'position unrecorded', 26, 35, 0.1, 'r', 'system of the xenos laer, exterminated by the emperor\'s children in a single month.', 'o'],
+    ['eye', 'ocularis malifica', 'the eye of terror', 'segmentum obscurus', -32.5, 12.2, 0.3, 'l', 'vast warp rift in segmentum obscurus, charted by imperial scholars as the ocularis malifica.', 'o'],
+    ['calth', 'calth', 'veridian star', 'ultramar // ultima segmentum', 20.9, -20.2, -0.12, 'l', 'ultramar system of the world calth, where the word bearers ambushed the ultramarines.', 'a'],
+    ['isstvan', 'isstvan', 'eight worlds', 'northern rim', -7.3, 33.1, 0.15, 'r', 'system with two habitable worlds, isstvan iii and isstvan v, on the segmentum obscurus side of the galaxy. horus staged the first betrayals of the heresy here.', 'a'],
+    ['ullanor', 'ullanor', 'site of the triumph', 'ultima segmentum', -13, 8, -0.05, 'r', 'system of the ork world ullanor, centre of the empire broken in the ullanor crusade. site of the triumph of ullanor, where horus was named warmaster.', 'o'],
+    ['nikaea', 'nikaea', 'site of the council', 'segmentum solar', -16.7, -3.4, 0.2, 'r', 'system of the volcanic world nikaea, where the council of nikaea was held.', 'o'],
+    ['davin', 'davin', 'the serpent lodge', 'ultima segmentum', -7, -1.8, 0.05, 'l', 'system of the feral world davin. horus was struck down on its moon and given to the serpent lodge.', 'o'],
+    ['laeran', 'laeran', 'cleansing of laeran', 'ultima segmentum', 28.2, -4.3, 0.1, 'r', 'system of the xenos laer, exterminated by the emperor\'s children in a single month.', 'o'],
     ['murder', 'murder', 'urisarach // 140-20', 'position unrecorded', 37, 11, -0.05, 'r', 'system of the death world murder, twentieth world found by the 140th expedition. home of the megarachnid.', 'o'],
     ['sn6319', 'sixty-three nineteen', 'the false emperor', 'position unrecorded', 31, 24, 0.1, 'r', 'nineteenth world brought to compliance by the 63rd expedition, under horus. its ruler called himself emperor of mankind.', 'o'],
     ['betagarmon', 'beta-garmon', 'contested cluster', 'segmentum solar', -20, -3, 0.05, 'b', 'star cluster in segmentum solar on the road to terra. an alpha legion campaign of sabotage helped the emperor\'s children and legio mortis take beta-garmon ii in 006.m31.', 'o'],
-    ['phall', 'phall', 'battle of phall', 'ultima', 3, 15, -0.05, 'r', 'system of two agri worlds. the imperial fists retribution fleet was caught here by perturabo\'s iron warriors.', 'o'],
-    ['sotha', 'sotha', 'the pharos', 'ultramar // ultima', 43, -18, -0.1, 'r', 'system of the world sotha, on the eastern fringe of ultramar. mount pharos holds the pharos beacon.', 'o'],
-    ['caliban', 'caliban', 'legio i // dark angels', 'segmentum obscurus', -20, 26, 0.1, 'r', 'system of the world caliban, homeworld of the dark angels.', 'hw'],
-    ['chemos', 'chemos', 'legio iii // emperor\'s children', 'ultima', 16, 26, -0.1, 'r', 'system of the world chemos, homeworld of the emperor\'s children.', 'hw'],
-    ['olympia', 'olympia', 'legio iv // iron warriors', 'ultima', 10, 17, 0.1, 'r', 'system of the world olympia, homeworld of the iron warriors.', 'hw'],
-    ['chogoris', 'chogoris', 'legio v // white scars', 'ultima', 12, -10, 0.05, 'r', 'system of the world chogoris, homeworld of the white scars.', 'hw'],
-    ['fenris', 'fenris', 'legio vi // space wolves', 'segmentum obscurus', -28, 15, 0.15, 'b', 'system of the world fenris, homeworld of the space wolves, close to the eye of terror.', 'hw'],
-    ['inwit', 'inwit', 'legio vii // imperial fists', 'segmentum solar', -20, -6, -0.1, 'r', 'system of the world inwit, birthplace of rogal dorn, in a cluster of ice worlds.', 'hw'],
-    ['nostramo', 'nostramo', 'legio viii // night lords', 'ultima', 36, 22, 0.1, 'l', 'system of the world nostramo, homeworld of the night lords. the planet was destroyed before the heresy.', 'hw'],
-    ['baal', 'baal', 'legio ix // blood angels', 'ultima', 24, 14, -0.1, 'r', 'system of the world baal and its two moons, baal primus and baal secundus. homeworld of the blood angels.', 'hw'],
-    ['medusa', 'medusa', 'legio x // iron hands', 'segmentum obscurus', -29, 22, 0.2, 'r', 'system of the world medusa, homeworld of the iron hands, close to the eye of terror.', 'hw'],
-    ['nuceria', 'nuceria', 'legio xii // world eaters', 'ultima', 30, -13, 0.05, 'l', 'system of the world nuceria, homeworld of the world eaters.', 'hw'],
-    ['macragge', 'macragge', 'legio xiii // ultramarines', 'ultramar // ultima', 39, -23, -0.1, 'r', 'system of the world macragge, capital of ultramar and homeworld of the ultramarines.', 'hw'],
-    ['barbarus', 'barbarus', 'legio xiv // death guard', 'segmentum solar', -17, -12, 0.1, 'r', 'system of the world barbarus, homeworld of the death guard.', 'hw'],
-    ['prospero', 'prospero', 'legio xv // thousand sons', 'ultima', -8, 18, 0.1, 'r', 'system of the world prospero, homeworld of the thousand sons.', 'hw'],
-    ['cthonia', 'cthonia', 'legio xvi // sons of horus', 'segmentum solar', -25.978, 0.018, 0.03, 'b', 'system of the mining world cthonia, near sol. homeworld of the sons of horus.', 'hw'],
-    ['colchis', 'colchis', 'legio xvii // word bearers', 'segmentum pacificus', -40, 4, 0.1, 'l', 'system of the world colchis, original homeworld of the word bearers.', 'hw'],
-    ['nocturne', 'nocturne', 'legio xviii // salamanders', 'ultima', 20, 3, -0.05, 'r', 'system of the world nocturne, homeworld of the salamanders.', 'hw'],
-    ['deliverance', 'deliverance', 'legio xix // raven guard', 'segmentum tempestus', -14, -24, 0.1, 'r', 'system of the forge and hive world kiavahr. its inhabited moon, deliverance, is the homeworld of the raven guard.', 'hw']
+    ['phall', 'phall', 'battle of phall', 'ultima segmentum', 3, 15, -0.05, 'r', 'system of two agri worlds. the imperial fists retribution fleet was caught here by perturabo\'s iron warriors.', 'o'],
+    ['sotha', 'sotha', 'the pharos', 'ultramar // ultima segmentum', 25.3, -17.9, -0.1, 'r', 'system of the world sotha, on the eastern fringe of ultramar. mount pharos holds the pharos beacon.', 'o'],
+    ['caliban', 'caliban', 'legio i // dark angels', 'segmentum obscurus', -30.1, 18.1, 0.1, 'r', 'system of the world caliban, homeworld of the dark angels.', 'hw'],
+    ['chemos', 'chemos', 'legio iii // emperor\'s children', 'ultima segmentum', -7.4, -6.6, -0.1, 'r', 'system of the world chemos, homeworld of the emperor\'s children.', 'hw'],
+    ['olympia', 'olympia', 'legio iv // iron warriors', 'ultima segmentum', 11.1, 2.5, 0.1, 'r', 'system of the world olympia, homeworld of the iron warriors.', 'hw'],
+    ['chogoris', 'chogoris', 'legio v // white scars', 'ultima segmentum', 2.6, -7.2, 0.05, 'r', 'system of the world chogoris, homeworld of the white scars.', 'hw'],
+    ['fenris', 'fenris', 'legio vi // space wolves', 'segmentum obscurus', -19.6, 7.7, 0.15, 'b', 'system of the world fenris, homeworld of the space wolves, close to the eye of terror.', 'hw'],
+    ['inwit', 'inwit', 'legio vii // imperial fists', 'segmentum tempestus', -20, -11.5, -0.1, 'r', 'system of the world inwit, birthplace of rogal dorn, in a cluster of ice worlds.', 'hw'],
+    ['nostramo', 'nostramo', 'legio viii // night lords', 'ghoul stars', 24, 23.3, 0.1, 'l', 'system of the world nostramo, homeworld of the night lords. the planet was destroyed before the heresy.', 'hw'],
+    ['baal', 'baal', 'legio ix // blood angels', 'ultima segmentum', 1.3, 13.9, -0.1, 'r', 'system of the world baal and its two moons, baal primus and baal secundus. homeworld of the blood angels.', 'hw'],
+    ['medusa', 'medusa', 'legio x // iron hands', 'segmentum obscurus', -36.5, 15.6, 0.2, 'r', 'system of the world medusa, homeworld of the iron hands, close to the eye of terror.', 'hw'],
+    ['nuceria', 'nuceria', 'legio xii // world eaters', 'eastern fringe', 30, -13, 0.05, 'l', 'system of the world nuceria, homeworld of the world eaters.', 'hw'],
+    ['macragge', 'macragge', 'legio xiii // ultramarines', 'ultramar // ultima segmentum', 21.3, -22.9, -0.1, 'r', 'system of the world macragge, capital of ultramar and homeworld of the ultramarines.', 'hw'],
+    ['barbarus', 'barbarus', 'legio xiv // death guard', 'segmentum tempestus', -28.7, -25.4, 0.1, 'r', 'system of the world barbarus, homeworld of the death guard.', 'hw'],
+    ['prospero', 'prospero', 'legio xv // thousand sons', 'ultima segmentum', -12.4, 0.4, 0.1, 'r', 'system of the world prospero, homeworld of the thousand sons.', 'hw'],
+    ['cthonia', 'cthonia', 'legio xvi // sons of horus', 'segmentum solar', -27.1, -3.2, 0.03, 'b', 'system of the mining world cthonia, near sol. homeworld of the sons of horus.', 'hw'],
+    ['colchis', 'colchis', 'legio xvii // word bearers', 'segmentum pacificus', -41.3, 8.3, 0.1, 'l', 'system of the world colchis, original homeworld of the word bearers.', 'hw'],
+    ['nocturne', 'nocturne', 'legio xviii // salamanders', 'ultima segmentum', -1.5, -14.1, -0.05, 'r', 'system of the world nocturne, homeworld of the salamanders.', 'hw'],
+    ['deliverance', 'deliverance', 'legio xix // raven guard', 'segmentum tempestus', -14, -23.2, 0.1, 'r', 'system of the forge and hive world kiavahr. its inhabited moon, deliverance, is the homeworld of the raven guard.', 'hw'],
+    ['lucius', 'lucius', 'forge world', 'segmentum obscurus', -17.7, 21.6, -0.1, 'r', 'system of the forge world lucius.', 'fw'],
+    ['stygies', 'stygies', 'forge world', 'segmentum pacificus', -40.6, 2.2, 0, 'r', 'system of the forge world stygies.', 'fw'],
+    ['voss', 'voss', 'forge world', 'segmentum solar', -31.9, 1.3, 0.1, 'r', 'system of the forge world voss.', 'fw'],
+    ['sarum', 'sarum', 'forge world', 'ultima segmentum', -6.3, 0.7, -0.1, 'r', 'system of the forge world sarum.', 'fw'],
+    ['ryza', 'ryza', 'forge world', 'ultima segmentum', -11.6, -2, -0.1, 'r', 'system of the forge world ryza.', 'fw'],
+    ['anvillus', 'anvillus', 'forge world', 'ultima segmentum', 3.8, 5.2, 0.1, 'r', 'system of the forge world anvillus.', 'fw'],
+    ['phaeton', 'phaeton', 'forge world', 'segmentum solar', -30.6, -5.9, -0.1, 'r', 'system of the forge world phaeton.', 'fw'],
+    ['graia', 'graia', 'forge world', 'segmentum tempestus', -31.8, -13.7, 0.1, 'r', 'system of the forge world graia.', 'fw'],
+    ['gryphonne', 'gryphonne', 'forge world', 'segmentum tempestus', -16.1, -26.1, 0, 'r', 'system of the forge world gryphonne.', 'fw'],
+    ['tigrus', 'tigrus', 'forge world', 'ultima segmentum', 22.4, -7.1, 0, 'r', 'system of the forge world tigrus.', 'fw'],
+    ['accatran', 'accatran', 'forge world', 'ultima segmentum', 11.4, -12.2, 0, 'r', 'system of the forge world accatran.', 'fw'],
+    ['neogeddon', 'neo-geddon', 'charted world', 'northern rim', 0.1, 37, -0.1, 'r', 'system of the world neo-geddon, named on the imperial chart. no further record.', 'o'],
+    ['kangda', 'kangda', 'charted world', 'segmentum obscurus', -37.6, 32.8, -0.1, 'r', 'system of the world kangda, named on the imperial chart. no further record.', 'o'],
+    ['abyss', 'abyss', 'charted world', 'northern rim', -20.7, 31.6, -0.1, 'r', 'system of the world abyss, named on the imperial chart. no further record.', 'o'],
+    ['opuscalus', 'opuscalus noctis', 'charted world', 'segmentum obscurus', -47.5, 26.7, 0, 'r', 'system of the world opuscalus noctis, named on the imperial chart. no further record.', 'o'],
+    ['morox', 'morox', 'charted world', 'segmentum obscurus', -28.5, 24, -0.1, 'r', 'system of the world morox, named on the imperial chart. no further record.', 'o'],
+    ['hellion', 'hellion', 'charted world', 'segmentum obscurus', -42.5, 18.4, 0.1, 'r', 'system of the world hellion, named on the imperial chart. no further record.', 'o'],
+    ['goth', 'goth', 'charted world', 'segmentum obscurus', -11.4, 17.3, -0.1, 'r', 'system of the world goth, named on the imperial chart. no further record.', 'o'],
+    ['cypramundi', 'cypra mundi', 'charted world', 'segmentum obscurus', -23.6, 14.5, -0.1, 'r', 'system of the world cypra mundi. archive fragment // in later ages a great naval base of segmentum obscurus.', 'o'],
+    ['lamrys', 'lamrys', 'charted world', 'ultima segmentum', -3.2, 16.3, -0.1, 'r', 'system of the world lamrys, named on the imperial chart. no further record.', 'o'],
+    ['bodt', 'bodt', 'charted world', 'ultima segmentum', -7.4, 14, 0, 'r', 'system of the world bodt, named on the imperial chart. no further record.', 'o'],
+    ['sarcosa', 'sarcosa', 'charted world', 'segmentum pacificus', -43.8, 12.2, -0.1, 'r', 'system of the world sarcosa, named on the imperial chart. no further record.', 'o'],
+    ['kayvas', 'kayvas belt', 'asteroid belt', 'ultima segmentum', -8.2, 9.5, 0.1, 'r', 'asteroid belt named on the imperial chart. no further record.', 'o'],
+    ['khur', 'khur', 'charted world', 'segmentum pacificus', -43.7, 5.8, 0, 'r', 'system of the world khur, named on the imperial chart. no further record.', 'o'],
+    ['seraphina', 'seraphina', 'charted world', 'segmentum solar', -29.5, 5, 0, 'r', 'system of the world seraphina, named on the imperial chart. no further record.', 'o'],
+    ['lorinalpha', 'lorin alpha', 'charted world', 'segmentum solar', -16.8, 3.5, -0.1, 'r', 'system of the world lorin alpha, named on the imperial chart. no further record.', 'o'],
+    ['chondax', 'chondax', 'the chondax campaign', 'ultima segmentum', -7.7, 4.8, 0.1, 'r', 'system of the world chondax, where the white scars were fighting orks when the heresy began.', 'o'],
+    ['lastrati', 'lastrati', 'charted world', 'ultima segmentum', -1.2, 2.7, -0.1, 'r', 'system of the world lastrati, named on the imperial chart. no further record.', 'o'],
+    ['olmec', 'olmec', 'charted world', 'segmentum solar', -31.5, -1.4, 0.1, 'r', 'system of the world olmec, named on the imperial chart. no further record.', 'o'],
+    ['sulis', 'sulis', 'charted world', 'ultima segmentum', 8, -4, -0.1, 'r', 'system of the world sulis, named on the imperial chart. no further record.', 'o'],
+    ['vasalius', 'vasalius', 'charted world', 'segmentum pacificus', -42.1, -3.9, 0.1, 'r', 'system of the world vasalius, named on the imperial chart. no further record.', 'o'],
+    ['shedim', 'shedim', 'charted world', 'segmentum solar', -20.8, -5.7, 0.1, 'r', 'system of the world shedim, named on the imperial chart. no further record.', 'o'],
+    ['necromunda', 'necromunda', 'hive world', 'segmentum solar', -21.7, -7.9, -0.1, 'r', 'system of the hive world necromunda.', 'o'],
+    ['gehenna', 'gehenna', 'charted world', 'segmentum tempestus', -35.4, -9.4, 0, 'r', 'system of the world gehenna, named on the imperial chart. no further record.', 'o'],
+    ['taras', 'taras', 'charted world', 'segmentum tempestus', -28.4, -11.1, -0.1, 'r', 'system of the world taras, named on the imperial chart. no further record.', 'o'],
+    ['tallarn', 'tallarn', 'battle of tallarn', 'segmentum tempestus', -18.5, -16.4, -0.1, 'r', 'system of the world tallarn. the iron warriors virus-bombed it early in the heresy; one of the largest armoured wars ever fought followed on its poisoned surface.', 'o'],
+    ['luthtyre', 'luth tyre', 'charted world', 'segmentum tempestus', -19.9, -19, 0, 'r', 'system of the world luth tyre, named on the imperial chart. no further record.', 'o'],
+    ['galaspar', 'galaspar', 'charted world', 'veiled region', -27.6, -29.6, 0, 'r', 'system of the world galaspar, named on the imperial chart. no further record.', 'o'],
+    ['lostson', 'finding of the lost son', 'site on the imperial chart', 'segmentum pacificus', -44.9, -13, 0.1, 'r', 'site marked on the imperial chart as the finding of the lost son. no further record.', 'o'],
+    ['vayber', 'vayber', 'charted world', 'ultima segmentum', 6.8, -14.7, -0.1, 'r', 'system of the world vayber, named on the imperial chart. no further record.', 'o'],
+    ['neverlight', 'neverlight', 'charted world', 'ultima segmentum', 12.1, -22.4, -0.1, 'r', 'system of the world neverlight, named on the imperial chart. no further record.', 'o'],
+    ['bale', 'bale', 'charted world', 'ultima segmentum', 11.1, -25, 0, 'r', 'system of the world bale, named on the imperial chart. no further record.', 'o'],
+    ['incalpeta', 'incalpeta terminus', 'charted world', 'ultima segmentum', 11.3, -31.6, -0.1, 'r', 'system of the world incalpeta terminus, named on the imperial chart. no further record.', 'o'],
+    ['saranluxor', 'saran luxor', 'charted world', 'eastern fringe', 31.1, -27.7, -0.1, 'r', 'system of the world saran luxor, named on the imperial chart. no further record.', 'o'],
+    ['impetus', 'impetus', 'charted world', 'ultima segmentum', 19.3, -4.5, -0.1, 'r', 'system of the world impetus, named on the imperial chart. no further record.', 'o'],
+    ['orpheus', 'orpheus prime', 'charted world', 'ultima segmentum', 29.4, -8.2, 0, 'r', 'system of the world orpheus prime, named on the imperial chart. no further record.', 'o'],
+    ['constantium', 'constantium', 'charted world', 'eastern fringe', 41.9, -6.7, 0, 'r', 'system of the world constantium, named on the imperial chart. no further record.', 'o'],
+    ['signus', 'signus prime', 'the signus cluster', 'eastern fringe', 36.8, 1.6, 0, 'r', 'system of signus prime, capital of the signus cluster. the word bearers lured the blood angels here as the heresy began and loosed daemons on the legion.', 'o'],
+    ['konig', 'konig secundus', 'charted world', 'ultima segmentum', 26.6, 4.8, -0.1, 'r', 'system of the world konig secundus, named on the imperial chart. no further record.', 'o'],
+    ['memlok', 'memlok', 'charted world', 'ultima segmentum', 28.6, 10.1, 0, 'r', 'system of the world memlok, named on the imperial chart. no further record.', 'o'],
+    ['desperation', 'desperation', 'charted world', 'ghoul stars', 35.8, 16, 0.1, 'r', 'system of the world desperation, named on the imperial chart. no further record.', 'o'],
+    ['honourum', 'honourum', 'charted world', 'ultima segmentum', 12.8, 17, 0.1, 'r', 'system of the world honourum, named on the imperial chart. no further record.', 'o'],
+    ['angehs', 'angehs', 'charted world', 'ultima segmentum', 15.5, 22.1, -0.1, 'r', 'system of the world angehs, named on the imperial chart. no further record.', 'o'],
+    ['quaijinn', 'quai jinn', 'charted world', 'ultima segmentum', 17.6, 30.9, 0.1, 'r', 'system of the world quai jinn, named on the imperial chart. no further record.', 'o'],
+    ['maelstrom', 'the maelstrom', 'warp storm', 'ultima segmentum', -4, -1.5, 0.2, 'l', 'warp storm beside the galactic core, between davin and sarum on the imperial chart.', 'o'],
+    ['gyre', 'wrath of the hungering gyre', 'warp storm', 'segmentum tempestus // ultima border', -3.7, -24.1, 0.2, 'l', 'warp storm on the imperial chart, where segmentum tempestus meets the ultima segmentum.', 'o']
   ];
   var PLACES = RAW.map(function (r) { return { id: r[0], name: r[1], sub: r[2], region: r[3], p: V(r[4], r[5], r[6]), side: r[7], text: r[8], group: r[9] }; });
   var byId = {}; PLACES.forEach(function (p) { byId[p.id] = p; });
@@ -2920,11 +2982,15 @@ el.appendChild(d);
     var ph = rnd() * Math.PI * 2;
     addP(rr * Math.cos(ph), rr * Math.sin(ph), gauss() * 0.35, 0.15, 0.12 + rnd() * 0.22, 0.3 + rnd() * 0.3);
   }
-  var EYE = byId.eye.p;
-  for (i = 0; i < 4500; i++) {
-    var er = Math.abs(gauss()) * 2.4, ea = rnd() * Math.PI * 2 + er * 0.9;
-    add(EYE.x + er * Math.cos(ea), EYE.y + gauss() * 0.4, EYE.z + er * Math.sin(ea), 0.3 + rnd() * 0.7, 0.45 + rnd() * 0.5, 0.3 + rnd() * 0.45);
-  }
+  // warp storms of the imperial chart: [place id, swirl size, points, outline radius], sizes in 1,000 ly, read off the official map
+  var STORMS = [['eye', 1.4, 3200, 2.8], ['maelstrom', 0.6, 1300, 1.3], ['gyre', 0.7, 1400, 1.5]], STORM = {};
+  STORMS.forEach(function (S) {
+    var c = byId[S[0]].p, j; STORM[S[0]] = S;
+    for (j = 0; j < S[2]; j++) {
+      var er = Math.abs(gauss()) * S[1], ea = rnd() * Math.PI * 2 + er * 2.16 / S[1];
+      add(c.x + er * Math.cos(ea), c.y + gauss() * 0.17 * S[1], c.z + er * Math.sin(ea), 0.3 + rnd() * 0.7, 0.45 + rnd() * 0.5, 0.3 + rnd() * 0.45);
+    }
+  });
   for (i = 0; i < 1500; i++) {
     var x = gauss(), y = gauss(), z = gauss(), L = Math.sqrt(x * x + y * y + z * z) || 1, R = 900 + rnd() * 500;
     add(x / L * R, y / L * R, z / L * R, 0.3, 0.2 + rnd() * 0.35, 2.5 + rnd() * 3);
@@ -2965,7 +3031,7 @@ el.appendChild(d);
     sp.position.copy(p); sp.scale.set(scale, scale, 1); sp.renderOrder = -1; scene.add(sp);
   }
   glow(V(0, 0, 0), 0x39ff6b, 30, 0.3);
-  glow(EYE, 0x39ff6b, 14, 0.3);
+  STORMS.forEach(function (S) { glow(byId[S[0]].p, 0x39ff6b, S[3] * 2.6, 0.3); });
 
   function circle(R, cx, cy, cz, seg) {
     var pts = []; for (var j = 0; j <= seg; j++) { var t = j / seg * Math.PI * 2; pts.push(new THREE.Vector3(cx + R * Math.cos(t), cy, cz + R * Math.sin(t))); }
@@ -2981,15 +3047,37 @@ el.appendChild(d);
   guides.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(0, -52, 0), V(0, 52, 0)]), axisMat));
   scene.add(guides);
   // the maelstrom: highlighted zone
-  var eyeZone = new THREE.Line(circle(6, EYE.x, EYE.y, EYE.z, 90), new THREE.LineDashedMaterial({ color: 0x39ff6b, dashSize: 0.5, gapSize: 0.34, depthTest: false, transparent: true }));
-  eyeZone.computeLineDistances(); scene.add(eyeZone);
+  var eyeZone = new THREE.Group(), zoneMat = new THREE.LineDashedMaterial({ color: 0x39ff6b, dashSize: 0.5, gapSize: 0.34, depthTest: false, transparent: true });   // every storm's outline, shown with other locations
+  STORMS.forEach(function (S) { var c = byId[S[0]].p, l = new THREE.Line(circle(S[3], c.x, c.y, c.z, 90), zoneMat); l.computeLineDistances(); l.renderOrder = 5; eyeZone.add(l); });
+  scene.add(eyeZone);
+
+  // segmentums: the borders, segmentum names and regions of the official horus heresy map (docs/ref/HH_MAP.md), drawn as its dashed lines.
+  // the solar ring is a circle round sol; the rest are the map's lines, digitised by hand
+  var SEG_LINES = [
+    [[-33.4, 6.8], [-61.2, 32.6]],
+    [[-18.1, 6.9], [-15.2, 9.9], [-12.4, 13.4], [-10.2, 16.1], [-8.1, 17.5], [-5.7, 20.3], [-3.4, 24.2], [-1.0, 27.6], [1.4, 30.6], [9.5, 37.0], [13.0, 40.3]],
+    [[-18.8, -7.6], [-16.3, -10.0], [-14.8, -11.9], [-11.9, -14.8], [-8.9, -17.6], [-5.9, -20.5], [-3.7, -23.8], [-1.0, -25.7], [2.0, -28.6], [5.0, -31.4], [7.9, -34.3], [11.4, -36.7]],
+    [[-37.2, -9.9], [-39.1, -12.4], [-41.0, -14.8], [-42.8, -17.3], [-44.8, -19.3], [-46.7, -21.2], [-48.6, -22.7], [-50.5, -24.2], [-52.4, -26.2], [-54.8, -28.4]],
+    [[-55.8, 27.6], [-53.9, 28.3], [-50.5, 31.1], [-45.3, 33.6], [-39.9, 35.2], [-37.0, 35.5], [-30.3, 36.1], [-29.8, 31.8], [-22.9, 31.9], [-21.0, 31.1], [-19.5, 30.7], [-14.1, 28.2], [-9.7, 26.0], [-5.8, 24.1], [-3.6, 23.0]],
+    [[13.0, 40.3], [14.8, 36.7], [17.8, 32.3], [20.0, 28.5], [21.9, 24.2], [23.4, 19.8], [24.6, 16.5], [25.3, 15.5], [29.3, 16.8], [31.9, 17.6], [33.1, 12.1], [34.1, 2.6], [34.4, -0.3], [34.4, -6.4], [26.9, -9.4], [25.8, -13.4], [24.3, -18.7], [22.2, -22.2], [21.1, -24.4], [23.9, -25.0], [26.9, -28.6], [25.6, -31.2], [24.7, -32.5], [23.7, -34.2], [23.0, -36.4]],
+    [[-23.4, 9.8], [-22.0, 11.2], [-21.1, 13.2], [-20.2, 15.1], [-19.5, 17.1], [-19.2, 19.0], [-20.1, 20.4], [-22.2, 19.9], [-25.1, 19.5], [-29.0, 19.4], [-32.9, 19.6], [-35.5, 19.4], [-37.0, 18.7], [-38.9, 17.7], [-40.9, 16.7], [-42.5, 14.1], [-44.1, 12.5], [-45.6, 10.5], [-46.9, 8.8], [-47.6, 6.4], [-47.8, 3.0], [-47.7, -0.9], [-47.4, -4.8], [-46.7, -8.6], [-45.9, -11.5], [-44.9, -13.4], [-43.4, -16.3], [-41.4, -18.7], [-39.4, -20.6], [-36.9, -22.8], [-34.9, -24.7], [-34.4, -26.4], [-31.0, -28.2], [-27.1, -28.4], [-23.2, -28.3], [-19.9, -28.0], [-16.5, -27.2], [-15.9, -29.4], [-15.4, -30.1], [-11.6, -28.8], [-8.7, -27.5], [-5.8, -25.8], [-3.7, -23.8]]
+  ];
+  var SEG_LABELS = [[-13.8, 28.1, 'segmentum obscurus'], [-3.6, 21.3, 'ultima segmentum'], [-34.2, -1.6, 'segmentum solar'], [-47.5, 0.6, 'segmentum pacificus'], [-8.9, -18.1, 'segmentum tempestus']];
+  var REG_LABELS = [[-30.8, 21.5, 'halo stars'], [33.6, 28.4, 'ghoul stars'], [35.2, -16.8, 'eastern fringe'], [-21.2, -32.9, 'veiled region'], [-52.8, -2.9, 'the inter-galactic void'],
+    [15.8, 9.5, 'the dominion of storms'], [11.0, -8.8, 'the thirteen realms'], [40.3, -2.2, 'the death of reason'], [4.7, -19.8, 'charadon sector'], [-28.3, -16.3, 'uhulis sector'],
+    [-39.8, -22.1, 'mandragoran sector'], [-3.8, 7.2, 'golgothan wastes'], [-4.4, 26.6, 'prohibited zone // area forbidden'], [22.9, -13.6, 'prohibited zone // plague cordon']];
+  // the borders are drawn on the overlay canvas each frame (drawBorders), not in webgl: crisp at any zoom, with a dark edge that keeps them clear of the star field
+  var segOn = true, SEG_W = SEG_LINES.map(function (L) { return L.map(function (q) { return V(q[0], q[1], 0); }); });
+  (function () { var ring = [], j, t; for (j = 0; j <= 120; j++) { t = j / 120 * Math.PI * 2; ring.push(new THREE.Vector3(SOL.x + 10.4 * Math.cos(t), 0, SOL.z + 10.4 * Math.sin(t))); } SEG_W.push(ring); })();   // the solar ring
 
   // dominions: one green, told apart by hatch. 0 warmaster (diagonal), 1 imperial (flat), 2 unaligned (dots), 3 xenos (grid)
+  // blobs sit on the same worlds as before at their map positions (isstvan, chemos, olympia, prospero, ullanor, colchis, barbarus, nostramo //
+  // sol, inwit, calth, nuceria, baal, nocturne, chogoris, fenris, medusa, deliverance, caliban); unaligned and xenos on the map's outer regions
   var DOMS = [
-    { blobs: [[5, 30, 13], [16, 26, 10], [10, 17, 9], [-8, 25, 10], [-17, 13, 6], [-40, 4, 6], [-17, -12, 5], [33, 21, 7]], labels: [[6, 36, 'warmaster']] },
-    { blobs: [[-26, 0, 13], [-20, -6, 9], [37, -21, 12], [30, -12, 8], [24, 14, 6], [20, 3, 6], [12, -10, 6], [-28, 15, 4], [-29, 22, 4], [-14, -24, 5], [-20, 26, 4]], labels: [[-27, -10, 'imperial']] },
-    { blobs: [[-43, -9, 10], [-36, -22, 9], [-22, -33, 12], [0, -36, 12], [20, -32, 9], [-44, 18, 6]], labels: [[-41, -17, 'unaligned'], [1, -41, 'unaligned']] },
-    { blobs: [[43, 28, 8], [30, -37, 7], [-30, 41, 8], [12, 46, 6], [1, -1, 7], [49, -6, 5]], labels: [[43, 32, 'ghoul stars // xenos'], [31, -41, 'charadon // orks'], [-30, 44, 'halo stars // xenos'], [1, -5, 'core wilds // xenos']] }
+    { blobs: [[-7.3, 33.1, 13], [-7.4, -6.6, 10], [11.1, 2.5, 9], [-12.4, 0.4, 10], [-13.0, 8.0, 6], [-41.3, 8.3, 6], [-28.7, -25.4, 5], [24.0, 23.3, 7]], labels: [[-6.3, 39.1, 'warmaster']] },
+    { blobs: [[-26.0, 0.0, 13], [-20.0, -11.5, 9], [20.9, -20.2, 12], [30.0, -13.0, 8], [1.3, 13.9, 6], [-1.5, -14.1, 6], [2.6, -7.2, 6], [-19.6, 7.7, 4], [-36.5, 15.6, 4], [-14.0, -23.2, 5], [-30.1, 18.1, 4]], labels: [[-27.0, -10.0, 'imperial']] },
+    { blobs: [[-48.9, -5.8, 10], [-42.3, -22.1, 9], [-22.2, -32.4, 12], [-0.8, -33.0, 12], [18.5, -31.2, 9], [-44.0, 17.1, 6]], labels: [[-46.3, -14.4, 'unaligned'], [-4.7, -34.8, 'unaligned']] },
+    { blobs: [[33.0, 27.8, 8], [4.7, -19.8, 7], [-43.3, 30.7, 8], [-0.2, 36.4, 6], [0.0, 0.0, 7], [41.5, -12.8, 5]], labels: [[33.6, 30.7, 'ghoul stars // xenos'], [4.8, -22.2, 'charadon // orks'], [-43.3, 32.7, 'halo stars // xenos'], [0.1, -4.1, 'core wilds // xenos']] }
   ];
   var domMesh = (function () {
     // each dominion is a soft field baked into one channel of a small texture; the shader finds the edge,
@@ -3080,6 +3168,8 @@ el.appendChild(d);
   var shipItem = makeItem({ name: ship.name, side: 't', cls: 'gc-ship', p: shipP, id: 'ship', ship: true, lead: true, onTap: function () { flyTo(shipP, 60); } });
   PLACES.forEach(function (pl) { makeItem({ name: pl.name, side: pl.side, p: pl.p, id: pl.id, group: pl.group, lead: true, onTap: function () { openPlace(pl.id, false); } }); });
   DOMS.forEach(function (D) { D.labels.forEach(function (Lb) { makeItem({ name: Lb[2], side: 'c', cls: 'gc-static gc-dom', p: V(Lb[0], Lb[1], 0), group: 'dom' }); }); });
+  SEG_LABELS.forEach(function (Lb) { makeItem({ name: Lb[2], side: 'c', cls: 'gc-static gc-seg', p: V(Lb[0], Lb[1], 0), group: 'seg' }); });
+  REG_LABELS.forEach(function (Lb) { makeItem({ name: Lb[2], side: 'c', cls: 'gc-static gc-reg', p: V(Lb[0], Lb[1], 0), group: 'seg' }); });
   ARMS.forEach(function (A) { var q = armPoint(A.rs, A.label); makeItem({ name: A.name, side: 'c', cls: 'gc-static gc-guide', p: V(q[0], q[1], 0), group: 'guides' }); });
   (function () {
     var q = armPoint(11.5, 46); makeItem({ name: 'outer arm', side: 'c', cls: 'gc-static gc-guide', p: V(q[0], q[1], 0), group: 'guides' });
@@ -3322,11 +3412,14 @@ el.appendChild(d);
     b.type = 'button'; b.className = 'gc-btn'; s1.textContent = pl.name; s2.textContent = pl.group === 'hw' ? pl.sub : pl.region;
     b.appendChild(s1); b.appendChild(s2); li.appendChild(b);
     b.addEventListener('click', function () { openPlace(pl.id, true); });
-    $(pl.group === 'hw' ? 'gc-listB' : (pl.group === 'o' ? 'gc-listD' : 'gc-listA')).appendChild(li);
+    $(pl.group === 'hw' ? 'gc-listB' : (pl.group === 'o' ? 'gc-listD' : (pl.group === 'fw' ? 'gc-listF' : 'gc-listA'))).appendChild(li);
+  });
+  ['gc-listD', 'gc-listF'].forEach(function (id) {   // the long lists read alphabetically; campaign and legions keep their order
+    var ul = $(id); Array.prototype.slice.call(ul.children).sort(function (a, b) { return a.textContent < b.textContent ? -1 : 1; }).forEach(function (li) { ul.appendChild(li); });
   });
 
   // inline controls
-  var bTop = $('gc-bTop'), PG = { a: { on: false, btn: 'gc-bCa' }, o: { on: false, btn: 'gc-bLm' }, hw: { on: false, btn: 'gc-bHw' } };
+  var bTop = $('gc-bTop'), PG = { a: { on: false, btn: 'gc-bCa' }, o: { on: false, btn: 'gc-bLm' }, hw: { on: false, btn: 'gc-bHw' }, fw: { on: false, btn: 'gc-bFw' } };
   function setTop(v) { bTop.setAttribute('aria-pressed', v ? 'true' : 'false'); }
   function toggle(btn) { var on = btn.getAttribute('aria-pressed') !== 'true'; btn.setAttribute('aria-pressed', on ? 'true' : 'false'); return on; }
   // place overlays: 'a' = campaign locations, 'o' = other locations (famous sites), 'hw' = legion homeworlds
@@ -3343,8 +3436,10 @@ el.appendChild(d);
   $('gc-bHw').addEventListener('click', function () { setPlaceGroup('hw', !PG.hw.on); });
   $('gc-bCa').addEventListener('click', function () { setPlaceGroup('a', !PG.a.on); });
   $('gc-bLm').addEventListener('click', function () { setPlaceGroup('o', !PG.o.on); });
-  // every overlay starts off
-  guides.visible = false; domMesh.visible = false; eyeZone.visible = false;
+  $('gc-bFw').addEventListener('click', function () { setPlaceGroup('fw', !PG.fw.on); });
+  $('gc-bSeg').addEventListener('click', function () { var on = toggle(this); segOn = on; setGroup('seg', on); });
+  // every overlay starts off but the segmentums, so the imperial chart shows from the start
+  guides.visible = false; domMesh.visible = false; eyeZone.visible = false; setGroup('fw', false);
   setGroup('guides', false); setGroup('dom', false); setGroup('hw', false); setGroup('a', false); setGroup('o', false);
   $('gc-bReset').addEventListener('click', resetView);
 
@@ -3369,8 +3464,30 @@ el.appendChild(d);
     ictx.strokeStyle = '#1e8f3a'; ictx.lineWidth = 0.75; ictx.beginPath(); ictx.moveTo(sx, sy); ictx.lineTo(bx, by); ictx.stroke();
     ictx.fillStyle = '#39ff6b'; ictx.beginPath(); ictx.moveTo(ex, ey); ictx.lineTo(bx - uy * 2.5, by + ux * 2.5); ictx.lineTo(bx + uy * 2.5, by - ux * 2.5); ictx.closePath(); ictx.fill();
   }
+  // segmentum borders (galaxy view only): dashed 7 5 with a slow drift, a dark under-stroke first so each dash reads over dense stars
+  function drawBorders(now) {
+    if (!segOn || tier !== 0) return;
+    var paths = [];
+    SEG_W.forEach(function (L) {
+      var path = [], k;
+      for (k = 0; k < L.length; k++) {
+        v3.copy(L[k]).applyMatrix4(camera.matrixWorldInverse);
+        if (v3.z > -0.05) { if (path.length > 1) paths.push(path); path = []; continue; }   // behind the camera: break the line
+        v3.applyMatrix4(camera.projectionMatrix); path.push([(v3.x * 0.5 + 0.5) * W, (-v3.y * 0.5 + 0.5) * H]);
+      }
+      if (path.length > 1) paths.push(path);
+    });
+    ictx.setLineDash([7, 5]); ictx.lineDashOffset = calm ? 0 : -(now / 400) % 12;
+    [['rgba(2,10,4,.9)', 4.5], ['rgba(57,255,107,.95)', 1.5]].forEach(function (st) {
+      ictx.strokeStyle = st[0]; ictx.lineWidth = st[1]; ictx.beginPath();
+      paths.forEach(function (p) { ictx.moveTo(p[0][0], p[0][1]); for (var k = 1; k < p.length; k++) ictx.lineTo(p[k][0], p[k][1]); });
+      ictx.stroke();
+    });
+    ictx.setLineDash([]); ictx.lineDashOffset = 0;
+  }
   function layout(now) {
     ictx.setTransform(DPR, 0, 0, DPR, 0, 0); ictx.clearRect(0, 0, W, H);
+    drawBorders(now);
     placed.length = 0; placed.push([0, 0, W, 26]);
     for (var i = 0; i < items.length; i++) {
       var it = items[i], vis = it.on && it.tier === tier;
@@ -3448,10 +3565,66 @@ el.appendChild(d);
     sn6319: ['63-19', ['sixty-three nineteen']],
     betagarmon: ['beta-garmon', ['beta-garmon ii', 'beta-garmon iii']],
     phall: ['phall', ['phall i', 'phall ii']],
-    sotha: ['valkenhel', ['sotha']]
+    sotha: ['valkenhel', ['sotha']],
+    // worlds from the official horus heresy map. lore names none of their stars ('' = generated name); stygies, gryphonne and voss take their worlds' stems
+    lucius: ['', ['lucius']],
+    stygies: ['stygies', ['stygies viii']],
+    voss: ['voss', ['voss prime']],
+    sarum: ['', ['sarum']],
+    ryza: ['', ['ryza']],
+    anvillus: ['', ['anvillus']],
+    phaeton: ['', ['phaeton']],
+    graia: ['', ['graia']],
+    gryphonne: ['gryphonne', ['gryphonne iv']],
+    tigrus: ['', ['tigrus']],
+    accatran: ['', ['accatran']],
+    neogeddon: ['', ['neo-geddon']],
+    kangda: ['', ['kangda']],
+    abyss: ['', ['abyss']],
+    opuscalus: ['', ['opuscalus noctis']],
+    morox: ['', ['morox']],
+    hellion: ['', ['hellion']],
+    goth: ['', ['goth']],
+    cypramundi: ['', ['cypra mundi']],
+    lamrys: ['', ['lamrys']],
+    bodt: ['', ['bodt']],
+    sarcosa: ['', ['sarcosa']],
+    kayvas: ['', ['kayvas belt|b']],
+    khur: ['', ['khur']],
+    seraphina: ['', ['seraphina']],
+    lorinalpha: ['', ['lorin alpha']],
+    chondax: ['', ['chondax']],
+    lastrati: ['', ['lastrati']],
+    olmec: ['', ['olmec']],
+    sulis: ['', ['sulis']],
+    vasalius: ['', ['vasalius']],
+    shedim: ['', ['shedim']],
+    necromunda: ['', ['necromunda']],
+    gehenna: ['', ['gehenna']],
+    taras: ['', ['taras']],
+    tallarn: ['', ['tallarn']],
+    luthtyre: ['', ['luth tyre']],
+    galaspar: ['', ['galaspar']],
+    lostson: ['', []],
+    vayber: ['', ['vayber']],
+    neverlight: ['', ['neverlight']],
+    bale: ['', ['bale']],
+    incalpeta: ['', ['incalpeta terminus']],
+    saranluxor: ['', ['saran luxor']],
+    impetus: ['', ['impetus']],
+    orpheus: ['', ['orpheus prime']],
+    constantium: ['', ['constantium']],
+    signus: ['', ['signus prime']],
+    konig: ['', ['konig secundus']],
+    memlok: ['', ['memlok']],
+    desperation: ['', ['desperation']],
+    honourum: ['', ['honourum']],
+    angehs: ['', ['angehs']],
+    quaijinn: ['', ['quai jinn']]
   };
   // generated bodies to add [inside, outside] the charted ones. seeded from the place id, so every device sees the same ones. their notes start 'auspex return //' (in-story flag for generated)
-  var GEN = { davin: [0, 2], laeran: [1, 2], murder: [1, 1], sn6319: [2, 6], betagarmon: [1, 2], phall: [0, 2], sotha: [1, 2] };
+  var GEN = { davin: [0, 2], laeran: [1, 2], murder: [1, 1], sn6319: [2, 6], betagarmon: [1, 2], phall: [0, 2], sotha: [1, 2],
+    lucius: [1, 2], stygies: [1, 2], voss: [1, 2], sarum: [1, 2], ryza: [1, 2], anvillus: [1, 2], phaeton: [1, 2], graia: [1, 2], gryphonne: [1, 2], tigrus: [1, 2], accatran: [1, 2], neogeddon: [1, 2], kangda: [1, 2], abyss: [1, 2], opuscalus: [1, 2], morox: [1, 2], hellion: [1, 2], goth: [1, 2], cypramundi: [1, 2], lamrys: [1, 2], bodt: [1, 2], sarcosa: [1, 2], kayvas: [1, 2], khur: [1, 2], seraphina: [1, 2], lorinalpha: [1, 2], chondax: [1, 2], lastrati: [1, 2], olmec: [1, 2], sulis: [1, 2], vasalius: [1, 2], shedim: [1, 2], necromunda: [1, 2], gehenna: [1, 2], taras: [1, 2], tallarn: [1, 2], luthtyre: [1, 2], galaspar: [1, 2], lostson: [1, 3], vayber: [1, 2], neverlight: [1, 2], bale: [1, 2], incalpeta: [1, 2], saranluxor: [1, 2], impetus: [1, 2], orpheus: [1, 2], constantium: [1, 2], signus: [1, 2], konig: [1, 2], memlok: [1, 2], desperation: [1, 2], honourum: [1, 2], angehs: [1, 2], quaijinn: [1, 2] };
   function fillDef(id, def) {
     var g = GEN[id], used = {}, pool = [], h, k;
     if (!g) return def;
@@ -3468,7 +3641,9 @@ el.appendChild(d);
     'ullanor prime': 'war world', nikaea: 'lava world', caliban: 'death world', chemos: 'mining world', olympia: 'civilised world', chogoris: 'feral world', fenris: 'death world', midgardia: 'death world', frostheim: 'ice world', svellgard: 'ocean world',
     inwit: 'death world', nostramo: 'debris field', tenebor: 'dead world', baal: 'desert world', medusa: 'death world', nuceria: 'civilised world', macragge: 'civilised world', ardium: 'hive world', barbarus: 'death world', prospero: 'civilised world', cthonia: 'mining world',
     colchis: 'feudal world', nocturne: 'death world', kiavahr: 'forge world',
-    davin: 'feral world', laeran: 'ocean world', murder: 'death world', 'sixty-three nineteen': 'civilised world', 'beta-garmon ii': 'fortress world', 'beta-garmon iii': 'hive world', 'phall i': 'agri-world', 'phall ii': 'agri-world', sotha: 'agri-world' };
+    davin: 'feral world', laeran: 'ocean world', murder: 'death world', 'sixty-three nineteen': 'civilised world', 'beta-garmon ii': 'fortress world', 'beta-garmon iii': 'hive world', 'phall i': 'agri-world', 'phall ii': 'agri-world', sotha: 'agri-world',
+    // official map: forge worlds by their cog; the rest are only named, so 'charted world'
+    'lucius': 'forge world', 'stygies viii': 'forge world', 'voss prime': 'forge world', 'sarum': 'forge world', 'ryza': 'forge world', 'anvillus': 'forge world', 'phaeton': 'forge world', 'graia': 'forge world', 'gryphonne iv': 'forge world', 'tigrus': 'forge world', 'accatran': 'forge world', 'neo-geddon': 'charted world', 'kangda': 'charted world', 'abyss': 'charted world', 'opuscalus noctis': 'charted world', 'morox': 'charted world', 'hellion': 'charted world', 'goth': 'charted world', 'cypra mundi': 'charted world', 'lamrys': 'charted world', 'bodt': 'charted world', 'sarcosa': 'charted world', 'khur': 'charted world', 'seraphina': 'charted world', 'lorin alpha': 'charted world', 'chondax': 'charted world', 'lastrati': 'charted world', 'olmec': 'charted world', 'sulis': 'charted world', 'vasalius': 'charted world', 'shedim': 'charted world', 'necromunda': 'hive world', 'gehenna': 'charted world', 'taras': 'charted world', 'tallarn': 'dead world', 'luth tyre': 'charted world', 'galaspar': 'charted world', 'vayber': 'charted world', 'neverlight': 'charted world', 'bale': 'charted world', 'incalpeta terminus': 'charted world', 'saran luxor': 'charted world', 'impetus': 'charted world', 'orpheus prime': 'charted world', 'constantium': 'charted world', 'signus prime': 'charted world', 'konig secundus': 'charted world', 'memlok': 'charted world', 'desperation': 'charted world', 'honourum': 'charted world', 'angehs': 'charted world', 'quai jinn': 'charted world' };
   // basic canon details for planets, paraphrased, keyed by body name; shown when the planet is selected in its system
   var NOTE = {
     terra: "throneworld of the imperium and seat of the emperor. the imperial palace sprawls across the himalazian mountains, the largest and best-defended fortress in the galaxy.",
@@ -3504,7 +3679,23 @@ el.appendChild(d);
     'beta-garmon iii': "hive world of the beta-garmon cluster.",
     'phall i': "lightly populated agri world. the imperial fists retribution fleet, held here by warp storms, was attacked by perturabo's iron warriors.",
     'phall ii': "lightly populated agri world.",
-    sotha: "world on the eastern fringe of ultramar. mount pharos holds the pharos, a xenos beacon of blackstone. later lore: necron work, one node of eight, driven by a shard of the c'tan zarhulash."
+    sotha: "world on the eastern fringe of ultramar. mount pharos holds the pharos, a xenos beacon of blackstone. later lore: necron work, one node of eight, driven by a shard of the c'tan zarhulash.",
+    'lucius': "forge world of the mechanicum.",
+    'stygies viii': "forge world of the mechanicum.",
+    'voss prime': "forge world of the mechanicum.",
+    'sarum': "forge world of the mechanicum.",
+    'ryza': "forge world of the mechanicum.",
+    'anvillus': "forge world of the mechanicum.",
+    'phaeton': "forge world of the mechanicum.",
+    'graia': "forge world of the mechanicum.",
+    'gryphonne iv': "forge world of the mechanicum.",
+    'tigrus': "forge world of the mechanicum.",
+    'accatran': "forge world of the mechanicum.",
+    'cypra mundi': "world named on the imperial chart. archive fragment // in later ages a great naval base.",
+    'chondax': "world of the chondax system, where the white scars hunted orks as the heresy began.",
+    'necromunda': "hive world of towering hive cities.",
+    'tallarn': "world virus-bombed by the iron warriors. loyalist and traitor armour fought across its poisoned wastes.",
+    'signus prime': "capital world of the signus cluster. daemons overran it when the word bearers sprang their trap on the blood angels."
   };
   var CLS = { sn6319: 'yellow star', sol: 'yellow dwarf', calth: 'blue star', baal: 'red star', nostramo: 'dying star', inwit: 'dying star', medusa: 'red giant' };
   // real neighbours of sol: name, galactic longitude, latitude, distance in ly
@@ -3740,16 +3931,17 @@ el.appendChild(d);
     for (i = 0; i < 260 * dense; i++) { r = 4 + 120 * Math.pow(rnd(), 0.6); x = gauss(); y = gauss(); z = gauss(); L = Math.sqrt(x * x + y * y + z * z) || 1; field(x / L * r, y / L * r * 0.8, z / L * r, rnd() * 0.6, 0.35 + rnd() * 0.5, 0.25 + rnd() * 0.5); }
     fieldN = LS.length;
     function spec(s) { special.push(s); LSmap[s.key] = s; return s; }
-    if (f.id === 'eye') {
-      for (i = 0; i < 3200; i++) { r = Math.abs(gauss()) * 620; a = rnd() * 6.2832 + r * 0.004; c.add(r * Math.cos(a), gauss() * 110, r * Math.sin(a), 0.3 + rnd() * 0.7, 0.45 + rnd() * 0.5, 2 + rnd() * 3); }
-      glowIn(sceneL, ORIGIN, 1800, 0.3);
+    if (STORM[f.id]) {   // a warp storm: its swirl fills the local view, scaled to the storm (the eye is the largest)
+      var sk = STORM[f.id][1] / 1.4;
+      for (i = 0; i < 3200 * sk; i++) { r = Math.abs(gauss()) * 620 * sk; a = rnd() * 6.2832 + r * 0.004 / sk; c.add(r * Math.cos(a), gauss() * 110 * sk, r * Math.sin(a), 0.3 + rnd() * 0.7, 0.45 + rnd() * 0.5, 2 + rnd() * 3); }
+      glowIn(sceneL, ORIGIN, 1800 * sk, 0.3);
       makeItem({ name: f.name, side: 'c', cls: 'gc-static gc-dom', p: new THREE.Vector3(), tier: 1 });
     } else if (f.place) {
       c.add(0, 0, 0, 1, 1, 1.6); glowIn(sceneL, ORIGIN, f.id === 'core' ? 90 : 6, 0.45);
       var cs = spec({ p: new THREE.Vector3(), key: 'p:' + f.id, name: null, place: f.id });
       makeItem({ name: starName(cs), side: 'r', p: cs.p, lead: true, tier: 1, id: f.id, onTap: function () { openPlace(f.id, false); } });
     }
-    if (f.id === 'sol' || f.id === 'cthonia') NEAR.forEach(function (s, k) {
+    if (f.id === 'sol') NEAR.forEach(function (s, k) {   // real neighbours of sol (cthonia sits 3,400 ly away on the imperial chart, beyond them)
       var l = s[1] * Math.PI / 180, b = s[2] * Math.PI / 180, d = s[3];
       var p = new THREE.Vector3(d * Math.cos(b) * Math.cos(l), d * Math.sin(b), -d * Math.cos(b) * Math.sin(l)).add(SOL.clone().sub(f.p).multiplyScalar(1000));
       c.add(p.x, p.y, p.z, 1, 0.95, Math.min(9, 0.5 + d * 0.02));
