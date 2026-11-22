@@ -397,6 +397,7 @@ body.shake{animation:flicker 11s infinite, shipShake .55s cubic-bezier(.36,.07,.
 .gc-mk.gc-sel .gc-nm{color:var(--hi);border-color:var(--green);background:rgba(57,255,107,.1)}
 .gc-mk.gc-static .gc-nm{pointer-events:none;cursor:default;font-size:11px;color:var(--dim);background:none}
 .gc-mk.gc-dom .gc-nm{font-size:.75rem;color:var(--green)}
+.gc-mk.gc-guide .gc-nm{font-size:.75rem;color:var(--green);background:rgba(2,10,4,.7);text-shadow:0 0 4px rgba(57,255,107,.6)}   /* guides overlay: ring distances and arm names, readable over the star field */
 .gc-mk.gc-ship .gc-hit{pointer-events:none}
 .gc-mk.gc-ship .gc-nm{color:var(--hi);border-color:var(--green);background:rgba(57,255,107,.28);box-shadow:0 0 8px rgba(57,255,107,.3)}
 
@@ -2972,10 +2973,10 @@ el.appendChild(d);
   }
   // guides: dashed range rings (slow drift), axes
   var guides = new THREE.Group(), ringSpin = new THREE.Group();
-  var dashMat = new THREE.LineDashedMaterial({ color: 0x1e8f3a, dashSize: 1.25, gapSize: 1.0, transparent: true, opacity: 0.8, depthTest: false });
+  var dashMat = new THREE.LineDashedMaterial({ color: 0x39ff6b, dashSize: 1.25, gapSize: 1.0, transparent: true, opacity: 0.9, depthTest: false });
   [10, 20, 30, 40].forEach(function (R) { var l = new THREE.Line(circle(R, 0, 0, 0, 180), dashMat); l.computeLineDistances(); ringSpin.add(l); });
   guides.add(ringSpin);
-  var axisMat = new THREE.LineBasicMaterial({ color: 0x1e8f3a, transparent: true, opacity: 0.35, depthTest: false });
+  var axisMat = new THREE.LineBasicMaterial({ color: 0x39ff6b, transparent: true, opacity: 0.55, depthTest: false });
   guides.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(-52, 0, 0), V(52, 0, 0)]), axisMat));
   guides.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([V(0, -52, 0), V(0, 52, 0)]), axisMat));
   scene.add(guides);
@@ -3079,11 +3080,11 @@ el.appendChild(d);
   var shipItem = makeItem({ name: ship.name, side: 't', cls: 'gc-ship', p: shipP, id: 'ship', ship: true, lead: true, onTap: function () { flyTo(shipP, 60); } });
   PLACES.forEach(function (pl) { makeItem({ name: pl.name, side: pl.side, p: pl.p, id: pl.id, group: pl.group, lead: true, onTap: function () { openPlace(pl.id, false); } }); });
   DOMS.forEach(function (D) { D.labels.forEach(function (Lb) { makeItem({ name: Lb[2], side: 'c', cls: 'gc-static gc-dom', p: V(Lb[0], Lb[1], 0), group: 'dom' }); }); });
-  ARMS.forEach(function (A) { var q = armPoint(A.rs, A.label); makeItem({ name: A.name, side: 'c', cls: 'gc-static', p: V(q[0], q[1], 0), group: 'guides' }); });
+  ARMS.forEach(function (A) { var q = armPoint(A.rs, A.label); makeItem({ name: A.name, side: 'c', cls: 'gc-static gc-guide', p: V(q[0], q[1], 0), group: 'guides' }); });
   (function () {
-    var q = armPoint(11.5, 46); makeItem({ name: 'outer arm', side: 'c', cls: 'gc-static', p: V(q[0], q[1], 0), group: 'guides' });
-    q = armPoint(SUN_R, 28.3, 0.36); makeItem({ name: 'orion spur', side: 'c', cls: 'gc-static', p: V(q[0], q[1] - 1.2, 0), group: 'guides' });
-    [10, 20, 30, 40].forEach(function (R) { makeItem({ name: R + 'k ly', side: 'c', cls: 'gc-static', p: V(0, -R, 0), group: 'guides' }); });
+    var q = armPoint(11.5, 46); makeItem({ name: 'outer arm', side: 'c', cls: 'gc-static gc-guide', p: V(q[0], q[1], 0), group: 'guides' });
+    q = armPoint(SUN_R, 28.3, 0.36); makeItem({ name: 'orion spur', side: 'c', cls: 'gc-static gc-guide', p: V(q[0], q[1] - 1.2, 0), group: 'guides' });
+    [10, 20, 30, 40].forEach(function (R) { makeItem({ name: R + 'k ly', side: 'c', cls: 'gc-static gc-guide', p: V(0, -R, 0), group: 'guides' }); });
   })();
   function measure() { items.forEach(function (it) { it.w = it.nm.offsetWidth || it.w; it.h = it.nm.offsetHeight || it.h; }); }
   function setGroup(name, on) { items.forEach(function (it) { if (it.group === name) it.on = on; }); }
@@ -3766,9 +3767,9 @@ el.appendChild(d);
     shell(c, 30000, 45000, 80, 180, 1200);
     guidesL = new THREE.Group(); spinL = new THREE.Group();
     [10, 100, 1000].forEach(function (R) {
-      var ln = new THREE.Line(circle(R, 0, 0, 0, 160), new THREE.LineDashedMaterial({ color: 0x1e8f3a, dashSize: R * 0.05, gapSize: R * 0.04, transparent: true, opacity: 0.8, depthTest: false }));
+      var ln = new THREE.Line(circle(R, 0, 0, 0, 160), new THREE.LineDashedMaterial({ color: 0x39ff6b, dashSize: R * 0.05, gapSize: R * 0.04, transparent: true, opacity: 0.9, depthTest: false }));
       ln.computeLineDistances(); spinL.add(ln);
-      var it = makeItem({ name: R.toLocaleString('en-US') + ' ly', side: 'c', cls: 'gc-static', p: new THREE.Vector3(0, 0, R), tier: 1, group: 'guides' }); it.on = guidesOn;
+      var it = makeItem({ name: R.toLocaleString('en-US') + ' ly', side: 'c', cls: 'gc-static gc-guide', p: new THREE.Vector3(0, 0, R), tier: 1, group: 'guides' }); it.on = guidesOn;
     });
     guidesL.add(spinL); guidesL.visible = guidesOn; sceneL.add(guidesL); sceneL.add(c.mesh());
     syncStarItems();
