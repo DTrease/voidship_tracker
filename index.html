@@ -456,6 +456,7 @@ a.gc-btn{display:inline-flex;align-items:center;text-decoration:none}
 #gc-root input[type=range]{border:0;padding:0;box-shadow:none}
 #gc-root{margin-bottom:var(--gap)}
 .gc-ovl{align-items:center;margin-top:.6rem;padding-top:.5rem;border-top:1px dashed var(--border)}
+.gc-kv [hidden]{display:none}
 #gc-jumpLy{width:6rem;max-width:6rem}
 #gc-jumpInfo{margin:.3rem 0 0}
 .gc-ovl+.gc-ovl{margin-top:.35rem;padding-top:0;border-top:0}   /* systems // sits right under overlays // */
@@ -672,6 +673,7 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
       <p id="gc-dtext"></p>
       <dl class="gc-kv">
         <dt>region</dt><dd id="gc-dreg"></dd>
+        <dt class="gc-al">allegiance</dt><dd class="gc-al" id="gc-dall"></dd>
         <dt>from ship</dt><dd id="gc-dship"></dd>
       </dl>
       <div class="gc-ctl gc-one">
@@ -716,6 +718,7 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
       </div>
       <p id="gc-otext"></p>
       <dl class="gc-kv">
+        <dt class="gc-al">allegiance</dt><dd class="gc-al" id="gc-oall"></dd>
         <dt>from ship</dt><dd id="gc-oship"></dd>
       </dl>
       <div class="gc-ctl gc-one">
@@ -3317,6 +3320,7 @@ el.appendChild(d);
     $('gc-dsub').textContent = '// ' + pl.sub;
     $('gc-dtext').textContent = pl.text + (SYS[pl.id] ? ' star: ' + placeStar(pl.id) + '.' : '');
     $('gc-dreg').textContent = pl.region;
+    showAlleg('gc-dall', sysAlleg('p:' + pl.id));
     $('gc-dship').textContent = ship.at === pl.id ? 'ship on station' : ly(pl.p.distanceTo(shipP));
     $('gc-bMove').hidden = ship.at === pl.id; $('gc-bFly').textContent = 'view';
     sysControls(SYS[pl.id] ? 'p:' + pl.id : null);
@@ -3336,6 +3340,7 @@ el.appendChild(d);
       $('gc-otitle').textContent = 'selected object: ' + b.name;
       $('gc-osub').textContent = '// orbit ' + b.orbit + ' // ' + b.type;
       $('gc-otext').textContent = [b.note, b.moons.length ? 'in orbit: ' + b.moons.join(', ') : ''].filter(Boolean).join(' // ');
+      showAlleg('gc-oall', bodyAlleg(sysCtx.key, b));
       $('gc-oship').textContent = here ? 'ship in orbit' : (shipInSys() ? 'ship in system' : ly(w.distanceTo(shipP)));
       $('gc-bOMove').hidden = here;
     } else {
@@ -3343,6 +3348,7 @@ el.appendChild(d);
       $('gc-otitle').textContent = 'selected object: ' + sysCtx.def.star;
       $('gc-osub').textContent = '// central star // ' + (sysCtx.def.cls || 'star');
       $('gc-otext').textContent = 'star of the ' + sysCtx.def.star + ' system, with ' + n + (n === 1 ? ' body' : ' bodies') + ' in orbit.';
+      showAlleg('gc-oall', null);
       $('gc-oship').textContent = shipInSys() ? 'ship in system' : ly(w.distanceTo(shipP));
       $('gc-bOMove').hidden = true;
     }
@@ -3786,7 +3792,7 @@ el.appendChild(d);
   var POP = { 'hive world': [1, 90, 'billion'], 'civilised world': [0.2, 9, 'billion'], 'agri-world': [5, 900, 'million'], 'feral world': [1, 400, 'million'], 'feudal world': [5, 600, 'million'], 'forge world': [1, 40, 'billion'], 'mining world': [0.1, 80, 'million'],
     'shrine world': [10, 900, 'million'], 'fortress world': [20, 800, 'million'], 'penal world': [1, 60, 'million'], 'knight world': [5, 200, 'million'], 'pleasure world': [1, 90, 'million'], 'cemetery world': [1, 50, 'million'], 'void station': [2, 400, 'thousand'],
     'death world': [0.01, 20, 'million'], 'ocean world': [1, 300, 'million'], 'jungle world': [0.1, 90, 'million'], 'desert world': [0.1, 60, 'million'] };
-  var HOOK = LST("compliance|not yet brought to compliance|iterators dispatched|remembrancer colony|legion recruiting ground|imperial army muster world|rogue trader charter disputed|astropathic relay|choir silent since isstvan|declared for the warmaster|holds for the throne|loyalty unknown|vox silent|ghost signals on all bands|old night ruins|dark age vault, sealed|iron men graveyard|abominable intelligence purged|xenos ruins under interdict|aeldari webway gate, dormant|ork spoor detected|ork rok swarm in orbit|hrud migration path|khrave nest burned out|void whales winter here|promethium seas|adamantium lodes|plasma storms|no dawn for 600 years|tidally locked|retrograde orbit|rings of ice|orbital docks derelict|titan legion forge-fane|navigator house enclave|black ship anchorage|mechanicum explorators missing|skitarii garrison|sealed by custodian edict|plague quarantine|famine tithe waived|rebellion suppressed|governor in exile|pirate haven|cold trade port|wreck of a crusade fleet|mass graves|lectitio divinitatus spreading|warp echoes at the mandeville point|geller field anomalies|time runs slow here|something answers hails in dead tongues|two moons where charts show one|atmosphere burned off in living memory|census refused|last contact 40 years ago|standard template fragment rumoured|uncharted until this survey");
+  var HOOK = LST("compliance|not yet brought to compliance|iterators dispatched|remembrancer colony|legion recruiting ground|imperial army muster world|rogue trader charter disputed|astropathic relay|choir silent since isstvan|tithe ships overdue|last census lost|astropathic silence|vox silent|ghost signals on all bands|old night ruins|dark age vault, sealed|iron men graveyard|abominable intelligence purged|xenos ruins under interdict|aeldari webway gate, dormant|ork spoor detected|ork rok swarm in orbit|hrud migration path|khrave nest burned out|void whales winter here|promethium seas|adamantium lodes|plasma storms|no dawn for 600 years|tidally locked|retrograde orbit|rings of ice|orbital docks derelict|titan legion forge-fane|navigator house enclave|black ship anchorage|mechanicum explorators missing|skitarii garrison|sealed by custodian edict|plague quarantine|famine tithe waived|rebellion suppressed|governor in exile|pirate haven|cold trade port|wreck of a crusade fleet|mass graves|lectitio divinitatus spreading|warp echoes at the mandeville point|geller field anomalies|time runs slow here|something answers hails in dead tongues|two moons where charts show one|atmosphere burned off in living memory|census refused|last contact 40 years ago|standard template fragment rumoured|uncharted until this survey");
   var TYPEHOOK = {
     'hive world': LST('underhive in revolt|spires above the cloud line|gang wars sanctioned|tithe: regiments|one hive, continent-wide'), 'forge world': LST('titan legion forge-fane|skitarii garrison|sworn to mars|sworn to the dark mechanicum|macro-cannon foundries|ordinatus yard'),
     'death world': LST('apex predators unclassified|flora carnivorous|legion recruiting ground|no settlement survives a year|the weather is the predator'), 'agri-world': LST('feeds nine systems|harvest tithe overdue|grain fleets inbound|blight in the southern belt'),
@@ -3886,6 +3892,54 @@ el.appendChild(d);
     else if (Math.hypot(p.x - SOL.x, p.z - SOL.z) < 10.4) mult = 0.3;
     else if (pl && RIMS[pl.region]) mult = 2;
     return { mult: mult, zone: zone };
+  }
+
+  // ---- allegiance at 008.M31: imperial, traitor, neutral or unknown, for every inhabited world ----
+  // named places: set by hand from heresy canon (tier 1); where canon only implies it, it is a judgement (marked j). null = none (storms, ruins)
+  var ALLEG = {
+    sol: 'imperial', calth: 'imperial', nikaea: 'imperial', phall: 'imperial', sotha: 'imperial', macragge: 'imperial', chogoris: 'imperial', fenris: 'imperial',
+    inwit: 'imperial', baal: 'imperial', medusa: 'imperial', nocturne: 'imperial', deliverance: 'imperial', necromunda: 'imperial',
+    caliban: 'imperial',      // j: the dark angels are loyal; luther's turn on caliban comes later
+    tallarn: 'imperial',      // j: a loyalist world when the iron warriors attack
+    rattigon: 'imperial', a34: 'imperial',   // campaign places (tier 4)
+    isstvan: 'traitor', betagarmon: 'traitor', chemos: 'traitor', olympia: 'traitor', signus: 'traitor',   // signus: overrun by daemons
+    davin: 'traitor', colchis: 'traitor', barbarus: 'traitor',   // j: their lodges and legions went with horus
+    ullanor: 'unknown', laeran: 'unknown', murder: 'unknown', sn6319: 'unknown', nuceria: 'unknown', cthonia: 'unknown',
+    eye: null, maelstrom: null, gyre: null, nostramo: null, prospero: null   // warp storms; nostramo destroyed, prospero burned
+  };
+  var ALLEG_BODY = { terra: 'imperial', mars: 'traitor' };   // mars: the schism; the fabricator-general and most of mars went to horus
+  // everything else rolls from where it is: [imperial, traitor, neutral, unknown] weights by dominion zone (tier 4)
+  var ALLEG_ZONE = [[10, 60, 15, 15], [75, 5, 10, 10], [35, 35, 10, 20], [5, 5, 30, 60]], ALLEG_NONE = [25, 10, 25, 40], ALLEG_NAMES = ['imperial', 'traitor', 'neutral', 'unknown'];
+  function inRuin(e, n) { var i, j, c = false; for (i = 0, j = RUIN.length - 1; i < RUIN.length; j = i++) { var a = RUIN[i], b = RUIN[j]; if ((a[1] > n) !== (b[1] > n) && e < (b[0] - a[0]) * (n - a[1]) / (b[1] - a[1]) + a[0]) c = !c; } return c; }
+  function keyPos(key) {   // the chart position a system key belongs to: its place, sol for named stars, or a grid point
+    var id = key.slice(0, 2) === 'p:' ? key.slice(2) : (key.slice(0, 2) === 'n:' ? 'sol' : key.split('#')[0]), pl = byId[id], q;
+    if (pl) return pl.p;
+    if (id.slice(0, 2) === 'v:') { q = id.split(':').map(parseFloat); if (isFinite(q[1]) && isFinite(q[2])) return V(q[1], q[2], 0); }
+    return null;
+  }
+  function zoneAlleg(key, R) {
+    var p = keyPos(key), w = ALLEG_NONE, d, i, b, e, n;
+    if (p) { e = p.x; n = -p.z;
+      for (d = 0; d < DOMS.length && w === ALLEG_NONE; d++) for (i = 0; i < DOMS[d].blobs.length; i++) { b = DOMS[d].blobs[i]; if (Math.hypot(e - b[0], n - b[1]) < b[2]) { w = ALLEG_ZONE[d]; break; } }
+      if (inRuin(e, n)) w = [w[0], w[1], w[2], w[3] + 25];   // cut off by the storm: more worlds out of contact
+    }
+    return wpick(R, [ALLEG_NAMES[0], w[0], ALLEG_NAMES[1], w[1], ALLEG_NAMES[2], w[2], ALLEG_NAMES[3], w[3]]);
+  }
+  function sysAlleg(key) {
+    var id = key.slice(0, 2) === 'p:' ? key.slice(2) : null;
+    if (id && Object.prototype.hasOwnProperty.call(ALLEG, id)) return ALLEG[id];
+    if (id && byId[id] && STORM[id]) return null;
+    return zoneAlleg(key, mkRnd(hashStr('al:' + key)));
+  }
+  // a world: lore override, else uninhabited types get none, else its system's allegiance (one in eight differs, rolled from its zone)
+  function bodyAlleg(key, b) {
+    if (ALLEG_BODY[b.name]) return ALLEG_BODY[b.name];
+    var t = b.type || '', sys = sysAlleg(key), id = key.slice(0, 2) === 'p:' ? key.slice(2) : null;
+    if (id && byId[id] && b.name === byId[id].name) return sys;   // the named world of a lore system
+    if (!XHAB.test(t)) return null;
+    if (sys === null && id && Object.prototype.hasOwnProperty.call(ALLEG, id)) return null;
+    var R = mkRnd(hashStr('al:' + key + '/' + b.name));
+    return R() < 0.125 ? zoneAlleg(key, R) : sys;
   }
 
   // ---------------- saved systems (this browser; hooks at the bottom for firebase) ----------------
@@ -4303,6 +4357,8 @@ el.appendChild(d);
     $('gc-dtitle').textContent = 'selected system: ' + title; $('gc-dsub').textContent = '// ' + sub; $('gc-dtext').textContent = text;
     $('gc-dreg').textContent = reg; $('gc-dship').textContent = shipTxt; $('gc-bMove').hidden = hideMove; $('gc-bFly').textContent = viewTxt;
   }
+  // the allegiance row: hidden when there is none (storms, ruins, uninhabited bodies)
+  function showAlleg(id, a) { var dd = $(id); dd.textContent = a || ''; dd.hidden = !a; dd.previousElementSibling.hidden = !a; }
   function regionOf() { return focus && focus.place ? REG[focus.place.id] || focus.place.region : 'uncharted'; }
   var REG = {};
   function starTarget(s) {
@@ -4310,6 +4366,7 @@ el.appendChild(d);
     fillTarget(starName(s), def ? (saved[s.key] ? 'surveyed // ' : 'auspex return // ') + def.cls : 'uncharted star // ' + genClass(hashStr(s.key)),
       def ? (def.bodies.length + (def.bodies.length === 1 ? ' body' : ' bodies') + ' on record' + (def.note ? ' // ' + def.note : '')) : 'no survey on record.',
       'local group: ' + focus.name, on ? (ship.body ? 'ship in system' : 'ship on station') : ly(w.distanceTo(shipP)), on && !ship.body, def && tier === 1 ? 'view system' : 'view');
+    showAlleg('gc-dall', def ? sysAlleg(s.key) : null);   // an uncharted star shows none until surveyed
     sysControls(s.key);
   }
   function viewTarget() {
@@ -4877,6 +4934,9 @@ el.appendChild(d);
   };
   api.flyTo = function (id) { if (byId[id]) openPlace(id, true); };
   api.vizState = function () { return viz ? viz.state() : null; };
+  // testing: allegiance of a system key, and of each body in it
+  api.allegOf = function (key) { var d = sysDef(key); return { system: sysAlleg(key), bodies: d ? d.bodies.map(function (b) { return b.name + ' (' + b.type + '): ' + bodyAlleg(key, b); }) : [] }; };
+  api.allegMix = function (place, n) { var c = {}, i; for (i = 0; i < (n || 2000); i++) { var a = sysAlleg(place + '#' + i); c[a] = (c[a] || 0) + 1; } return c; };
   // testing: share of n generated systems round a place (or 'n:' / 'v:' key) with at least one xenos note, and the species seen
   api.xenoTest = function (key, n) {
     var ctx = xenoCtx(key), hit = 0, seen = {}, i;
