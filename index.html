@@ -249,10 +249,21 @@ box-shadow:0 0 6px var(--green);animation:blink 1.4s infinite}
 .comp-sec::before{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--border))}
 .comp-sec::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
 .comp-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:3px}
+.comp-sub{margin:2px 0 8px;padding-left:10px;border-left:1px solid var(--border)}   /* what a component holds: cargo under its bay, craft under the launch bay */
+.comp-sub .add{margin-top:0}
+.comp-row .die-select{flex:none;padding:1px 15px 1px 5px;background-position:right 4px center;font-size:var(--fs-s)}
+.comp-row{gap:6px}
+.comp-row .del{flex:none;padding:1px 7px}
+.comp-add{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.comp-add input{flex:1 1 9rem;min-width:0}
+.comp-add .die-select{flex:1 1 7rem;max-width:none}
+.comp-add .add{flex:1 1 100%;margin-top:0}
+.comp-add [hidden]{display:none}
 .comp-n{flex:1;min-width:0;background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer;color:var(--text);font-family:var(--term);font-size:var(--fs-m);line-height:1.1;text-shadow:inherit}
 .comp-n:hover,.comp-n:focus-visible{color:var(--hi);outline:none}
-.comp-n small{color:var(--dim);font-size:var(--fs-s)}
-.comp-n small::before{content:' // '}
+.comp-n{display:flex;align-items:baseline;white-space:nowrap;overflow:hidden}   /* one line: on a narrow screen only the location is trimmed */
+.comp-n small{color:var(--dim);font-size:var(--fs-s);margin-left:.35em;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.comp-n small::before{content:'// '}
 .comp-t{flex:none;font-family:var(--term);font-size:var(--fs-s);letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border:1px solid transparent;background:none;color:var(--dim);white-space:nowrap;text-shadow:inherit}
 button.comp-t{cursor:pointer}
 .comp-t.s1{border:1px dashed var(--green-dim);color:var(--green);background:rgba(57,255,107,.06)}
@@ -761,29 +772,39 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
 <select id="fuelQuality" class="die-select" onchange="saveStatus(this)"></select></div>
 </div>
 
-<div class="panel">
-<h2>Components</h2>
-<div id="compList"></div>
+<!-- components & manifest: each component's status comes from the stored damage (renderComponents fills the [data-st] slots);
+     what each part holds sits under it: cargo under its bay, craft under the launch bay -->
+<div class="panel" id="compPanel">
+<h2>Components &amp; Manifest</h2>
+<div class="comp-row" data-st="plasma"></div>
+<div class="comp-row" data-st="warp"></div>
+<div class="comp-row" data-st="geller"></div>
+<div class="comp-row" data-st="shield"></div>
+<div class="comp-row" data-st="bridge"></div>
+<div class="comp-row" data-st="life"></div>
+<div class="comp-row" data-st="quarters"></div>
+<div class="comp-row" data-st="auger"></div>
+<div class="comp-row" data-st="laser"></div>
+<div class="comp-row" data-st="bayA"></div><div class="comp-sub cargo-bay" id="cargoA"></div>
+<div class="comp-row" data-st="bayB"></div><div class="comp-sub cargo-bay" id="cargoB"></div>
+<div class="comp-row" data-st="bayC"></div><div class="comp-sub cargo-bay" id="cargoC"></div>
+<div class="comp-row" data-st="bayD"></div><div class="comp-sub cargo-bay" id="cargoD"></div>
+<div class="comp-row" data-st="launch"></div>
+<div class="comp-sub"><div id="hangarList"></div>
+<button class="add" onclick="addItem('hangar',{name:'',qty:1})">+ add craft to launch bay</button></div>
+<div id="compAdded"></div>
+<div class="comp-add" id="compAdd">
+<input type="text" id="compNewType" maxlength="100" placeholder="component" aria-label="new component name" hidden onkeydown="if(event.key==='Enter'){event.preventDefault();addComponent();}else if(event.key==='Escape'){closeAddComponent();}">
+<select id="compNewAt" class="die-select" aria-label="new component location" hidden></select>
+<button class="add" type="button" id="compAddBtn" onclick="addComponent()">+ add component</button>
 </div>
-</section>
-
-
-<section class="group">
-<h2 class="group-title"><span>Manifest</span></h2>
+<div class="comp-sec">[ supplemental features ]</div>
+<div id="upgradesList"></div>
+<button class="add" onclick="addItem('upgrades',{text:''})">+ add feature</button>
+</div>
 
 <div class="panel"><h2>Crew</h2><div id="crewList"></div>
 <button class="add" onclick="addItem('crew',{desc:'New crew',quality:'d10',qty:1})">+ add crew</button></div>
-
-<div class="panel"><h2>Defense Array</h2><div id="defenseList"></div>
-<button class="add" onclick="addItem('defense',{desc:'',quality:'d10'})">+ add defense</button></div>
-
-<div class="panel"><h2>Hangar Bay</h2><div id="hangarList"></div>
-<button class="add" onclick="addItem('hangar',{name:'',qty:1})">+ add craft</button></div>
-
-<div class="panel"><h2>Cargo Bays</h2><div id="cargoGrid"></div></div>
-
-<div class="panel"><h2>Upgrades</h2><div id="upgradesList"></div>
-<button class="add" onclick="addItem('upgrades',{text:''})">+ add upgrade</button></div>
 </section>
 
 <section class="group">
@@ -1037,10 +1058,8 @@ db.ref('crew').on('value', s=>renderList('crew','crewList',s.val(),[
   {key:'qty',type:'number',placeholder:'qty',width:'55px'}
 ]));
 db.ref('upgrades').on('value', s=>renderList('upgrades','upgradesList',s.val(),[{key:'text',placeholder:'text'}]));
-db.ref('defense').on('value', s=>renderList('defense','defenseList',s.val(),[
-  {key:'desc',placeholder:'description'},
-  {key:'quality',type:'select',width:'62px'}
-]));
+db.ref('defense').on('value', s=>renderDefenseData(s.val()));        // old defense list: only feeds the laser and shield dice now
+db.ref('components').on('value', s=>renderCompData(s.val()));
 db.ref('cargo').on('value', s=>renderCargo(s.val()||DEFAULTS.cargo));
 db.ref('rolls').on('value', s=>renderRollHistory(s.val()));
 db.ref('clocks').on('value', s=>renderClocks(s.val()));
@@ -1212,29 +1231,67 @@ let dmgArmed = null, dmgArmTimer = null, hullMsgTimer = null;
 
 // the ship's components (rogue trader ch.8, the most basic type of each), and the wireframe section each sits in.
 // a component shows the damage stored in its section; the four cargo bays share one section and split it by dmgBay
+// id = the row's data-st slot in the components & manifest panel
 const COMPONENTS = [
-  {sup:0, type:'jovian 2 plasma drive', at:'plasma'},
-  {sup:0, type:'strelov 1 warp engine', at:'engines'},
-  {sup:0, type:'geller field', at:'engines'},
-  {sup:0, type:'single void shield', at:'defense'},
-  {sup:0, type:'combat bridge', at:'bridge'},
-  {sup:0, type:'m-1.r life sustainer', at:'crew'},
-  {sup:0, type:'voidsmen quarters', at:'crew'},
-  {sup:0, type:'m-100 auger array', at:'prow'},
-  {sup:1, type:'sunsear laser battery', at:'broadside', loc:'broadside'},
-  {sup:1, type:'cargo bay a', at:'cargo', bay:0, loc:'cargo bays'},
-  {sup:1, type:'cargo bay b', at:'cargo', bay:1, loc:'cargo bays'},
-  {sup:1, type:'cargo bay c', at:'cargo', bay:2, loc:'cargo bays'},
-  {sup:1, type:'cargo bay d', at:'cargo', bay:3, loc:'cargo bays'},
-  {sup:1, type:'launch bay', at:'hangar'}
+  {id:'plasma', type:'jovian 2 plasma drive', at:'plasma'},
+  {id:'warp', type:'strelov 1 warp engine', at:'engines'},
+  {id:'geller', type:'geller field', at:'engines'},
+  {id:'shield', type:'single void shield', at:'defense', die:/shield/i},     // die: the row has a quality die; until one is stored, it is read from the old defense entry matching this
+  {id:'bridge', type:'combat bridge', at:'bridge'},
+  {id:'life', type:'m-1.r life sustainer', at:'crew'},
+  {id:'quarters', type:'voidsmen quarters', at:'crew'},
+  {id:'auger', type:'m-100 auger array', at:'prow'},
+  {id:'laser', type:'sunsear laser battery', at:'broadside', loc:'broadside', die:/laser/i},
+  {id:'bayA', type:'cargo bay a', at:'cargo', bay:0, loc:'cargo bays'},
+  {id:'bayB', type:'cargo bay b', at:'cargo', bay:1, loc:'cargo bays'},
+  {id:'bayC', type:'cargo bay c', at:'cargo', bay:2, loc:'cargo bays'},
+  {id:'bayD', type:'cargo bay d', at:'cargo', bay:3, loc:'cargo bays'},
+  {id:'launch', type:'launch bay', at:'hangar'}
 ];
+// stored at /components/{id}: for a built-in row only {quality}; a component added on the page is {type, at, t} (and maybe quality).
+// the old /defense list is no longer shown; its laser and void shield entries only supply the dice until one is set here
+let compData = {}, defenseData = {};
+const COMP_AT = ['plasma','engines','bridge','crew','defense','broadside','prow','cargo','wings','hangar'];   // locations a component can be added to: the wireframe's sections
+function addedComponents(){
+return Object.keys(compData).filter(id=> !COMPONENTS.some(c=>c.id === id) && compData[id] && compData[id].type && DMG_SECTIONS[compData[id].at])
+  .map(id=>({id:id, type:String(compData[id].type), at:compData[id].at, added:1, t:Number(compData[id].t) || 0})).sort((a,b)=> a.t - b.t);
+}
+function allComponents(){ return COMPONENTS.concat(addedComponents()); }
+function compQuality(c){
+const s = compData[c.id];
+if(s && s.quality) return s.quality;
+if(c.die){ const d = Object.values(defenseData || {}).find(x=> x && c.die.test(x.desc || '')); if(d && d.quality) return d.quality; }
+return 'd10';
+}
+function renderCompData(v){ compData = v || {}; renderComponents(); }
+function renderDefenseData(v){ defenseData = v || {}; renderComponents(); }
+// "+ add component": the first tap shows the name and location fields, the next one adds (an empty name just closes them again)
+function closeAddComponent(){
+const ti = document.getElementById('compNewType');
+ti.value = ''; ti.hidden = true; document.getElementById('compNewAt').hidden = true;
+document.getElementById('compAddBtn').textContent = '+ add component';
+}
+function addComponent(){
+const ti = document.getElementById('compNewType'), at = document.getElementById('compNewAt').value, type = ti.value.trim().toLowerCase();
+if(ti.hidden){
+  ti.hidden = false; document.getElementById('compNewAt').hidden = false;
+  document.getElementById('compAddBtn').textContent = '+ add';
+  ti.focus(); return;
+}
+if(!type){ closeAddComponent(); return; }
+if(!DMG_SECTIONS[at]) return;
+db.ref('components').push({type:type.slice(0, 100), at:at, t:Date.now()});
+closeAddComponent();
+}
+(function(){ const s = document.getElementById('compNewAt'); if(!s) return; COMP_AT.forEach(id=>{ const o = document.createElement('option'); o.value = id; o.textContent = DMG_SECTIONS[id]; s.appendChild(o); }); })();
+
 // which cargo bay (0..3, a..d) a damage in the cargo section is in: from its id, so every device and the wireframe agree
 function dmgBay(id){ let h = 2166136261; for(let i=0;i<id.length;i++){ h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) % 4; }
 window.dmgBay = dmgBay;
 
 // sections damage can land in: what the wireframe has fitted, else the fixed ones; only those with a component, so every damage shows in the list
 function dmgSections(){
-const has = id=> DMG_SECTIONS[id] && COMPONENTS.some(c=>c.at === id);
+const comps = allComponents(), has = id=> DMG_SECTIONS[id] && comps.some(c=>c.at === id);
 try { if(window.ShipView && ShipView.sections){ const s = ShipView.sections(); if(s && s.length){ const r = s.map(x=>x.id).filter(has); if(r.length) return r; } } } catch(e){ /* fall through */ }
 return Object.keys(DMG_SECTIONS).filter(id=>!DMG_UPGRADES[id] && has(id));
 }
@@ -1373,45 +1430,56 @@ renderComponents();
 
 // the components panel: one row per component, "type // location", with the worst damage in its section (or bay) as its status.
 // tapping a damage asks "repair +n?", a second tap repairs it. tapping the name lights the section on the wireframe.
+// built-in rows are fixed slots ([data-st]); rows added on the page go in #compAdded. only those rows are rebuilt here,
+// the cargo, craft and feature fields between them belong to their own renderers
+function compTag(c){
+const num = n=> String(Math.round(n * 100) / 100);
+const ds = dmgState.list.filter(d=> d.section === c.at && (c.bay === undefined || dmgBay(d.id) === c.bay)).sort((a,b)=> b.sev - a.sev || b.t - a.t);
+const d = ds[0];
+if(!d){ const t = document.createElement('span'); t.className = 'comp-t'; t.textContent = 'intact'; return t; }
+const t = document.createElement('button'), off = d.sev >= DMG_RULES.OFFLINE_AT && d.type !== 'offline';
+t.type = 'button';
+if(dmgArmed === d.id){ t.className = 'comp-t ask'; t.textContent = 'repair +' + num(d.cost) + '?'; }
+else {
+  t.className = 'comp-t s' + d.sev + (Date.now() - d.t < 8000 ? ' new' : '');
+  t.textContent = d.type + (off ? ' // off' : '') + (ds.length > 1 ? ' +' + (ds.length - 1) : '');
+}
+t.title = DMG_TYPES[d.type] + ' (' + DMG_SEV[d.sev] + ') -' + num(d.cost) + ' hull';
+t.setAttribute('aria-pressed', dmgArmed === d.id ? 'true' : 'false');
+t.addEventListener('click', ()=>repairTap(d.id));
+return t;
+}
+function fillCompRow(row, c){
+row.textContent = '';
+const name = document.createElement('button'), loc = document.createElement('small');
+name.type = 'button'; name.className = 'comp-n'; name.textContent = c.type;
+loc.textContent = c.loc || DMG_SECTIONS[c.at]; name.appendChild(loc);
+name.addEventListener('click', ()=>{ if(window.ShipView && ShipView.pick) ShipView.pick(c.at); });
+row.appendChild(name);
+if(c.die){
+  const sel = document.createElement('select'); sel.className = 'die-select'; sel.setAttribute('aria-label', c.type + ' quality');
+  fillDieSelect(sel, compQuality(c));
+  sel.onchange = ()=> db.ref('components/' + c.id).update({quality: sel.value});
+  row.appendChild(sel);
+}
+row.appendChild(compTag(c));
+if(c.added){
+  const del = document.createElement('button'); del.className = 'del'; del.type = 'button'; del.textContent = '×'; del.setAttribute('aria-label', 'remove ' + c.type);
+  del.onclick = ()=> dbRemove('components/' + c.id);
+  row.appendChild(del);
+}
+}
 function renderComponents(){
-const el = document.getElementById('compList');
-if(!el) return;
+const panel = document.getElementById('compPanel');
+if(!panel) return;
 if(holdRender('comps', null, renderComponents)) return;
 const st = curStatus || {}, hull = Number(st.hull);
 const known = st.hull !== null && st.hull !== undefined && String(st.hull).trim() !== '' && isFinite(hull);
 document.documentElement.classList.toggle('ship-lost', known && hull <= 0);
-const num = n=> String(Math.round(n * 100) / 100);
-const short = {breach:'breach', fire:'fire', surge:'surge', offline:'offline', structural:'structural', coolant:'coolant'};
-el.textContent = '';
-[0, 1].forEach(sup=>{
-  const h = document.createElement('div'); h.className = 'comp-sec'; h.textContent = sup ? '[ supplemental ]' : '[ essential ]'; el.appendChild(h);
-  COMPONENTS.filter(c=>c.sup === sup).forEach(c=>{
-    const ds = dmgState.list.filter(d=> d.section === c.at && (c.bay === undefined || dmgBay(d.id) === c.bay))
-      .sort((a,b)=> b.sev - a.sev || b.t - a.t);
-    const row = document.createElement('div'), name = document.createElement('button'), loc = document.createElement('small');
-    row.className = 'comp-row';
-    name.type = 'button'; name.className = 'comp-n'; name.textContent = c.type;
-    loc.textContent = c.loc || DMG_SECTIONS[c.at]; name.appendChild(loc);
-    name.addEventListener('click', ()=>{ if(window.ShipView && ShipView.pick) ShipView.pick(c.at); });
-    row.appendChild(name);
-    const d = ds[0];
-    if(!d){ const t = document.createElement('span'); t.className = 'comp-t'; t.textContent = 'intact'; row.appendChild(t); }
-    else {
-      const t = document.createElement('button'), off = d.sev >= DMG_RULES.OFFLINE_AT && d.type !== 'offline';
-      t.type = 'button';
-      if(dmgArmed === d.id){ t.className = 'comp-t ask'; t.textContent = 'repair +' + num(d.cost) + '?'; }
-      else {
-        t.className = 'comp-t s' + d.sev + (Date.now() - d.t < 8000 ? ' new' : '');
-        t.textContent = short[d.type] + (off ? ' // off' : '') + (ds.length > 1 ? ' +' + (ds.length - 1) : '');
-      }
-      t.title = DMG_TYPES[d.type] + ' (' + DMG_SEV[d.sev] + ') -' + num(d.cost) + ' hull';
-      t.setAttribute('aria-pressed', dmgArmed === d.id ? 'true' : 'false');
-      t.addEventListener('click', ()=>repairTap(d.id));
-      row.appendChild(t);
-    }
-    el.appendChild(row);
-  });
-});
+COMPONENTS.forEach(c=>{ const row = panel.querySelector('[data-st="' + c.id + '"]'); if(row) fillCompRow(row, c); });
+const box = document.getElementById('compAdded');
+box.textContent = '';
+addedComponents().forEach(c=>{ const row = document.createElement('div'); row.className = 'comp-row'; fillCompRow(row, c); box.appendChild(row); });
 }
 
 // test hooks. detach(): from then on nothing is written to or read from the shared database (reload to reattach).
@@ -1518,14 +1586,15 @@ el.appendChild(row);
 }
 function addItem(path, obj){ db.ref(path).push(obj); }
 
+// each bay's fields sit under its row in the components & manifest panel (#cargoA..D); the row above names the bay
 function renderCargo(v){
-const el = document.getElementById('cargoGrid');
+const el = document.getElementById('compPanel');
 if(holdRender('cargoGrid', el, ()=>renderCargo(v))) return;
-el.innerHTML='';
 ['A','B','C','D'].forEach(h=>{
 const bay = v[h] || {};
-const wrap = document.createElement('div'); wrap.className='cargo-bay';
-const head = document.createElement('div'); head.className='bay-head'; head.textContent=h;
+const wrap = document.getElementById('cargo' + h);
+if(!wrap) return;
+wrap.innerHTML='';
 const row = document.createElement('div'); row.className='bay-row';
 
 const descInp = document.createElement('input'); descInp.type='text';
@@ -1543,8 +1612,7 @@ unitInp.style.maxWidth='130px';
 unitInp.onchange = ()=> db.ref('cargo/'+h).update({unit: unitInp.value});
 
 row.appendChild(descInp); row.appendChild(qtyInp); row.appendChild(unitInp);
-wrap.appendChild(head); wrap.appendChild(row);
-el.appendChild(wrap);
+wrap.appendChild(row);
 });
 }
 
