@@ -440,6 +440,7 @@ a.gc-btn{display:inline-flex;align-items:center;text-decoration:none}
 .gc-sw.gc-p1{background:rgba(57,255,107,.16)}
 .gc-sw.gc-p2{background:radial-gradient(rgba(57,255,107,.28) 1.2px,rgba(57,255,107,.04) 1.6px) 0 0/6px 6px}
 .gc-sw.gc-ruin{border:1px dashed var(--green);background:none}   /* the ruinstorm: an outline, not a fill */
+.gc-sw.gc-cordon{border:1px dotted var(--green);background:rgba(57,255,107,.12)}   /* the plague cordon: dotted edge, faint fill */
 .gc-sw.gc-p3{background:linear-gradient(rgba(57,255,107,.28) 1px,transparent 1px) 0 0/6px 6px,linear-gradient(90deg,rgba(57,255,107,.28) 1px,rgba(57,255,107,.04) 1px) 0 0/6px 6px}
 
 #gc-root [hidden]{display:none!important}
@@ -642,6 +643,7 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
         <li><span class="gc-sw gc-p2"></span>contested</li>
         <li><span class="gc-sw gc-p3"></span>xenos</li>
         <li><span class="gc-sw gc-ruin"></span>ruinstorm</li>
+        <li><span class="gc-sw gc-cordon"></span>xersinia prohibited zone</li>
       </ul>
     </div>
     <p id="gc-status">// drag: turn // pinch: zoom // 2 fingers: slide</p>
@@ -3086,7 +3088,7 @@ el.appendChild(d);
   var SEG_LABELS = [[-13.8, 28.1, 'segmentum obscurus'], [-3.6, 21.3, 'ultima segmentum'], [-34.2, -1.6, 'segmentum solar'], [-47.5, 0.6, 'segmentum pacificus'], [-8.9, -18.1, 'segmentum tempestus']];
   var REG_LABELS = [[-30.8, 21.5, 'halo stars'], [33.6, 28.4, 'ghoul stars'], [35.2, -16.8, 'eastern fringe'], [-21.2, -32.9, 'veiled region'], [-52.8, -2.9, 'the inter-galactic void'],
     [15.8, 9.5, 'the dominion of storms'], [11.0, -8.8, 'the thirteen realms'], [40.3, -2.2, 'the death of reason'], [4.7, -19.8, 'charadon sector'], [-28.3, -16.3, 'uhulis sector'],
-    [-39.8, -22.1, 'mandragoran sector'], [-3.8, 7.2, 'golgothan wastes'], [-4.4, 26.6, 'prohibited zone // area forbidden'], [22.9, -13.6, 'prohibited zone // plague cordon']];
+    [-39.8, -22.1, 'mandragoran sector'], [-3.8, 7.2, 'golgothan wastes'], [-4.4, 26.6, 'prohibited zone // area forbidden']];   // the plague cordon is a dominion (CORDON)
   // the borders are drawn on the overlay canvas each frame (drawBorders), not in webgl: crisp at any zoom, with a dark edge that keeps them clear of the star field
   var segOn = true, SEG_W = SEG_LINES.map(function (L) { return L.map(function (q) { return V(q[0], q[1], 0); }); });
   (function () { var ring = [], j, t; for (j = 0; j <= 120; j++) { t = j / 120 * Math.PI * 2; ring.push(new THREE.Vector3(SOL.x + 10.4 * Math.cos(t), 0, SOL.z + 10.4 * Math.sin(t))); } SEG_W.push(ring); })();   // the solar ring
@@ -3103,6 +3105,19 @@ el.appendChild(d);
   ];
   // the ruinstorm: raised after calth, it cuts the galaxy in two and seals the east off from terra (ultramar, signus and baal inside).
   // a dashed outline over the eastern half, west edge through the core; it is new at 008 and spreads ~009-011. edge estimated (tier 4)
+  // the official map's "prohibited zone // plague cordon enforced": an oval round where the map writes it, size estimated (tier 4)
+  // an irregular blob: the rim wobbled by several waves and leaning a little, so it reads as a quarantined region, not a drawn oval.
+  // placed (user's choice) so its southernmost point lies 1,000 ly due galactic north of calth. named the xersinia prohibited zone (campaign source)
+  var CORDON_C, CORDON = (function () {
+    var shape = [], k, t, r, x, y, a = 0.5, low = null, c = byId.calth.p;
+    for (k = 0; k < 72; k++) { t = k / 72 * Math.PI * 2;
+      r = 1 + 0.16 * Math.sin(2 * t + 0.7) + 0.11 * Math.sin(3 * t + 2.1) + 0.07 * Math.sin(5 * t + 4.0) + 0.04 * Math.sin(9 * t + 1.3);
+      x = 3.9 * r * Math.cos(t); y = 2.7 * r * Math.sin(t); shape.push([x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)]); }
+    shape.forEach(function (q) { if (!low || q[1] < low[1]) low = q; });
+    var ce = c.x - low[0], cn = -c.z + 1 - low[1];   // shift the blob so its lowest point sits at calth + 1,000 ly north
+    CORDON_C = [ce, cn];
+    return shape.map(function (q) { return [ce + q[0], cn + q[1]]; });
+  })();
   // drawn as a storm: a rough circle centred on calth, where it was raised (user's choice), its rim wobbled by a few waves. radius ~26k ly takes in ultramar and signus
   var RUIN = (function () { var c = byId.calth.p, ce = c.x, cn = -c.z, pts = [], k, t, r; for (k = 0; k < 72; k++) { t = k / 72 * Math.PI * 2;
     r = 26 * (1 + 0.09 * Math.sin(3 * t + 1.1) + 0.06 * Math.sin(5 * t + 2.3) + 0.035 * Math.sin(11 * t + 0.4)); pts.push([ce + r * Math.cos(t), cn + r * Math.sin(t)]); } return pts; })();
@@ -3199,6 +3214,7 @@ el.appendChild(d);
   PLACES.forEach(function (pl) { makeItem({ name: pl.name, side: pl.side, p: pl.p, id: pl.id, group: pl.group, lead: true, onTap: function () { openPlace(pl.id, false); } }); });
   DOMS.forEach(function (D) { D.labels.forEach(function (Lb) { makeItem({ name: Lb[2], side: 'c', cls: 'gc-static gc-dom', p: V(Lb[0], Lb[1], 0), group: 'dom' }); }); });
   makeItem({ name: 'ruinstorm', side: 'c', cls: 'gc-static gc-dom', p: V(30, 0, 0), group: 'dom' });
+  makeItem({ name: 'xersinia prohibited zone', side: 'c', cls: 'gc-static gc-dom', p: V(CORDON_C[0], CORDON_C[1], 0), group: 'dom' });
   SEG_LABELS.forEach(function (Lb) { makeItem({ name: Lb[2], side: 'c', cls: 'gc-static gc-seg', p: V(Lb[0], Lb[1], 0), group: 'seg' }); });
   REG_LABELS.forEach(function (Lb) { makeItem({ name: Lb[2], side: 'c', cls: 'gc-static gc-reg', p: V(Lb[0], Lb[1], 0), group: 'seg' }); });
   ARMS.forEach(function (A) { var q = armPoint(A.rs, A.label); makeItem({ name: A.name, side: 'c', cls: 'gc-static gc-guide', p: V(q[0], q[1], 0), group: 'guides' }); });
@@ -3531,11 +3547,16 @@ el.appendChild(d);
   function scr(p) { v3.copy(p).applyMatrix4(camera.matrixWorldInverse); if (v3.z > -0.05) return null; v3.applyMatrix4(camera.projectionMatrix); return [(v3.x * 0.5 + 0.5) * W, (-v3.y * 0.5 + 0.5) * H]; }
   function drawDom(now) {
     if (!domMesh.visible || tier !== 0) return;
-    var pts = RUIN.map(function (q) { return scr(V(q[0], q[1], 0)); });
-    if (pts.some(function (p) { return !p; })) return;
-    ictx.strokeStyle = 'rgba(57,255,107,.9)'; ictx.lineWidth = 1.5; ictx.setLineDash([3, 3]); ictx.lineDashOffset = calm ? 0 : -(now / 300) % 6;
-    ictx.beginPath(); ictx.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(function (p) { ictx.lineTo(p[0], p[1]); }); ictx.closePath(); ictx.stroke();
-    ictx.setLineDash([]); ictx.lineDashOffset = 0;
+    function outline(poly, dash, fill) {
+      var pts = poly.map(function (q) { return scr(V(q[0], q[1], 0)); });
+      if (pts.some(function (p) { return !p; })) return;
+      ictx.beginPath(); ictx.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(function (p) { ictx.lineTo(p[0], p[1]); }); ictx.closePath();
+      if (fill) { ictx.fillStyle = fill; ictx.fill(); }
+      ictx.strokeStyle = 'rgba(57,255,107,.9)'; ictx.lineWidth = 1.5; ictx.setLineDash(dash); ictx.lineDashOffset = calm ? 0 : -(now / 300) % (dash[0] + dash[1]); ictx.stroke();
+      ictx.setLineDash([]); ictx.lineDashOffset = 0;
+    }
+    outline(RUIN, [3, 3], null);                          // ruinstorm: open dashes
+    outline(CORDON, [1, 2], 'rgba(57,255,107,.12)');      // plague cordon: a close-dotted edge round a faint fill
   }
   function layout(now) {
     ictx.setTransform(DPR, 0, 0, DPR, 0, 0); ictx.clearRect(0, 0, W, H);
@@ -4936,6 +4957,7 @@ el.appendChild(d);
   api.vizState = function () { return viz ? viz.state() : null; };
   // testing: allegiance of a system key, and of each body in it
   api.allegOf = function (key) { var d = sysDef(key); return { system: sysAlleg(key), bodies: d ? d.bodies.map(function (b) { return b.name + ' (' + b.type + '): ' + bodyAlleg(key, b); }) : [] }; };
+  api.cordonEdge = function () { var low = null; CORDON.forEach(function (q) { if (!low || q[1] < low[1]) low = q; }); return { south: low, calth: [byId.calth.p.x, -byId.calth.p.z] }; };   // testing
   api.allegMix = function (place, n) { var c = {}, i; for (i = 0; i < (n || 2000); i++) { var a = sysAlleg(place + '#' + i); c[a] = (c[a] || 0) + 1; } return c; };
   // testing: share of n generated systems round a place (or 'n:' / 'v:' key) with at least one xenos note, and the species seen
   api.xenoTest = function (key, n) {
