@@ -3029,9 +3029,10 @@ el.appendChild(d);
     g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c);
   }
   var gtex = glowTexture();
+  var coreGlows = [];   // galaxy glows, dimmed with the stars (setDim)
   function glow(p, color, scale, op) {
     var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: gtex, color: color, depthWrite: false, depthTest: false, transparent: true, opacity: op }));
-    sp.position.copy(p); sp.scale.set(scale, scale, 1); sp.renderOrder = -1; scene.add(sp);
+    sp.position.copy(p); sp.scale.set(scale, scale, 1); sp.renderOrder = -1; sp.userData.op = op; scene.add(sp); coreGlows.push(sp);
   }
   glow(V(0, 0, 0), 0x39ff6b, 30, 0.3);
   STORMS.forEach(function (S) { glow(byId[S[0]].p, 0x39ff6b, S[3] * 2.6, 0.3); });
@@ -3438,7 +3439,13 @@ el.appendChild(d);
     if (!on && selected && byId[selected] && byId[selected].group === g) clearTarget();
   }  bTop.addEventListener('click', function () { var on = toggle(bTop); if (on) { goal.phi = 0.02; goal.theta = Math.round(cur.theta / (Math.PI * 2)) * Math.PI * 2; } else goal.phi = 0.92; });
   // with any overlay on (segmentums, guides, dominions) the galaxy's stars dim a little, so the overlay reads
-  function setDim() { starMatG.uniforms.uDim.value = (segOn || guidesOn || domMesh.visible) ? 0.6 : 1; }
+  // galaxy star brightness [no overlay, overlay on]: kept low so the marked worlds stand out (user's pick, option b of three)
+  var STAR_DIM = [0.38, 0.26];
+  function setDim() {
+    var d = STAR_DIM;
+    starMatG.uniforms.uDim.value = (segOn || guidesOn || domMesh.visible) ? d[1] : d[0];
+    coreGlows.forEach(function (g) { g.material.opacity = g.userData.op * d[0]; });   // the core and storm glows dim with the stars
+  }
   $('gc-bGuides').addEventListener('click', function () { var on = toggle(this); guides.visible = on; setGroup('guides', on); guidesOn = on; if (guidesL) guidesL.visible = on; setDim(); });
   $('gc-bDom').addEventListener('click', function () { var on = toggle(this); domMesh.visible = on; setGroup('dom', on); $('gc-key').hidden = !on; setDim(); });
   $('gc-bHw').addEventListener('click', function () { setPlaceGroup('hw', !PG.hw.on); });
