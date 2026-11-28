@@ -396,7 +396,8 @@ body.shake{animation:flicker 11s infinite, shipShake .55s cubic-bezier(.36,.07,.
 .gc-gtitle{display:flex;align-items:center;gap:.6rem;margin:.5rem 0 .3rem;font-size:1rem;font-weight:400;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
 .gc-gtitle::before,.gc-gtitle::after{content:"";flex:1;height:1px}
 .gc-gtitle::before{background:var(--green-dim)}
-.gc-gtitle::after{background:var(--green-dim)}.gc-dim{color:var(--dim)}
+.gc-gtitle::after{background:var(--green-dim)}
+.gc-dim{color:var(--dim)}
 .gc-sm{font-size:.75rem}
 
 /* chart */
@@ -562,6 +563,38 @@ a.gc-btn{display:inline-flex;align-items:center;text-decoration:none}
 
 /* ===== map view (?map=1): the starmap alone, filling the tab ===== */
 html.map-mode body{padding:0;height:100vh;height:100dvh;min-height:0;overflow:hidden}
+/* ===== wide layout (desktop >= 1100 px, "2 columns" chosen; html.wide2 set by the layout script). docs/mockups/wide-layout-1.html =====
+   navigation pinned on the left (60%): starmap fills it, navigation data in its bottom ~30% scrolling inside itself.
+   the other sections stack on the right (40%) and scroll with the page. grid placement only: no element moves in the dom */
+#layoutBar{display:none}
+html.wide #layoutBar{display:flex;position:sticky;top:0;z-index:13;justify-content:flex-end;align-items:center;gap:.35rem;margin:-16px -12px 6px;padding:4px 12px;
+  background:rgba(2,10,4,.94);border-bottom:1px solid var(--border);box-shadow:0 2px 8px rgba(2,10,4,.9)}   /* pinned strip: takes its own space at rest (user's request) */
+html.wide #layoutBar .gc-btn{font-family:var(--term);text-shadow:inherit;font-size:.75rem}
+html.wide2{--lbh:42px}
+html.wide2 .wrap{max-width:1600px;display:grid;grid-template-columns:minmax(0,3fr) minmax(420px,2fr);column-gap:14px;align-items:start}
+html.wide2 .wrap>h1,html.wide2 .wrap>#connLine{grid-column:1 / -1}
+html.wide2 #gc-root{grid-column:1;grid-row:3 / span 4;position:sticky;top:var(--lbh);height:calc(100vh - var(--lbh) - 8px);align-self:start;margin:0;display:flex;flex-direction:column}
+html.wide2 .wrap>section.group:nth-of-type(2){grid-column:2;grid-row:3}
+html.wide2 .wrap>section.group:nth-of-type(3){grid-column:2;grid-row:4}
+html.wide2 .wrap>section.group:nth-of-type(4){grid-column:2;grid-row:5}
+html.wide2 .wrap>#logoutBtn{grid-column:2;grid-row:6}
+html.wide2 #gc-root>.group-title{flex:none;pointer-events:none}   /* navigation cannot fold in this layout */
+html.wide2 #gc-root>.group-title span::before{content:'[ '}
+html.wide2 #gc-root #gc-mappanel{flex:2.4 1 0;min-height:0;display:flex;flex-direction:column;margin-bottom:var(--gap)}
+html.wide2 #gc-root #gc-mappanel>*{flex:none}
+html.wide2 #gc-root #gc-chart{flex:1 1 auto;aspect-ratio:auto;max-height:none;min-height:180px}
+html.wide2 #gc-root #gc-index[open]{max-height:28vh;overflow:auto}
+html.wide2 #gc-root #gc-navdata{flex:.6 1 0;min-height:150px;overflow:auto;margin:0;display:block}   /* about the bottom quarter; scrolls inside itself */
+/* keep the rows round the chart tight, so the chart gets the height */
+html.wide2 #gc-mappanel>.gc-ptitle{margin-bottom:.25rem}
+html.wide2 #gc-mappanel .gc-ctl{margin-top:.3rem}
+html.wide2 #gc-mappanel .gc-ovl{margin-top:.35rem;padding-top:.3rem}
+html.wide2 #gc-mappanel .gc-ovl+.gc-ovl{margin-top:.25rem;padding-top:0}
+html.wide2 #gc-root #locDate{padding:.1rem .4rem;max-width:9rem}
+html.wide2 #gc-status{margin-top:.25rem;min-height:0}
+html.wide2 #gc-status:empty{display:none}
+html.wide2 #gc-index{margin-top:.35rem;padding-top:.3rem}
+html.wide2 #gc-root.collapsed #gc-mappanel{display:flex}
 .map-mode .wrap{max-width:none}
 .map-mode .wrap>:not(#gc-root),.map-mode #gc-root>.group-title,.map-mode #gc-mappanel>.gc-ptitle,.map-mode .warp-test-btn{display:none!important}
 html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75rem / 1rem ratio kept */
@@ -650,6 +683,12 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
       <button class="dk-b" type="button" id="dk-roll">roll</button>
     </div>
   </div>
+</div>
+<!-- layout switch: desktop only (>= 1100 px), pinned to the top -->
+<div id="layoutBar" role="group" aria-label="page layout">
+  <span class="gc-dim gc-sm">layout //</span>
+  <button class="gc-btn" type="button" data-lay="2" aria-pressed="true">2 columns</button>
+  <button class="gc-btn" type="button" data-lay="1" aria-pressed="false">1 column</button>
 </div>
 <div class="wrap">
 <h1>Augur Report</h1>
@@ -5787,6 +5826,26 @@ el.appendChild(d);
   document.getElementById('locDate').closest('.gc-ctl').hidden = true;   // no date row in the map view
   nh.addEventListener('click', function () { fold(!nd.classList.contains('gc-fold')); });
   nh.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); fold(!nd.classList.contains('gc-fold')); } });
+})();
+</script>
+<script>
+/* PAGE LAYOUT // desktop (>= 1100 px) gets the layout strip: "2 columns" (html.wide2: navigation pinned left, the rest right) or
+   "1 column" (today's page). remembered per device (vt_layout). phones and the full-page map view (?map=1) are never changed. */
+(function () {
+  'use strict';
+  var html = document.documentElement, mq = window.matchMedia ? window.matchMedia('(min-width: 1100px)') : null;
+  function pref() { return safeStorageGet('vt_layout') === '1' ? '1' : '2'; }
+  function apply() {
+    var wide = !!(mq && mq.matches) && !html.classList.contains('map-mode'), p = pref();
+    html.classList.toggle('wide', wide);
+    html.classList.toggle('wide2', wide && p === '2');
+    Array.prototype.forEach.call(document.querySelectorAll('#layoutBar [data-lay]'), function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-lay') === p ? 'true' : 'false'); });
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#layoutBar [data-lay]'), function (b) {
+    b.addEventListener('click', function () { safeStorageSet('vt_layout', b.getAttribute('data-lay')); apply(); });
+  });
+  if (mq) { if (mq.addEventListener) mq.addEventListener('change', apply); else if (mq.addListener) mq.addListener(apply); }
+  apply();
 })();
 </script>
 </body>
