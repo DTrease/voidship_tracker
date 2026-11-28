@@ -279,7 +279,7 @@ button.comp-t{cursor:pointer}
 .hull-hit label{white-space:nowrap}
 .hull-hit .hit-btns{display:flex;gap:4px;align-items:center;margin-left:auto}
 .hull-hit input[type=number]{width:3.4rem}
-.hull-hit .gc-btn{font-family:var(--term);font-size:var(--fs-m);text-transform:lowercase;text-shadow:inherit;white-space:nowrap}
+.hull-hit .gc-btn{font-family:var(--term);font-size:var(--fs-s);text-transform:lowercase;text-shadow:inherit;white-space:nowrap}
 #sv-over span.sv-fail{color:var(--dim);animation:textGlitch .8s steps(5) infinite}
 @media (prefers-reduced-motion:reduce){#sv-over span.sv-fail{animation:none}}
 #sv-over span.sv-on{color:var(--hi);border-color:var(--green);background:rgba(57,255,107,.1)}
@@ -403,7 +403,8 @@ body.shake{animation:flicker 11s infinite, shipShake .55s cubic-bezier(.36,.07,.
 
 /* inline controls */
 .gc-ctl{display:flex;flex-wrap:wrap;gap:.35rem;margin:.4rem 0 0}
-.gc-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:.35rem .6rem;min-height:2.1rem;cursor:pointer;letter-spacing:.04em}
+.gc-btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:.15rem .45rem;min-height:1.65rem;font-size:.75rem;cursor:pointer;letter-spacing:.04em}   /* compact (user: the old 1rem / 2.1rem buttons were too big) */
+#gc-root .gc-btn{font-size:.75rem}   /* beats the #gc-root button font reset */
 a.gc-btn{display:inline-flex;align-items:center;text-decoration:none}
 .gc-tab{margin-left:auto}
 #gc-bBack,.map-mode #gc-bTab{display:none}
@@ -447,6 +448,7 @@ a.gc-btn{display:inline-flex;align-items:center;text-decoration:none}
 #gc-root select{-webkit-appearance:none;appearance:none;background-color:var(--panel2);border:1px solid var(--border);color:var(--text);padding:.4rem 1.6rem .4rem .5rem;min-width:0;
   background-image:linear-gradient(45deg,transparent 50%,var(--green) 50%),linear-gradient(135deg,var(--green) 50%,transparent 50%);background-position:calc(100% - 13px) 55%,calc(100% - 8px) 55%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
 #gc-root select option{background:var(--panel2);color:var(--text)}
+#gc-root select.gc-small{font-size:.75rem;min-height:1.65rem;padding:.15rem 1.6rem .15rem .45rem}   /* sits beside a .gc-btn */
 #gc-root select:focus-visible{outline:1px solid var(--green);outline-offset:2px}
 .gc-row{display:grid;grid-template-columns:1fr 1fr;gap:.3rem;padding:.4rem;margin:.3rem 0;border:1px solid var(--border);background:rgba(57,255,107,.04)}
 .gc-row input[type=text],#gc-edit>input[type=text]{max-width:none!important;min-width:0}
@@ -597,6 +599,7 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
         <div class="gc-view">
           <button class="gc-ib" id="gc-bTop" type="button" aria-pressed="false" title="top-down view" aria-label="top-down view"><svg viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="11.5" rx="6" ry="2.5"/><path d="M8 2v6M5.5 5.5L8 8l2.5-2.5"/></svg></button>
           <button class="gc-ib" id="gc-bReset" type="button" title="reset view" aria-label="reset view"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v3.2h-3.2"/></svg></button>
+          <button class="gc-ib" id="gc-bPush" type="button" title="push view to all" aria-label="push view to all"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M7.4 7.4h1.2v1.2H7.4zM5.4 5.2a4 4 0 0 0 0 5.6M10.6 5.2a4 4 0 0 1 0 5.6M3.2 3a7 7 0 0 0 0 10M12.8 3a7 7 0 0 1 0 10"/></svg></button>
         </div>
         <div class="gc-pad">
           <button class="gc-ib gc-f" id="gc-mF" type="button" title="travel forward" aria-label="travel forward"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 10l5-5 5 5"/></svg></button>
@@ -613,6 +616,11 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
       </div>
       <div id="gc-foot">chart ref gc-31 // ring = 10k ly // to scale</div>
       <div id="gc-nogl">// webgl unavailable // chart offline</div>
+    </div>
+    <div class="gc-ctl gc-lab" id="gc-push" hidden>
+      <span class="gc-sm" id="gc-pushMsg"></span>
+      <button class="gc-btn" id="gc-pushOpen" type="button">open</button>
+      <button class="gc-btn gc-add" id="gc-pushNo" type="button">dismiss</button>
     </div>
     <div class="gc-ctl gc-lab">
       <span class="gc-dim gc-sm">scale //</span>
@@ -676,6 +684,7 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
       <dl class="gc-kv">
         <dt>region</dt><dd id="gc-dreg"></dd>
         <dt class="gc-al">allegiance</dt><dd class="gc-al" id="gc-dall"></dd>
+        <dt>overlays</dt><dd id="gc-dovl"></dd>
         <dt>from ship</dt><dd id="gc-dship"></dd>
       </dl>
       <div class="gc-ctl gc-one">
@@ -686,6 +695,10 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
       <div class="gc-ctl" id="gc-sysctl" hidden>
         <button class="gc-btn gc-add" id="gc-bGen" type="button">generate system</button>
         <button class="gc-btn" id="gc-bErase" type="button">erase record</button>
+      </div>
+      <div class="gc-ctl gc-lab" id="gc-pinrow">
+        <button class="gc-btn gc-add" type="button" id="gc-bPin">add to overlay</button>
+        <select id="gc-pinSel" class="gc-small" aria-label="systems overlay" hidden></select>
       </div>
     </div>
     <div id="gc-edit" hidden>
@@ -3203,7 +3216,8 @@ el.appendChild(d);
     var nm = document.createElement('span'); nm.className = 'gc-nm'; nm.textContent = o.name;
     if (o.onTap) {
       var hit = document.createElement('button'); hit.type = 'button'; hit.className = 'gc-hit'; hit.setAttribute('aria-label', o.name);
-      var tapped = function (ev) { o.onTap(ev); mkTap(it); }; hit.addEventListener('click', tapped); nm.addEventListener('click', tapped); el.appendChild(hit);
+      var tapped = function (ev) { o.onTap(ev); if (!o.solo) mkTap(it); };   // solo: the tap does its own thing (no centre / drop-in)
+      hit.addEventListener('click', tapped); nm.addEventListener('click', tapped); el.appendChild(hit);
     }
     el.appendChild(nm); layer.appendChild(el);
     var it = { el: el, nm: nm, p: o.p, side: o.side, on: true, w: 60, h: 14, shown: true, hid: false, id: o.id || null, group: o.group || null, lead: !!o.lead, tier: o.tier || 0, ship: !!o.ship, keep: false };
@@ -3333,6 +3347,7 @@ el.appendChild(d);
     refreshObject();
     var s = sysPanelStar(), pl = s ? null : sysPanelPlace();
     $('gc-dnone').hidden = !!(s || pl); $('gc-dbody').hidden = !(s || pl);
+    pinControls(s, pl);
     if (s) { starTarget(s); return; }
     $('gc-dtitle').textContent = pl ? (SYS[pl.id] ? 'selected system: ' : 'selected location: ') + pl.name : 'selected system';
     if (!pl) return;
@@ -3378,6 +3393,31 @@ el.appendChild(d);
     selBody = null; setSelStar(null); select(id); refreshTarget();
     if (fly) { flyPlace(pl); if (chart.scrollIntoView) chart.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' }); }
   }
+  // "add to overlay": opens a dropdown of the systems overlays. one already added reads "remove: ...". a lore place's own overlay is fixed and not offered.
+  var PIN_NAME = { a: 'campaign', o: 'other locations', hw: 'astartes homeworlds', fw: 'forge worlds' }, pinTarget = null;
+  function pinControls(s, pl) {
+    var key = s ? s.key : (pl ? 'p:' + pl.id : null);
+    if (!pinTarget || pinTarget.key !== key) $('gc-pinSel').hidden = true;   // selection moved on: close the dropdown
+    pinTarget = s ? { key: key, s: s } : (pl ? { key: key, pl: pl } : null);
+    if (!pinTarget) return;
+    var own = pl ? pl.group : null, names = [];
+    Object.keys(PIN_NAME).forEach(function (g) { if (g === own || pins[g][key]) names.push(PIN_NAME[g]); });
+    showAlleg('gc-dovl', names.join(', '));
+    var sel = $('gc-pinSel'); sel.textContent = '';
+    var o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'choose overlay'; o0.disabled = true; o0.selected = true; sel.appendChild(o0);
+    Object.keys(PIN_NAME).forEach(function (g) {
+      if (g === own) return;
+      var o = document.createElement('option'); o.value = g; o.textContent = (pins[g][key] ? 'remove: ' : '') + PIN_NAME[g]; sel.appendChild(o);
+    });
+  }
+  $('gc-bPin').addEventListener('click', function () { var sel = $('gc-pinSel'); sel.hidden = !sel.hidden; if (!sel.hidden) { sel.value = ''; sel.focus(); } });
+  $('gc-pinSel').addEventListener('change', function () {
+    var t = pinTarget, g = this.value; this.hidden = true; if (!t || !PIN_NAME[g]) return;
+    if (pins[g][t.key]) { setPin(g, t.key, null); status('// removed from ' + PIN_NAME[g]); return; }
+    var w = t.pl ? t.pl.p : worldOf(t.s);
+    setPin(g, t.key, { e: +w.x.toFixed(4), n: +(-w.z).toFixed(4), u: +w.y.toFixed(4) });
+    status('// added to ' + PIN_NAME[g] + (PG[g].on ? '' : ' // overlay off'));
+  });
   function clearTarget() { selBody = null; selSysStar = false; setSelStar(null); select(null); refreshTarget(); }
   $('gc-bFly').addEventListener('click', function () { viewTarget(); });
   $('gc-bMove').addEventListener('click', function () { moveShipToTarget(); });
@@ -3476,13 +3516,63 @@ el.appendChild(d);
   function setTop(v) { bTop.setAttribute('aria-pressed', v ? 'true' : 'false'); }
   function toggle(btn) { var on = btn.getAttribute('aria-pressed') !== 'true'; btn.setAttribute('aria-pressed', on ? 'true' : 'false'); return on; }
   // place overlays: 'a' = campaign locations, 'o' = other locations (famous sites), 'hw' = legion homeworlds
-  function placeOn(pl) { return PG[pl.group] ? PG[pl.group].on : true; }
+  function placeOn(pl) { return (PG[pl.group] ? PG[pl.group].on : true) || pinnedOn('p:' + pl.id); }
   function setPlaceGroup(g, on) {
     PG[g].on = on;
     $(PG[g].btn).setAttribute('aria-pressed', on ? 'true' : 'false');
-    setGroup(g, on);
+    setGroup(g, on); pinItemsOn();
     if (g === 'o') eyeZone.visible = on;   // the warp-storm outline belongs with its other-locations marker
-    if (!on && selected && byId[selected] && byId[selected].group === g) clearTarget();
+    if (!on && selected && byId[selected] && !placeOn(byId[selected])) clearTarget();
+  }
+  // ---- added systems: any star or place can be added to a systems overlay (shared via firebase: chart/pins/<group>/<key> = {e, n, u}) ----
+  var PSTORE = 'hh-galactic-chart-pins-v1', PIN_LIST = { a: 'gc-listA', o: 'gc-listD', hw: 'gc-listB', fw: 'gc-listF' }, pins = cleanPins(null);
+  function cleanPins(obj) {
+    var out = { a: {}, o: {}, hw: {}, fw: {} };
+    if (obj && typeof obj === 'object') Object.keys(out).forEach(function (g) {
+      var src = obj[g]; if (!src || typeof src !== 'object') return;
+      Object.keys(src).slice(0, 500).forEach(function (k) { var q = src[k]; if (k.length < 80 && (k.slice(0, 2) !== 'p:' || byId[k.slice(2)]) && q && [q.e, q.n, q.u].every(function (x) { return typeof x === 'number' && isFinite(x); })) out[g][k] = { e: q.e, n: q.n, u: q.u }; });
+    });
+    return out;
+  }
+  try { pins = cleanPins(JSON.parse(window.localStorage.getItem(PSTORE) || 'null')); } catch (e) { /* storage unavailable */ }
+  function pinnedOn(key) { return Object.keys(PG).some(function (g) { return PG[g].on && pins[g][key]; }); }
+  function isPinned(key) { return Object.keys(pins).some(function (g) { return !!pins[g][key]; }); }
+  function pinName(key) { return key.slice(0, 2) === 'p:' ? (byId[key.slice(2)] ? byId[key.slice(2)].name : key) : starLabel(key); }
+  function pinItemsOn() {   // galaxy markers: a place shows with its own group or any group it was added to; an added star with its group
+    items.forEach(function (it) {
+      if (it.pin) it.on = PG[it.group].on;
+      else if (it.tier === 0 && it.id && byId[it.id] && PG[it.group]) it.on = placeOn(byId[it.id]);
+    });
+  }
+  function rebuildPins() {
+    items = items.filter(function (it) { if (it.pin) { if (it.el.parentNode) it.el.parentNode.removeChild(it.el); return false; } return true; });
+    Object.keys(pins).forEach(function (g) {
+      Object.keys(pins[g]).forEach(function (k) {
+        if (k.slice(0, 2) === 'p:') return;   // places already have a marker
+        var q = pins[g][k], it = makeItem({ name: pinName(k), side: 'r', p: V(q.e, q.n, q.u), group: g, lead: true, solo: true, onTap: function () { gotoStar(k); } });
+        it.pin = true;
+      });
+    });
+    pinItemsOn();
+    // index: added entries go at the end of their overlay's list ("added // ...")
+    Array.prototype.slice.call(document.querySelectorAll('#gc-index li.gc-pinli')).forEach(function (li) { li.parentNode.removeChild(li); });
+    Object.keys(pins).forEach(function (g) {
+      Object.keys(pins[g]).forEach(function (k) {
+        var pl = k.slice(0, 2) === 'p:' ? byId[k.slice(2)] : null, f = pl ? null : focusFromKey(k.slice(0, 2) === 'n:' ? 'sol' : k.split('#')[0]);
+        var li = document.createElement('li'), b = document.createElement('button'), s1 = document.createElement('span'), s2 = document.createElement('span');
+        li.className = 'gc-pinli'; b.type = 'button'; b.className = 'gc-btn'; s1.textContent = pinName(k); s2.textContent = 'added // ' + (pl ? pl.region : (f ? f.name : 'uncharted'));
+        b.appendChild(s1); b.appendChild(s2); li.appendChild(b); b.addEventListener('click', function () { if (pl) openPlace(pl.id, true); else gotoStar(k); });
+        $(PIN_LIST[g]).appendChild(li);
+      });
+    });
+    ['gc-listD', 'gc-listF'].forEach(function (id) { var ul = $(id); Array.prototype.slice.call(ul.children).sort(function (a, b) { return a.textContent < b.textContent ? -1 : 1; }).forEach(function (li) { ul.appendChild(li); }); });
+    if (focus) syncStarItems();
+  }
+  function setPin(g, key, val) {
+    if (val) pins[g][key] = val; else delete pins[g][key];
+    try { window.localStorage.setItem(PSTORE, JSON.stringify(pins)); } catch (e) { /* ignore */ }
+    if (typeof api.onPinChange === 'function') { try { api.onPinChange(g, key, val || null); } catch (e) { /* ignore */ } }
+    rebuildPins(); refreshTarget();
   }  bTop.addEventListener('click', function () { var on = toggle(bTop); if (on) { goal.phi = 0.02; goal.theta = Math.round(cur.theta / (Math.PI * 2)) * Math.PI * 2; } else goal.phi = 0.92; });
   // with any overlay on (segmentums, guides, dominions) the galaxy's stars dim a little, so the overlay reads
   // galaxy star brightness [no overlay, overlay on]: kept low so the marked worlds stand out (user's pick, option b of three)
@@ -4008,7 +4098,7 @@ el.appendChild(d);
   }
   function starName(s) { if (s.place) return SYS[s.place] ? placeStar(s.place) : byId[s.place].name; return saved[s.key] ? saved[s.key].star : (s.name || genStarName(hashStr(s.key))); }
   function starLabel(key) { return saved[key] ? saved[key].star : (key.slice(0, 2) === 'n:' ? key.slice(2) : genStarName(hashStr(key))); }
-  function hasItem(s) { return !s.place && (s.key.slice(0, 2) === 'n:' || !!saved[s.key]); }
+  function hasItem(s) { return !s.place && (s.key.slice(0, 2) === 'n:' || !!saved[s.key] || isPinned(s.key)); }
 
   var tier = 0, focus = null, sceneL = null, sceneS = null, spinL = null, spinS = null, guidesL = null, guidesOn = false,
       sysCtx = null, sysMax = 60, sysBodies = [], selBody = null, selSysStar = false, selStar = null, LS = [], LSmap = {}, fieldN = 0, lastFoot = '', ORIGIN = new THREE.Vector3();
@@ -4098,7 +4188,8 @@ el.appendChild(d);
     } else if (f.place) {
       c.add(0, 0, 0, 1, 1, 1.6); glowIn(sceneL, ORIGIN, f.id === 'core' ? 90 : 6, 0.45);
       var cs = spec({ p: new THREE.Vector3(), key: 'p:' + f.id, name: null, place: f.id });
-      makeItem({ name: starName(cs), side: 'r', p: cs.p, lead: true, tier: 1, id: f.id, onTap: function () { openPlace(f.id, false); } });
+      // label: the same name as on the galaxy chart (calth, not its star)
+      makeItem({ name: f.name, side: 'r', p: cs.p, lead: true, tier: 1, id: f.id, onTap: function () { openPlace(f.id, false); } });
     }
     if (f.id === 'sol') NEAR.forEach(function (s, k) {   // real neighbours of sol (cthonia sits 3,400 ly away on the imperial chart, beyond them)
       var l = s[1] * Math.PI / 180, b = s[2] * Math.PI / 180, d = s[3];
@@ -4129,10 +4220,12 @@ el.appendChild(d);
   function syncStarItems() {
     if (!focus) return;
     items = items.filter(function (it) { if (it.dyn) { if (it.el.parentNode) it.el.parentNode.removeChild(it.el); return false; } return true; });
-    Object.keys(saved).forEach(function (k) {
+    var keys = {}; Object.keys(saved).forEach(function (k) { keys[k] = 1; });
+    Object.keys(pins).forEach(function (g) { Object.keys(pins[g]).forEach(function (k) { keys[k] = 1; }); });   // added stars get a label too
+    Object.keys(keys).forEach(function (k) {
       if (k.slice(0, 2) === 'p:' || k.slice(0, 2) === 'n:') return;
       var s = starByKey(k); if (!s) return;
-      var it = makeItem({ name: saved[k].star, side: 'r', p: s.p, lead: true, tier: 1, id: 'star:' + k, onTap: function () { selectStar(s); } }); it.dyn = true;
+      var it = makeItem({ name: starLabel(k), side: 'r', p: s.p, lead: true, tier: 1, id: 'star:' + k, onTap: function () { selectStar(s); } }); it.dyn = true;
     });
   }
 
@@ -4415,7 +4508,7 @@ el.appendChild(d);
   }
   // ---- generate / configure / erase ----
   function afterSystemChange(s) {
-    syncStarItems();
+    rebuildPins();   // also relabels local stars (a renamed record renames its added markers too)
     if (tier === 2 && sysCtx && s && sysCtx.key === s.key) {
       var def = sysDef(s.key);
       if (!def) { goLocal(focus, 40, sysCtx.star.p); sysCtx = null; return; }
@@ -4520,6 +4613,7 @@ el.appendChild(d);
     });
   }
   refreshSavedList();
+  rebuildPins();
 
   function footer() {
     var t;
@@ -4971,6 +5065,73 @@ el.appendChild(d);
   };
   api.getSystems = function () { return JSON.parse(JSON.stringify(saved)); };
   api.setSystems = function (o) { saved = loadSystems(o); saveSystems(true); afterSystemChange(sysCtx ? sysCtx.star : null); };
+  // added systems (sync): onPinChange(group, key, {e, n, u} | null) is set by the sync script; setPins replaces the lot from firebase
+  api.onPinChange = null;
+  api.getPins = function () { return JSON.parse(JSON.stringify(pins)); };
+  api.setPins = function (o) {
+    var next = cleanPins(o); if (JSON.stringify(next) === JSON.stringify(pins)) return;
+    pins = next; try { window.localStorage.setItem(PSTORE, JSON.stringify(pins)); } catch (e) { /* ignore */ }
+    rebuildPins(); refreshTarget();
+  };
+
+  // ---- push view: one player sends their exact view (scale, camera, selection, overlays) to everyone with the starmap open ----
+  var OVL_BTNS = ['gc-bSeg', 'gc-bGuides', 'gc-bDom', 'gc-bCa', 'gc-bLm', 'gc-bHw', 'gc-bFw'];
+  function num(x) { return typeof x === 'number' && isFinite(x); }
+  api.getView = function () {
+    var r6 = function (x) { return +x.toPrecision(6); };
+    return {
+      t: tier, th: r6(goal.theta), ph: r6(goal.phi), r: r6(goal.radius), x: r6(goal.target.x), y: r6(goal.target.y), z: r6(goal.target.z),
+      top: bTop.getAttribute('aria-pressed') === 'true',
+      o: OVL_BTNS.map(function (id) { return $(id).getAttribute('aria-pressed') === 'true' ? 1 : 0; }).join(''),
+      f: focus && tier > 0 ? focus.key : null, s: sysCtx && tier === 2 ? sysCtx.key : null,
+      star: selStar ? selStar.key : null, sel: selected && byId[selected] ? selected : null,
+      b: tier === 2 ? selBody : null, ss: tier === 2 && selSysStar
+    };
+  };
+  api.setView = function (v) {
+    if (!v || [v.t, v.th, v.ph, v.r, v.x, v.y, v.z].some(function (x) { return !num(x); })) return false;
+    if (typeof v.o === 'string') OVL_BTNS.forEach(function (id, i) {   // overlays first: hiding a group drops a selection in it
+      var want = v.o.charAt(i) === '1', on = $(id).getAttribute('aria-pressed') === 'true';
+      if (want !== on) $(id).click();
+    });
+    var sel = typeof v.sel === 'string' && byId[v.sel] ? v.sel : null;
+    if (v.t === 0) {
+      if (tier !== 0) goGalaxy();
+      if (sel) openPlace(sel, false); else clearTarget();
+    } else {
+      var f = typeof v.f === 'string' ? focusFromKey(v.f) : null;
+      if (!f) return false;
+      goLocal(f, 300);
+      if (v.t === 1) {
+        var st = typeof v.star === 'string' ? starByKey(v.star) : null;
+        if (st) selectStar(st); else if (sel) openPlace(sel, false); else clearTarget();
+      } else {
+        var k = typeof v.s === 'string' ? v.s : '', s = k.slice(0, 2) === 'p:' ? (LSmap[k] || (byId[k.slice(2)] ? { key: k, place: k.slice(2), p: new THREE.Vector3() } : null)) : starByKey(k);
+        if (!s || !goSystem(s)) return false;
+        var hasB = typeof v.b === 'string' && sysBodies.some(function (x) { return x.name === v.b; });
+        if (hasB) selectBody(v.b); else if (v.ss) selectSysStar();
+      }
+    }
+    var TAU = Math.PI * 2;   // camera last; turn the short way round
+    goal.theta = v.th + Math.round((cur.theta - v.th) / TAU) * TAU; goal.phi = v.ph; goal.radius = v.r; goal.target.set(v.x, v.y, v.z);
+    setTop(!!v.top); clampGoal();
+    if (chart.scrollIntoView) chart.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+    return true;
+  };
+  // the sync script sets onPushView (send) and calls offerView (receive)
+  api.onPushView = null;
+  $('gc-bPush').addEventListener('click', function () {
+    if (typeof api.onPushView !== 'function') { status('// no link // push failed'); return; }
+    api.onPushView(api.getView()).then(function () { status('// view pushed to all'); }, function () { status('// push refused // check database rules'); });
+  });
+  var offered = null, offerT = null;
+  function closeOffer() { offered = null; clearTimeout(offerT); $('gc-push').hidden = true; }
+  api.offerView = function (by, v) {
+    offered = v; $('gc-pushMsg').textContent = '// view pushed // ' + by; $('gc-push').hidden = false;
+    clearTimeout(offerT); offerT = setTimeout(closeOffer, 5 * 60000);   // a stale offer goes away by itself
+  };
+  $('gc-pushOpen').addEventListener('click', function () { var v = offered; closeOffer(); if (v && !api.setView(v)) status('// pushed view lost // system not found'); });
+  $('gc-pushNo').addEventListener('click', closeOffer);
   window.GalChart = api;
 })();
 </script>
@@ -4979,6 +5140,8 @@ el.appendChild(d);
 /* NAVIGATION SYNC // starmap <-> firebase
    chart/ship               the voidship: {name, at, body, star, e, n, u}
    chart/systems/<key>      surveyed systems, one child per system (keys escaped: firebase bans . # $ / [ ] in keys)
+   chart/push               last view pushed to all: {id, by, v} (v = GalChart.getView() as json)
+   chart/pins/<g>/<key>     systems added to an overlay (g = a, o, hw, fw): {e, n, u} galaxy position
    started from boot() once the crew is signed in, same as the tracker's own listeners. */
 (function () {
   'use strict';
@@ -5033,6 +5196,41 @@ el.appendChild(d);
       if (shipTimer) return;   // a local change is waiting to be sent, it wins
       if (typeof v.e === 'number' && typeof v.n === 'number' && typeof v.u === 'number' && !sameShip(G.getShip(), shipOut(v))) G.setShip(v);
       if (v.name === 'our ship' || v.name === 'emperor\'s paddle') shipRef.child('name').set(G.getShip().name).catch(warn);   // retire an old default name in firebase
+    }, warn);
+
+    // ---- pushed view: chart/push = {id, by, v (view as json)}. the push already there on load is old news: only later ones are offered ----
+    var pushRef = db.ref('chart/push'), me = Math.random().toString(36).slice(2, 10), pushSeen = false;
+    function who() {
+      var u = (typeof currentUser !== 'undefined' && currentUser) || {};
+      if (u.type === 'gm') return 'gm';
+      if (u.type === 'crew' && u.name) return String(u.name).trim().split(/\s+/).pop().toLowerCase().slice(0, 40);
+      return 'party';
+    }
+    G.onPushView = function (view) {
+      return pushRef.set({ id: me + '-' + Date.now().toString(36), by: who(), v: JSON.stringify(view) });
+    };
+    pushRef.on('value', function (snap) {
+      var p = snap.val();
+      if (!pushSeen) { pushSeen = true; return; }
+      if (!p || typeof p.id !== 'string' || typeof p.v !== 'string' || p.id.indexOf(me + '-') === 0) return;   // nothing, malformed, or our own
+      var v; try { v = JSON.parse(p.v); } catch (e) { return; }
+      G.offerView(typeof p.by === 'string' ? p.by.slice(0, 40) : 'party', v);
+    }, warn);
+
+    // ---- added systems: chart/pins/<group>/<escaped key> = {e, n, u} ----
+    var pinRef = db.ref('chart/pins'), pinSeen = false;
+    G.onPinChange = function (g, k, v) { pinRef.child(g).child(enc(k)).set(v).catch(warn); };
+    pinRef.on('value', function (snap) {
+      var v = snap.val(), out = {};
+      if (!v && !pinSeen) {   // first run: publish whatever this browser has already added
+        pinSeen = true; var local = G.getPins(), any = false, up = {};
+        Object.keys(local).forEach(function (g) { Object.keys(local[g]).forEach(function (k) { up[g + '/' + enc(k)] = local[g][k]; any = true; }); });
+        if (any) pinRef.update(up).catch(warn);
+        return;
+      }
+      pinSeen = true;
+      Object.keys(v || {}).forEach(function (g) { out[g] = {}; Object.keys(v[g] || {}).forEach(function (k) { out[g][dec(k)] = v[g][k]; }); });
+      G.setPins(out);
     }, warn);
 
     // ---- surveyed systems ----
