@@ -3110,13 +3110,14 @@ el.appendChild(d);
     blending: THREE.NormalBlending, depthWrite: false, depthTest: false, transparent: true
   });
   // local group stars: brightness, paleness and size come from distance to the viewer only (no per-star randomness), so near reads bright, far dim.
-  // uRef = the camera's distance to its focus: a star at that distance gets the middle value, so the rule holds at every zoom
+  // uRef = distance from the camera to its 10th nearest star (depthRef, each frame), so the rule holds at every zoom and in sparse patches
   var starMatL = new THREE.ShaderMaterial({
     uniforms: { uScale: { value: 1000 }, uMax: { value: 28 }, uRef: { value: 300 }, uDpr: { value: 1 } },   // uDpr: sizes below are css px, times the canvas pixel ratio
     vertexShader: 'uniform float uScale; uniform float uMax; uniform float uRef; uniform float uDpr; varying float vB;' +
       'void main(){ vec4 mv=modelViewMatrix*vec4(position,1.0); float dist=max(0.001,length(mv.xyz));' +
-      ' vB=clamp(1.0*uRef/dist,0.24,1.0);' +   /* brightness: the main distance cue */
-      ' gl_PointSize=clamp(uDpr*(1.5+0.9*pow(uScale/(uDpr*dist),0.85)),1.5*uDpr,uMax); gl_Position=projectionMatrix*mv; }',   /* size: second cue after brightness (about 2 css px far, 8 at the focus distance, up to 13 close; the soft edge shows about half) */
+      ' float q=uRef/dist;' +   /* q: 1 for a star as far as the 10th nearest, more when nearer */
+      ' vB=clamp(pow(q,0.6),0.3,1.0);' +   /* brightness: the main distance cue; far stars keep 0.3 so the field stays visible */
+      ' gl_PointSize=clamp(uDpr*(2.0+5.0*pow(min(q,3.0),0.8)),2.0*uDpr,uMax); gl_Position=projectionMatrix*mv; }',   /* size: second cue (about 7 css px for the nearest ten, 2-3 far, up to 13 very close) */
     fragmentShader: 'precision mediump float; varying float vB;' +
       'void main(){ float d=length(gl_PointCoord-vec2(0.5)); float a=smoothstep(0.5,0.0,d); vec3 c=mix(vec3(0.22,1.0,0.42),vec3(0.76,1.0,0.82),vB); gl_FragColor=vec4(c,a*vB); }',
     blending: THREE.NormalBlending, depthWrite: false, depthTest: false, transparent: true
@@ -4198,7 +4199,7 @@ el.appendChild(d);
   function hasItem(s) { return !s.place && (s.key.slice(0, 2) === 'n:' || !!saved[s.key] || isPinned(s.key)); }
 
   var tier = 0, focus = null, sceneL = null, sceneS = null, spinL = null, spinS = null, guidesL = null, guidesOn = false,
-      sysCtx = null, sysMax = 60, sysBodies = [], selBody = null, selSysStar = false, selStar = null, LS = [], LSmap = {}, fieldN = 0, lastFoot = '', ORIGIN = new THREE.Vector3();
+      sysCtx = null, sysMax = 60, sysBodies = [], selBody = null, selSysStar = false, selStar = null, LS = [], LSmap = {}, lastFoot = '', ORIGIN = new THREE.Vector3();
   var shipItemL = makeItem({ name: ship.name, side: 't', cls: 'gc-ship', p: new THREE.Vector3(), ship: true, lead: true, tier: 1, onTap: function () {} });   // tap: centre on it; double tap: into its system (dropIn)
   var shipItemS = makeItem({ name: ship.name, side: 't', cls: 'gc-ship', p: new THREE.Vector3(), ship: true, lead: true, tier: 2 });
   var selItem = makeItem({ name: '-', side: 'r', p: new THREE.Vector3(), lead: true, tier: 1, id: 'selstar' });
@@ -4261,21 +4262,70 @@ el.appendChild(d);
   function worldOf(s) { return s.place ? byId[s.place].p.clone() : focus.p.clone().addScaledVector(s.p, 0.001); }
   function starByKey(key) {
     if (LSmap[key]) return LSmap[key];
-    var m = key.lastIndexOf('#'); if (m < 1 || !focus || key.slice(0, m) !== focus.key) return null;
-    var i = parseInt(key.slice(m + 1), 10); return (i >= 0 && i < fieldN) ? LS[i] : null;
+    if (!focus) return null;
+    var s = legacyStar(focus, key);   // an old numbered star referred to after the field was built (e.g. a record that just synced in)
+    if (s) { LS.push(s); LSmap[key] = s; }
+    return s;
   }
   function nearestStar(t, maxD) { var best = null, bd = maxD * maxD, i, d; for (i = 0; i < LS.length; i++) { d = LS[i].p.distanceToSquared(t); if (d < bd) { bd = d; best = LS[i]; } } return best; }
+
+  // ---- local star density: real milky way (lore tier 3; no canon or campaign source gives local star density) ----
+  // thin disc + thick disc + bulge, after bland-hawthorn & gerhard 2016 (scale lengths / heights in kly: 1 kpc = 3.26 kly).
+  // the chart's galactic centre is the origin, the plane is y = 0, the sun sits 26 kly out (SUN_R). values are relative to the sun's.
+  var GAL = { thinRd: 8.5, thinHz: 0.98, thickRd: 6.5, thickHz: 2.9, thickF: 0.12, bulgeR: 1.6, bulgeF: 60 };
+  function galRho(x, y, z) {   // world kly
+    var R = Math.sqrt(x * x + z * z), h = Math.abs(y), rs = Math.sqrt(R * R + y * y);
+    return Math.exp(-R / GAL.thinRd - h / GAL.thinHz) + GAL.thickF * Math.exp(-R / GAL.thickRd - h / GAL.thickHz) + GAL.bulgeF * Math.exp(-SUN_R / GAL.thinRd) * Math.exp(-rs / GAL.bulgeR);   // bulge: 60x the thin disc's solar value at its heart, falling off over 1.6 kly
+  }
+  var FIELD_R = 2300, FIELD_H = 2300, FIELD_BASE = 5460, FIELD_CAP = 3;   // ly; stars drawn at the sun's mean density (the old count); at most 3x that
+  function fieldMean(cx, cy, cz, R) {   // mean galRho over the view cylinder round (cx, cy, cz) kly, sampled on a fixed pattern (same answer every time)
+    var s = 0, mx = 0, n = 0, i, j, k, rr, a, v;
+    for (i = 0; i < 6; i++) for (j = 0; j < 12; j++) for (k = -4; k <= 4; k++) {
+      rr = Math.sqrt((i + 0.5) / 6) * FIELD_R / 1000; a = j / 12 * 6.2832;
+      v = R(cx + rr * Math.cos(a), cy + k / 4 * FIELD_H / 1000, cz + rr * Math.sin(a)); s += v; n++; if (v > mx) mx = v;
+    }
+    return { mean: s / n, max: mx };
+  }
+  var SUN_FIELD = fieldMean(SOL.x, 0, SOL.z, galRho).mean;
+  // the old generator (an even disc plus an invented 260-star cluster round the centre). only used to put stars that something
+  // refers to (a saved record, an overlay entry, the ship) back exactly where they were, under their old key
+  var legacyCache = {};
+  function legacyPositions(f) {
+    if (legacyCache[f.key]) return legacyCache[f.key];
+    var keepSeed = seed, out = [], i, r, a, x, y, z, L, dense = f.id === 'core' ? 3 : 1;
+    seed = hashStr('L' + f.key);
+    for (i = 0; i < 5200 * dense; i++) { r = 2300 * Math.sqrt(rnd()); a = rnd() * 6.2832; out.push(r * Math.cos(a), gauss() * 330, r * Math.sin(a)); rnd(); rnd(); rnd(); }
+    for (i = 0; i < 260 * dense; i++) { r = 4 + 120 * Math.pow(rnd(), 0.6); x = gauss(); y = gauss(); z = gauss(); L = Math.sqrt(x * x + y * y + z * z) || 1; out.push(x / L * r, y / L * r * 0.8, z / L * r); rnd(); rnd(); rnd(); }
+    seed = keepSeed;
+    return (legacyCache[f.key] = out);
+  }
+  function legacyIndex(f, key) { var pre = f.key + '#'; return key.indexOf(pre) === 0 && /^\d+$/.test(key.slice(pre.length)) ? parseInt(key.slice(pre.length), 10) : -1; }
+  function legacyStar(f, key) {   // the old star a key names, or null
+    var i = legacyIndex(f, key), q = i >= 0 ? legacyPositions(f) : null;
+    if (!q || i * 3 + 2 >= q.length) return null;
+    return { p: new THREE.Vector3(q[i * 3], q[i * 3 + 1], q[i * 3 + 2]), key: key, name: null, place: null };
+  }
+  function keptKeys(f) {   // old star keys in this local group that something still refers to
+    var ks = {}, add = function (k) { if (k && legacyIndex(f, k) >= 0) ks[k] = 1; };
+    Object.keys(saved).forEach(add); Object.keys(pins).forEach(function (g) { Object.keys(pins[g]).forEach(add); }); add(ship.star);
+    return Object.keys(ks);
+  }
 
   function buildLocal(f) {
     dropScene(sceneL); dropItems(1);
     sceneL = new THREE.Scene(); sceneL.background = scene.background;
     LS = []; LSmap = {};
-    seed = hashStr('L' + f.key);
-    var c = new Cloud(), i, dense = f.id === 'core' ? 3 : 1, r, a, x, y, z, L, special = [];
-    function field(px, py, pz, pale, br, s) { c.add(px, py, pz, pale, br, s); LS.push({ p: new THREE.Vector3(px, py, pz), key: f.key + '#' + LS.length, name: null, place: null }); }
-    for (i = 0; i < 5200 * dense; i++) { r = 2300 * Math.sqrt(rnd()); a = rnd() * 6.2832; field(r * Math.cos(a), gauss() * 330, r * Math.sin(a), rnd() * 0.6, 0.25 + rnd() * 0.6, 1.2 + rnd() * 2.2); }
-    for (i = 0; i < 260 * dense; i++) { r = 4 + 120 * Math.pow(rnd(), 0.6); x = gauss(); y = gauss(); z = gauss(); L = Math.sqrt(x * x + y * y + z * z) || 1; field(x / L * r, y / L * r * 0.8, z / L * r, rnd() * 0.6, 0.35 + rnd() * 0.5, 0.25 + rnd() * 0.5); }
-    fieldN = LS.length;
+    var c = new Cloud(), i, r, a, x, y, z, special = [], wx = f.p.x, wy = f.p.y, wz = f.p.z;
+    function field(px, py, pz, key) { c.add(px, py, pz, 0.5, 0.6, 1.6); var s = { p: new THREE.Vector3(px, py, pz), key: key, name: null, place: null }; LS.push(s); LSmap[key] = s; }
+    keptKeys(f).forEach(function (k) { var s = legacyStar(f, k); if (s) field(s.p.x, s.p.y, s.p.z, k); });   // referenced old stars stay put
+    // the field: as many stars as the real density here allows (relative to the sun's), placed by rejection against that density
+    var fm = fieldMean(wx, wy, wz, galRho), n = Math.round(FIELD_BASE * Math.max(0.1, Math.min(FIELD_CAP, fm.mean / SUN_FIELD))), top = fm.max * 1.15, tries = 0;
+    seed = hashStr('L2|' + f.key);
+    for (i = 0; i < n && tries < n * 60; tries++) {
+      r = FIELD_R * Math.sqrt(rnd()); a = rnd() * 6.2832; x = r * Math.cos(a); z = r * Math.sin(a); y = (rnd() * 2 - 1) * FIELD_H;
+      if (rnd() * top > galRho(wx + x / 1000, wy + y / 1000, wz + z / 1000)) continue;
+      field(x, y, z, f.key + '#g' + i); i++;
+    }
     function spec(s) { special.push(s); LSmap[s.key] = s; return s; }
     if (STORM[f.id]) {   // a warp storm: its swirl fills the local view, scaled to the storm (the eye is the largest)
       var sk = STORM[f.id][1] / 1.4;
@@ -4533,6 +4583,24 @@ el.appendChild(d);
     select(own ? 'star:' + s.key : 'selstar');
   }
   function selectStar(s) { if (s.place) { openPlace(s.place, false); return; } selBody = null; setSelStar(s); refreshTarget(); }
+  // local group depth: "near" is measured against the stars actually round the camera, not the zoom. every few frames find the
+  // distance to the DEPTH_K-th nearest star; starMatL draws stars at that distance bright, nearer brighter, farther dimmer.
+  // (against the zoom, a sparse patch such as eta crucis had every star "far", so all of them looked the same: faint)
+  var DEPTH_K = 10, depthN = 0, depthGoal = 300;
+  function depthRef(dt) {
+    if (depthN++ % 6 === 0 && LS.length) {
+      var cp = camera.position, top = [], i, j, d;
+      for (i = 0; i < LS.length; i++) {
+        d = LS[i].p.distanceToSquared(cp);
+        if (top.length < DEPTH_K) { top.push(d); if (top.length === DEPTH_K) top.sort(function (a, b) { return a - b; }); }
+        else if (d < top[DEPTH_K - 1]) { for (j = DEPTH_K - 1; j > 0 && top[j - 1] > d; j--) top[j] = top[j - 1]; top[j] = d; }
+      }
+      if (top.length < DEPTH_K) top.sort(function (a, b) { return a - b; });
+      depthGoal = Math.max(0.5, Math.sqrt(top[top.length - 1]));
+    }
+    var u = starMatL.uniforms.uRef, k = 1 - Math.exp(-(dt || 0.016) * 6);
+    u.value += (depthGoal - u.value) * k;   // ease, so moving the camera never pops the brightness
+  }
   function starNear(x, y, r) {   // the local star drawn nearest to (x, y), within r css px
     var best = null, bd = r * r, i, d, dx, dy;
     for (i = 0; i < LS.length; i++) {
@@ -5150,12 +5218,12 @@ el.appendChild(d);
     var dt = Math.min(0.05, (now - last) / 1000); last = now;
     var k = 1 - Math.exp(-dt * (calm ? 60 : 7));
     cur.theta += (goal.theta - cur.theta) * k; cur.phi += (goal.phi - cur.phi) * k; cur.radius += (goal.radius - cur.radius) * k; cur.target.lerp(goal.target, k);
-    starMatL.uniforms.uRef.value = cur.radius;   // local stars: brightness is relative to the viewing distance
     if (!calm) { ringSpin.rotation.y += dt * 0.012; if (spinL) spinL.rotation.y += dt * 0.012; if (spinS) spinS.rotation.y += dt * 0.02; }
     if (mv.x || mv.y || mv.z) travel(mv.x, mv.y, mv.z, cur.radius * 0.75 * dt);
     var sp = Math.sin(cur.phi);
     camera.position.set(cur.target.x + cur.radius * sp * Math.sin(cur.theta), cur.target.y + cur.radius * Math.cos(cur.phi), cur.target.z + cur.radius * sp * Math.cos(cur.theta));
     camera.lookAt(cur.target);
+    if (tier === 1) depthRef(dt);
     jumpSync();
     renderer.render(tier === 0 ? scene : (tier === 1 ? sceneL : sceneS), camera);
     footer();
@@ -5176,6 +5244,7 @@ el.appendChild(d);
   };
   api.flyTo = function (id) { if (byId[id]) openPlace(id, true); };
   api.vizState = function () { return viz ? viz.state() : null; };
+  api.depthState = function () { return { ref: +starMatL.uniforms.uRef.value.toFixed(1), goal: +depthGoal.toFixed(1), stars: LS.length }; };   // testing: local group depth reference
   // testing: allegiance of a system key, and of each body in it
   api.allegOf = function (key) { var d = sysDef(key); return { system: sysAlleg(key), bodies: d ? d.bodies.map(function (b) { return b.name + ' (' + b.type + '): ' + bodyAlleg(key, b); }) : [] }; };
   api.cordonEdge = function () { var low = null; CORDON.forEach(function (q) { if (!low || q[1] < low[1]) low = q; }); return { south: low, calth: [byId.calth.p.x, -byId.calth.p.z] }; };   // testing
