@@ -387,8 +387,7 @@ body.shake{animation:flicker 11s infinite, shipShake .55s cubic-bezier(.36,.07,.
 .gc-gtitle{display:flex;align-items:center;gap:.6rem;margin:.5rem 0 .3rem;font-size:1rem;font-weight:400;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
 .gc-gtitle::before,.gc-gtitle::after{content:"";flex:1;height:1px}
 .gc-gtitle::before{background:var(--green-dim)}
-.gc-gtitle::after{background:var(--green-dim)}
-.gc-dim{color:var(--dim)}
+.gc-gtitle::after{background:var(--green-dim)}.gc-dim{color:var(--dim)}
 .gc-sm{font-size:.75rem}
 
 /* chart */
@@ -398,6 +397,8 @@ body.shake{animation:flicker 11s infinite, shipShake .55s cubic-bezier(.36,.07,.
 #gc-sky:focus-visible{outline:1px solid var(--green-dim);outline-offset:-2px}
 #gc-ink,#gc-labels{pointer-events:none}
 #gc-labels{position:absolute;inset:0;overflow:hidden}
+#gc-tip{position:absolute;left:0;top:0;z-index:7;pointer-events:none;white-space:nowrap;font-size:.75rem;line-height:1;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--hi);background:rgba(2,10,4,.85);border:1px solid var(--green-dim);padding:2px 4px}   /* local group: system name under the mouse */
 #gc-vbox{position:relative;height:230px;margin:.5rem 0 0;background:var(--bg);border:1px solid var(--border);overflow:hidden}
 #gc-vbox canvas{display:block;width:100%;height:100%;touch-action:pan-y;cursor:grab;outline:none}
 #gc-vmeta{margin:.3rem 0 0;white-space:pre-line}
@@ -437,6 +438,7 @@ a.gc-btn{display:inline-flex;align-items:center;text-decoration:none}
 .gc-btn.gc-add{border-style:dashed;border-color:var(--green-dim)}
 /* one-line action rows (view / move ship here / edit record): never wrap, slightly narrower buttons */
 .gc-ctl.gc-one{flex-wrap:nowrap}
+.gc-acts .gc-btn{white-space:nowrap}   /* selected system actions: one row, each button kept whole */
 .gc-one .gc-btn{white-space:nowrap;padding-left:.45rem;padding-right:.45rem;flex:0 1 auto;min-width:0}
 #gc-status{margin:.4rem 0 0;color:var(--dim);font-size:.75rem;min-height:1em}
 
@@ -722,16 +724,12 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
         <dt>overlays</dt><dd id="gc-dovl"></dd>
         <dt>from ship</dt><dd id="gc-dship"></dd>
       </dl>
-      <div class="gc-ctl gc-one">
+      <div class="gc-ctl gc-acts">   <!-- one row; wraps only when it must (phones, or with the overlay dropdown open) -->
         <button class="gc-btn" id="gc-bFly" type="button">view</button>
         <button class="gc-btn gc-add" id="gc-bMove" type="button">move ship here</button>
         <button class="gc-btn gc-add" id="gc-bCfg" type="button" hidden>configure</button>
-      </div>
-      <div class="gc-ctl" id="gc-sysctl" hidden>
-        <button class="gc-btn gc-add" id="gc-bGen" type="button">generate system</button>
-        <button class="gc-btn" id="gc-bErase" type="button">erase record</button>
-      </div>
-      <div class="gc-ctl gc-lab" id="gc-pinrow">
+        <button class="gc-btn gc-add gm-only" id="gc-bGen" type="button" hidden>generate system</button>
+        <button class="gc-btn" id="gc-bErase" type="button" hidden>erase record</button>
         <button class="gc-btn gc-add" type="button" id="gc-bPin">add to overlay</button>
         <select id="gc-pinSel" class="gc-small" aria-label="systems overlay" hidden></select>
       </div>
@@ -3111,6 +3109,18 @@ el.appendChild(d);
       'void main(){ float d=length(gl_PointCoord-vec2(0.5)); float a=smoothstep(0.5,0.0,d); gl_FragColor=vec4(vC,a*a*vB); }',
     blending: THREE.NormalBlending, depthWrite: false, depthTest: false, transparent: true
   });
+  // local group stars: brightness, paleness and size come from distance to the viewer only (no per-star randomness), so near reads bright, far dim.
+  // uRef = the camera's distance to its focus: a star at that distance gets the middle value, so the rule holds at every zoom
+  var starMatL = new THREE.ShaderMaterial({
+    uniforms: { uScale: { value: 1000 }, uMax: { value: 28 }, uRef: { value: 300 }, uDpr: { value: 1 } },   // uDpr: sizes below are css px, times the canvas pixel ratio
+    vertexShader: 'uniform float uScale; uniform float uMax; uniform float uRef; uniform float uDpr; varying float vB;' +
+      'void main(){ vec4 mv=modelViewMatrix*vec4(position,1.0); float dist=max(0.001,length(mv.xyz));' +
+      ' vB=clamp(1.0*uRef/dist,0.24,1.0);' +   /* brightness: the main distance cue */
+      ' gl_PointSize=clamp(uDpr*(1.5+0.9*pow(uScale/(uDpr*dist),0.85)),1.5*uDpr,uMax); gl_Position=projectionMatrix*mv; }',   /* size: second cue after brightness (about 2 css px far, 8 at the focus distance, up to 13 close; the soft edge shows about half) */
+    fragmentShader: 'precision mediump float; varying float vB;' +
+      'void main(){ float d=length(gl_PointCoord-vec2(0.5)); float a=smoothstep(0.5,0.0,d); vec3 c=mix(vec3(0.22,1.0,0.42),vec3(0.76,1.0,0.82),vB); gl_FragColor=vec4(c,a*vB); }',
+    blending: THREE.NormalBlending, depthWrite: false, depthTest: false, transparent: true
+  });
     // galaxy stars: small crisp points whatever the zoom (a hard-edged disc, capped in size), with density doing the work
   var starMatG = new THREE.ShaderMaterial({
     uniforms: { uScale: { value: 1000 }, uMax: { value: 3.2 }, uMin: { value: 1 }, uDim: { value: 1 } },   // uDim: lowered while an overlay is on (setDim)
@@ -3325,6 +3335,7 @@ el.appendChild(d);
     ink.width = Math.round(W * DPR); ink.height = Math.round(H * DPR);
     camera.aspect = W / H; camera.updateProjectionMatrix();
     starMat.uniforms.uScale.value = H * DPR * 0.5 / TAN; starMat.uniforms.uMax.value = 13 * DPR;
+    starMatL.uniforms.uScale.value = H * DPR * 0.5 / TAN; starMatL.uniforms.uMax.value = 13 * DPR; starMatL.uniforms.uDpr.value = DPR;
     starMatG.uniforms.uScale.value = H * DPR * 0.5 / TAN; starMatG.uniforms.uMax.value = 3.2 * DPR; starMatG.uniforms.uMin.value = DPR;
     fitR = 58 / (Math.min(1, W / H) * TAN);
     measure();
@@ -3465,7 +3476,7 @@ el.appendChild(d);
   var PIN_NAME = { a: 'campaign', o: 'other locations', hw: 'astartes homeworlds', fw: 'forge worlds' }, pinTarget = null;
   function pinControls(s, pl) {
     var key = s ? s.key : (pl ? 'p:' + pl.id : null);
-    if (!pinTarget || pinTarget.key !== key) $('gc-pinSel').hidden = true;   // selection moved on: close the dropdown
+    if (!pinTarget || pinTarget.key !== key) pinOpen(false);   // selection moved on: close the dropdown
     pinTarget = s ? { key: key, s: s } : (pl ? { key: key, pl: pl } : null);
     if (!pinTarget) return;
     var own = pl ? pl.group : null, names = [];
@@ -3477,10 +3488,14 @@ el.appendChild(d);
       if (g === own) return;
       var o = document.createElement('option'); o.value = g; o.textContent = (pins[g][key] ? 'remove: ' : '') + PIN_NAME[g]; sel.appendChild(o);
     });
+    var ox = document.createElement('option'); ox.value = 'x'; ox.textContent = 'cancel'; sel.appendChild(ox);
   }
-  $('gc-bPin').addEventListener('click', function () { var sel = $('gc-pinSel'); sel.hidden = !sel.hidden; if (!sel.hidden) { sel.value = ''; sel.focus(); } });
+  // the dropdown takes the button's place while open, so the row stays one line; picking, cancel or tapping away closes it
+  function pinOpen(on) { $('gc-pinSel').hidden = !on; $('gc-bPin').hidden = on; }
+  $('gc-bPin').addEventListener('click', function () { var sel = $('gc-pinSel'); pinOpen(true); sel.value = ''; sel.focus(); });
+  $('gc-pinSel').addEventListener('blur', function () { pinOpen(false); });
   $('gc-pinSel').addEventListener('change', function () {
-    var t = pinTarget, g = this.value; this.hidden = true; if (!t || !PIN_NAME[g]) return;
+    var t = pinTarget, g = this.value; pinOpen(false); if (!t || !PIN_NAME[g]) return;
     if (pins[g][t.key]) { setPin(g, t.key, null); status('// removed from ' + PIN_NAME[g]); return; }
     var w = t.pl ? t.pl.p : worldOf(t.s);
     setPin(g, t.key, { e: +w.x.toFixed(4), n: +(-w.z).toFixed(4), u: +w.y.toFixed(4) });
@@ -3531,7 +3546,21 @@ el.appendChild(d);
   function centreItem(it) { if (!it) return; goal.target.copy(it.p); zoomPt = it.p.clone(); clampGoal(); }
   function centreSelection() { if (tier === 1 && selStar) { goal.target.copy(selStar.p); zoomPt = null; clampGoal(); } }
   // double click / double tap on a system: centre on it and drop straight into its system view (already in system view: same as a single click)
+  // the ship's own system (a charted place it is on station at, or a star it orbits); null when it is in transit or the star has no record
+  function shipSystem() {
+    if (ship.at && byId[ship.at] && SYS[ship.at]) return { f: placeFocus(byId[ship.at]), key: 'p:' + ship.at };
+    if (ship.star) { var f = focusFromKey(ship.star.slice(0, 2) === 'n:' ? 'sol' : ship.star.split('#')[0]); if (f && sysDef(ship.star)) return { f: f, key: ship.star }; }
+    return null;
+  }
   function dropIn(it) {
+    if (it && it.ship && tier !== 2) {   // double click on the ship: into the system it is in (if any); otherwise as before
+      var ss = shipSystem();
+      if (ss) {
+        if (!focus || focus.key !== ss.f.key || tier !== 1) goLocal(ss.f, 300);
+        var st = ss.key.slice(0, 2) === 'p:' ? LSmap[ss.key] : starByKey(ss.key);
+        if (st && goSystem(st)) return;
+      }
+    }
     if (tier === 2) { centreItem(it); return; }
     if (tier === 0) {
       var pl = it && it.id ? byId[it.id] : null;
@@ -4170,18 +4199,18 @@ el.appendChild(d);
 
   var tier = 0, focus = null, sceneL = null, sceneS = null, spinL = null, spinS = null, guidesL = null, guidesOn = false,
       sysCtx = null, sysMax = 60, sysBodies = [], selBody = null, selSysStar = false, selStar = null, LS = [], LSmap = {}, fieldN = 0, lastFoot = '', ORIGIN = new THREE.Vector3();
-  var shipItemL = makeItem({ name: ship.name, side: 't', cls: 'gc-ship', p: new THREE.Vector3(), ship: true, lead: true, tier: 1 });
+  var shipItemL = makeItem({ name: ship.name, side: 't', cls: 'gc-ship', p: new THREE.Vector3(), ship: true, lead: true, tier: 1, onTap: function () {} });   // tap: centre on it; double tap: into its system (dropIn)
   var shipItemS = makeItem({ name: ship.name, side: 't', cls: 'gc-ship', p: new THREE.Vector3(), ship: true, lead: true, tier: 2 });
   var selItem = makeItem({ name: '-', side: 'r', p: new THREE.Vector3(), lead: true, tier: 1, id: 'selstar' });
   shipItemL.keep = shipItemS.keep = selItem.keep = true; shipItemL.on = shipItemS.on = selItem.on = false;
 
   function Cloud() { this.pos = []; this.col = []; this.siz = []; this.brt = []; }
   Cloud.prototype.add = function (x, y, z, pale, br, s) { this.pos.push(x, y, z); this.col.push(0.22 + 0.54 * pale, 1, 0.42 + 0.4 * pale); this.brt.push(br); this.siz.push(s); };
-  Cloud.prototype.mesh = function () {
+  Cloud.prototype.mesh = function (mat) {   // mat: optional material (local group view passes starMatL)
     var g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(this.pos, 3)); g.setAttribute('aColor', new THREE.Float32BufferAttribute(this.col, 3));
     g.setAttribute('aSize', new THREE.Float32BufferAttribute(this.siz, 1)); g.setAttribute('aBr', new THREE.Float32BufferAttribute(this.brt, 1));
-    var m = new THREE.Points(g, starMat); m.frustumCulled = false; return m;
+    var m = new THREE.Points(g, mat || starMat); m.frustumCulled = false; return m;
   };
   function shell(c, R0, R1, s0, s1, n) {
     for (var i = 0; i < n; i++) { var x = gauss(), y = gauss(), z = gauss(), L = Math.sqrt(x * x + y * y + z * z) || 1, R = R0 + rnd() * (R1 - R0); c.add(x / L * R, y / L * R, z / L * R, 0.3, 0.2 + rnd() * 0.35, s0 + rnd() * (s1 - s0)); }
@@ -4254,7 +4283,7 @@ el.appendChild(d);
       glowIn(sceneL, ORIGIN, 1800 * sk, 0.3);
       makeItem({ name: f.name, side: 'c', cls: 'gc-static gc-dom', p: new THREE.Vector3(), tier: 1 });
     } else if (f.place) {
-      c.add(0, 0, 0, 1, 1, 1.6); glowIn(sceneL, ORIGIN, f.id === 'core' ? 90 : 6, 0.45);
+      c.add(0, 0, 0, 1, 1, 1.6); glowIn(sceneL, ORIGIN, f.id === 'core' ? 90 : 3, 0.45);   // the system's own star: glow 3 ly across (was 6; user: too big)
       var cs = spec({ p: new THREE.Vector3(), key: 'p:' + f.id, name: null, place: f.id });
       // label: the same name as on the galaxy chart (calth, not its star)
       makeItem({ name: f.name, side: 'r', p: cs.p, lead: true, tier: 1, id: f.id, onTap: function () { openPlace(f.id, false); } });
@@ -4281,7 +4310,7 @@ el.appendChild(d);
       ln.computeLineDistances(); spinL.add(ln);
       var it = makeItem({ name: R.toLocaleString('en-US') + ' ly', side: 'c', cls: 'gc-static gc-guide', p: new THREE.Vector3(0, 0, R), tier: 1, group: 'guides' }); it.on = guidesOn;
     });
-    guidesL.add(spinL); guidesL.visible = guidesOn; sceneL.add(guidesL); sceneL.add(c.mesh());
+    guidesL.add(spinL); guidesL.visible = guidesOn; sceneL.add(guidesL); sceneL.add(c.mesh(starMatL));
     syncStarItems();
   }
   // labels for every surveyed star in the current local group
@@ -4504,16 +4533,42 @@ el.appendChild(d);
     select(own ? 'star:' + s.key : 'selstar');
   }
   function selectStar(s) { if (s.place) { openPlace(s.place, false); return; } selBody = null; setSelStar(s); refreshTarget(); }
-  function pickStar(x, y) {
-    var best = null, bd = 18 * 18, i, d, dx, dy;
+  function starNear(x, y, r) {   // the local star drawn nearest to (x, y), within r css px
+    var best = null, bd = r * r, i, d, dx, dy;
     for (i = 0; i < LS.length; i++) {
       tmp.copy(LS[i].p).project(camera); if (tmp.z >= 1 || tmp.z <= -1) continue;
       dx = (tmp.x * 0.5 + 0.5) * W - x; dy = (-tmp.y * 0.5 + 0.5) * H - y; d = dx * dx + dy * dy;
       if (d < bd) { bd = d; best = LS[i]; }
     }
+    return best;
+  }
+  function pickStar(x, y) {
+    var best = starNear(x, y, 18);
     if (!best) return false;
     selectStar(best); return true;
   }
+  // hover tooltip (local group, mouse only): the name of the system under the pointer. a charted place shows its galaxy name
+  var tip = document.createElement('div'); tip.id = 'gc-tip'; tip.hidden = true; tip.setAttribute('aria-hidden', 'true'); chart.appendChild(tip);
+  var tipQ = null, tipRaf = 0;
+  function tipHide() { tipQ = null; tip.hidden = true; }
+  function tipRun() {
+    tipRaf = 0; var q = tipQ; if (!q) return;
+    if (tier !== 1 || pointers.size) { tip.hidden = true; return; }
+    var s = starNear(q.x, q.y, 10);
+    if (!s) { tip.hidden = true; return; }
+    tip.textContent = s.place && byId[s.place] ? byId[s.place].name : starName(s);
+    tip.hidden = false;
+    var tx = Math.min(q.x + 12, W - tip.offsetWidth - 4), ty = q.y + 14 + tip.offsetHeight > H ? q.y - tip.offsetHeight - 8 : q.y + 14;
+    tip.style.transform = 'translate(' + Math.max(4, tx).toFixed(0) + 'px,' + ty.toFixed(0) + 'px)';
+  }
+  canvas.addEventListener('pointermove', function (ev) {
+    if (ev.pointerType === 'touch') return;
+    var r = canvas.getBoundingClientRect(); tipQ = { x: ev.clientX - r.left, y: ev.clientY - r.top };
+    if (!tipRaf) tipRaf = requestAnimationFrame(tipRun);
+  });
+  canvas.addEventListener('pointerleave', tipHide);
+  canvas.addEventListener('pointerdown', tipHide);
+  canvas.addEventListener('wheel', tipHide, { passive: true });   // the view moves under the pointer: drop the stale name
   function selectBody(name) { selBody = name; selSysStar = false; select('body:' + name); refreshTarget(); }
   function selectSysStar() { selBody = null; selSysStar = true; select('sysstar'); refreshTarget(); }
   function currentStar() {
@@ -4530,13 +4585,12 @@ el.appendChild(d);
     armT = setTimeout(function () { armed = null; refreshTarget(); }, 3000); return false;
   }
   function sysControls(key) {
-    var row = $('gc-sysctl'); if (!key) { row.hidden = true; $('gc-bCfg').hidden = true; return; }
+    if (!key) { $('gc-bGen').hidden = $('gc-bErase').hidden = $('gc-bCfg').hidden = true; return; }
     var isPlace = key.slice(0, 2) === 'p:', has = !!saved[key];
     var star = !isPlace && !!sysDef(key);   // a star with an on-demand survey
     $('gc-bGen').hidden = isPlace; if (armed !== 'gc-bGen') $('gc-bGen').textContent = star ? 'regenerate' : 'generate system';
     $('gc-bCfg').hidden = false; $('gc-bCfg').textContent = (has || isPlace || star) ? 'edit record' : 'configure';   // sits on the view / move row
     $('gc-bErase').hidden = !has; if (armed !== 'gc-bErase') $('gc-bErase').textContent = (isPlace || star) ? 'restore record' : 'erase record';
-    row.hidden = isPlace && !has;   // nothing left in this row for an unedited lore system
   }
   function fillTarget(title, sub, text, reg, shipTxt, hideMove, viewTxt) {
     $('gc-dtitle').textContent = 'selected system: ' + title; $('gc-dsub').textContent = '// ' + sub; $('gc-dtext').textContent = text;
@@ -4588,6 +4642,7 @@ el.appendChild(d);
   }
   $('gc-bGen').addEventListener('click', function () {
     var s = currentStar(); if (!s || s.place) return;
+    if (!(typeof currentUser !== 'undefined' && currentUser && currentUser.type === 'gm')) return;   // gm only (the button is .gm-only)
     if (saved[s.key] && !confirmArm('gc-bGen')) return;
     saved[s.key] = genSystem(starName(s), saved[s.key] ? saved[s.key].cls : genClass(hashStr(s.key)), (Math.random() * 4294967296) | 0, xenoCtx(s.key));
     saveSystems(); afterSystemChange(s); status('// survey logged // ' + saved[s.key].bodies.length + ' bodies');
@@ -5095,6 +5150,7 @@ el.appendChild(d);
     var dt = Math.min(0.05, (now - last) / 1000); last = now;
     var k = 1 - Math.exp(-dt * (calm ? 60 : 7));
     cur.theta += (goal.theta - cur.theta) * k; cur.phi += (goal.phi - cur.phi) * k; cur.radius += (goal.radius - cur.radius) * k; cur.target.lerp(goal.target, k);
+    starMatL.uniforms.uRef.value = cur.radius;   // local stars: brightness is relative to the viewing distance
     if (!calm) { ringSpin.rotation.y += dt * 0.012; if (spinL) spinL.rotation.y += dt * 0.012; if (spinS) spinS.rotation.y += dt * 0.02; }
     if (mv.x || mv.y || mv.z) travel(mv.x, mv.y, mv.z, cur.radius * 0.75 * dt);
     var sp = Math.sin(cur.phi);
