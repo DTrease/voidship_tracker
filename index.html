@@ -274,6 +274,8 @@ button.comp-t{cursor:pointer}
 .comp-menu{flex:none;display:flex;gap:4px}
 .comp-t:not(.ask):hover{color:var(--green)}
 .comp-t.new{animation:textGlitch .6s steps(5)}
+.comp-t.inact{border:1px dotted var(--dim)}   /* inactive, no damage */
+.comp-row.comp-off .comp-n{color:var(--dim)}   /* inactive component: name dims */
 @media (prefers-reduced-motion:reduce){.comp-t.s3,.comp-t.new{animation:none}}
 .hull-hit{justify-content:flex-start;flex-wrap:wrap;row-gap:4px}
 .hull-hit label{white-space:nowrap}
@@ -308,6 +310,26 @@ button.comp-t{cursor:pointer}
 .d100-row{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:6px;color:var(--dim);font-size:var(--fs-s);letter-spacing:.08em}
 .d100-row input{width:4.5em;text-align:center}
 .verdict.plain{color:var(--dim)}
+/* ===== pinned mini roller (#dock), bottom right: last roll (number beside die and verdict), die dropdown and roll ===== */
+#dock{position:fixed;right:8px;bottom:8px;z-index:12;font-family:var(--term);font-size:var(--fs-s);color:var(--text);letter-spacing:.04em;filter:blur(.1px);
+  text-shadow:1px 0 1.6px rgba(57,255,107,.35),-.8px 0 1.6px rgba(57,255,107,.18)}   /* lives on <html> (see the dock script), so it takes the body's blur and ghost itself */
+#dock[hidden]{display:none}
+#dock .dk-box{background:var(--panel);border:1px solid var(--border);box-shadow:inset 0 0 12px rgba(57,255,107,.06),0 0 10px rgba(2,10,4,.9);
+  padding:.25rem .35rem;width:10.5rem;box-sizing:border-box}   /* fixed width: the box doesn't jump as the verdict changes */
+#dock .dk-top{display:flex;align-items:center;gap:.4rem;min-height:1.9rem}
+#dock .dk-num{font-size:1.9rem;line-height:1;min-width:1.6ch;text-align:right;color:#c2ffd1;text-shadow:0 0 8px var(--green)}
+#dock .dk-txt{display:flex;flex-direction:column;line-height:1.05;white-space:nowrap}
+#dock .dk-ctl{display:flex;gap:3px;margin-top:.2rem}
+#dock button,#dock select{font:inherit;color:inherit;text-shadow:inherit;border-radius:0;letter-spacing:inherit}
+#dock .dk-b{flex:1;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:0 .35rem;min-height:1.65rem;cursor:pointer;text-transform:lowercase}
+#dock .dk-b:hover{border-color:var(--green-dim)}
+#dock .dk-b:active{border-color:var(--green);background:rgba(57,255,107,.12);color:#c2ffd1}
+#dock .dk-b:focus-visible,#dock select:focus-visible{outline:1px solid var(--green);outline-offset:1px}
+#dock .dk-dim{color:var(--dim)}
+#dock .verdict{text-transform:uppercase;letter-spacing:.08em}
+#dock select{-webkit-appearance:none;appearance:none;background-color:var(--panel2);border:1px solid var(--border);padding:0 1.3rem 0 .35rem;min-height:1.65rem;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--green) 50%),linear-gradient(135deg,var(--green) 50%,transparent 50%);background-position:calc(100% - 11px) 55%,calc(100% - 6px) 55%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+#dock select option{background:var(--panel2);color:var(--text)}
 .dice-result{margin-top:var(--gap);padding-top:var(--gap);border-top:1px dashed var(--border);
   text-align:center;min-height:4.2em;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
 .dice-result .roll-die{color:var(--dim);font-size:var(--fs-s);letter-spacing:.08em}
@@ -580,6 +602,19 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
 </div>
 
 <div id="app">
+<!-- pinned mini roller, bottom right (moved onto <html> by its script). same rollDie() as Fate. -->
+<div id="dock" aria-label="mini roller">
+  <div class="dk-box">
+    <div class="dk-top">
+      <span class="dk-num" id="dk-num">--</span>
+      <span class="dk-txt"><span class="dk-dim" id="dk-die">// fate</span><span class="verdict plain" id="dk-ver"></span></span>
+    </div>
+    <div class="dk-ctl">
+      <select id="dk-sel" aria-label="die"><option value="4">d4</option><option value="6">d6</option><option value="8">d8</option><option value="10">d10</option><option value="12">d12</option><option value="20" selected>d20</option><option value="100">d100</option></select>
+      <button class="dk-b" type="button" id="dk-roll">roll</button>
+    </div>
+  </div>
+</div>
 <div class="wrap">
 <h1>Augur Report</h1>
 <div class="sub" id="connLine"><span class="status-dot"></span><span id="connText">connection live // praise the omnissiah</span></div>
@@ -1493,8 +1528,14 @@ if(loss) up['status/hull'] = Number(curStatus.hull) - loss;
 hullMsg('// ' + d.type + ' worse // ' + DMG_SECTIONS[d.section] + ' -' + loss + ' hull');
 dmgWrite(up);
 }
+// inactive: a component switched off by the crew. no hull cost, sits beside any damage. stored at /components/{id}/inactive (true, or absent)
+function compInactive(c){ return !!(compData[c.id] && compData[c.id].inactive === true); }
+function compSetInactive(c, on){
+db.ref('components/' + c.id + '/inactive').set(on ? true : null);
+hullMsg('// ' + c.type + (on ? ' inactive' : ' active'));
+}
 function compTag(c){
-const num = n=> String(Math.round(n * 100) / 100);
+const num = n=> String(Math.round(n * 100) / 100), ina = compInactive(c);
 const ds = dmgState.list.filter(d=> d.section === c.at && (c.bay === undefined || dmgBay(d.id) === c.bay)).sort((a,b)=> b.sev - a.sev || b.t - a.t);
 const d = ds[0];
 const btn = (text, cls, fn, title)=>{ const b = document.createElement('button'); b.type = 'button'; b.className = 'comp-t ' + cls; b.textContent = text; if(title) b.title = title;
@@ -1509,6 +1550,7 @@ if(compMenu === c.id){
     m.appendChild(btn('fire' + cost, 'ask', ()=>compDamage(c, 'fire'), k + ' hull'));
     m.appendChild(btn('breach' + cost, 'ask', ()=>compDamage(c, 'breach'), k + ' hull'));
   }
+  m.appendChild(btn(ina ? 'activate' : 'deactivate', 'ask', ()=>compSetInactive(c, !ina), 'no hull cost'));
   m.appendChild(btn('x', 'ask', ()=>{}, 'close'));
   return m;
 }
@@ -1516,15 +1558,16 @@ const t = document.createElement('button');
 t.type = 'button';
 t.setAttribute('aria-haspopup', 'true');
 t.addEventListener('click', ()=>openCompMenu(c.id));
-if(!d){ t.className = 'comp-t'; t.textContent = 'intact'; t.title = 'damage'; return t; }
+if(!d){ t.className = 'comp-t' + (ina ? ' inact' : ''); t.textContent = ina ? 'inactive' : 'intact'; t.title = ina ? 'inactive // no hull cost' : 'damage'; return t; }
 const off = d.sev >= DMG_RULES.OFFLINE_AT && d.type !== 'offline';
 t.className = 'comp-t s' + d.sev + (Date.now() - d.t < 8000 ? ' new' : '');
-t.textContent = d.type + (off ? ' // off' : '') + (ds.length > 1 ? ' +' + (ds.length - 1) : '');
+t.textContent = (ina ? 'inactive // ' : '') + d.type + (off ? ' // off' : '') + (ds.length > 1 ? ' +' + (ds.length - 1) : '');
 t.title = DMG_TYPES[d.type] + ' (' + DMG_SEV[d.sev] + ') -' + num(d.cost) + ' hull';
 return t;
 }
 function fillCompRow(row, c){
 row.textContent = '';
+row.classList.toggle('comp-off', compInactive(c));
 const name = document.createElement('button'), loc = document.createElement('small');
 name.type = 'button'; name.className = 'comp-n'; name.textContent = c.type;
 loc.textContent = c.loc || DMG_SECTIONS[c.at]; name.appendChild(loc);
@@ -1759,7 +1802,32 @@ const rollEntry = {
 if(currentUser && currentUser.type === 'gm') rollEntry.roller = 'GM';
 else if(currentUser && currentUser.type === 'crew') rollEntry.roller = currentUser.name;
 db.ref('rolls').push(rollEntry);
+if(window.dockShow) window.dockShow(rollEntry);
+return rollEntry;
 }
+
+// ---- pinned mini roller (#dock): die dropdown + roll, shows this device's last roll. a d100 here uses the Fate target, if one is set ----
+(function(){
+const dock = document.getElementById('dock'); if(!dock) return;
+// body has a filter (the .1px blur), which makes it the frame for position:fixed. the dock moves out to <html> so it pins to the screen
+document.documentElement.appendChild(dock);
+const app0 = document.getElementById('app');
+function showDock(){ dock.hidden = !app0 || getComputedStyle(app0).display === 'none'; }   // hidden while the gate is up
+showDock(); if(window.MutationObserver && app0) new MutationObserver(showDock).observe(app0, { attributes: true, attributeFilter: ['style'] });
+safeStorageRemove('vt_dock'); safeStorageRemove('vt_dock2fold');   // left over from the three trial versions
+window.dockShow = function(e){
+  document.getElementById('dk-die').textContent = 'd'+e.sides+' roll';
+  document.getElementById('dk-num').textContent = e.roll;
+  const v = document.getElementById('dk-ver'); v.className = 'verdict '+e.verdict;
+  v.textContent = e.verdictText.replace(/ \/\/ VS \d+$/, '').replace(/^\/\/ no target$/, '');   // short: no target talk in the dock
+};
+const sel = document.getElementById('dk-sel');
+document.getElementById('dk-roll').addEventListener('click', ()=>rollDie(parseInt(sel.value, 10)));
+// keep the end of the page clear of the dock, so nothing is stuck under it
+function fit(){ const a = document.getElementById('app'); if(a) a.style.paddingBottom = (dock.offsetHeight + 16)+'px'; }
+if(window.ResizeObserver) new ResizeObserver(fit).observe(dock); else window.addEventListener('resize', fit);
+fit();
+})();
 
 function renderRollHistory(data){
 const el = document.getElementById('rollHistory');
