@@ -2153,7 +2153,11 @@ setTimeout(()=>{
 }, gap);
 }
 
+// the random warp event (chaos interference) is off: the user found it added little. true brings back the timer;
+// the gm's "[!] test warp event" button still triggers it by hand
+const WARP_EVENTS_ON = false;
 function scheduleWarpEvent(){
+if(!WARP_EVENTS_ON) return;
 const meanMs = 0.75 * 60 * 60 * 1000; // Poisson mean: 0.75 hours
 const interval = sampleExponential(meanMs);
 setTimeout(()=>{
