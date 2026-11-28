@@ -117,7 +117,7 @@ html.hull-hurt .dmg-scan,html.hull-hurt .dmg-roll{display:block}
   color:#c2ffd1;text-shadow:0 0 6px var(--green),0 0 22px rgba(57,255,107,.85);opacity:0}
 @keyframes asciiEyeFlicker{0%{opacity:0}8%{opacity:1}16%{opacity:.25}24%{opacity:1}80%{opacity:1}92%{opacity:.3}100%{opacity:0}}
 .warp-ascii-eye.show{animation:asciiEyeFlicker 2.6s steps(10) forwards}
-.warp-test-btn{display:none;position:fixed;right:14px;top:14px;z-index:40;background:rgba(2,10,4,.85);
+.warp-test-btn{display:none;position:fixed;left:14px;top:14px;z-index:40;background:rgba(2,10,4,.85);
   color:var(--green);border:1px solid var(--green);padding:8px 12px;font-family:var(--term);
   font-size:var(--fs-m);letter-spacing:.06em;cursor:pointer;text-transform:uppercase;
   box-shadow:0 0 8px rgba(57,255,107,.4)}
@@ -570,31 +570,41 @@ html.map-mode body{padding:0;height:100vh;height:100dvh;min-height:0;overflow:hi
 html.wide #layoutBar{display:flex;position:sticky;top:0;z-index:13;justify-content:flex-end;align-items:center;gap:.35rem;margin:-16px -12px 6px;padding:4px 12px;
   background:rgba(2,10,4,.94);border-bottom:1px solid var(--border);box-shadow:0 2px 8px rgba(2,10,4,.9)}   /* pinned strip: takes its own space at rest (user's request) */
 html.wide #layoutBar .gc-btn{font-family:var(--term);text-shadow:inherit;font-size:.75rem}
+html.wide .warp-test-btn{top:6px;left:12px;padding:.15rem .5rem;font-size:var(--fs-s)}   /* gm's warp button: top left, sized to sit in the layout strip */
 html.wide2{--lbh:42px}
 html.wide2 .wrap{max-width:1600px;display:grid;grid-template-columns:minmax(0,3fr) minmax(420px,2fr);column-gap:14px;align-items:start}
-html.wide2 .wrap>h1,html.wide2 .wrap>#connLine{grid-column:1 / -1}
-html.wide2 #gc-root{grid-column:1;grid-row:3 / span 4;position:sticky;top:var(--lbh);height:calc(100vh - var(--lbh) - 8px);align-self:start;margin:0;display:flex;flex-direction:column}
+/* the map column starts right under the strip: title and connection line sit at the top of the right column */
+html.wide2 .wrap>h1{grid-column:2;grid-row:1;margin:0;font-size:1.6rem}
+html.wide2 .wrap>#connLine{grid-column:2;grid-row:2;margin:2px 0 8px}
+html.wide2 #gc-root{grid-column:1;grid-row:1 / span 6;position:sticky;top:var(--lbh);height:calc(100vh - var(--lbh) - 8px);align-self:start;margin:0;display:flex;flex-direction:column}
 html.wide2 .wrap>section.group:nth-of-type(2){grid-column:2;grid-row:3}
 html.wide2 .wrap>section.group:nth-of-type(3){grid-column:2;grid-row:4}
 html.wide2 .wrap>section.group:nth-of-type(4){grid-column:2;grid-row:5}
 html.wide2 .wrap>#logoutBtn{grid-column:2;grid-row:6}
-html.wide2 #gc-root>.group-title{flex:none;pointer-events:none}   /* navigation cannot fold in this layout */
-html.wide2 #gc-root>.group-title span::before{content:'[ '}
-html.wide2 #gc-root #gc-mappanel{flex:2.4 1 0;min-height:0;display:flex;flex-direction:column;margin-bottom:var(--gap)}
-html.wide2 #gc-root #gc-mappanel>*{flex:none}
-html.wide2 #gc-root #gc-chart{flex:1 1 auto;aspect-ratio:auto;max-height:none;min-height:180px}
-html.wide2 #gc-root #gc-index[open]{max-height:28vh;overflow:auto}
-html.wide2 #gc-root #gc-navdata{flex:.6 1 0;min-height:150px;overflow:auto;margin:0;display:block}   /* about the bottom quarter; scrolls inside itself */
-/* keep the rows round the chart tight, so the chart gets the height */
-html.wide2 #gc-mappanel>.gc-ptitle{margin-bottom:.25rem}
-html.wide2 #gc-mappanel .gc-ctl{margin-top:.3rem}
-html.wide2 #gc-mappanel .gc-ovl{margin-top:.35rem;padding-top:.3rem}
-html.wide2 #gc-mappanel .gc-ovl+.gc-ovl{margin-top:.25rem;padding-top:0}
+/* right column: tighter headings */
+html.wide2 .wrap>section.group:not(#gc-root){margin-bottom:8px}
+html.wide2 .wrap>section.group:not(#gc-root)>.group-title{margin-bottom:6px}
+/* map column: no "[ navigation ]" heading or "> starmap" title; the chart fills the map panel and the control rows float over its
+   top-left corner (#gc-float, moved in by the layout script, same look as the full-page map view) */
+html.wide2 #gc-root>.group-title,html.wide2 #gc-mappanel>.gc-ptitle{display:none}
+html.wide2 #gc-root #gc-mappanel{flex:1 1 auto;min-height:300px;margin:0 0 6px;padding:0;position:relative;overflow:hidden;display:block}
+html.wide2 #gc-root #gc-chart{position:absolute;inset:0;aspect-ratio:auto;max-height:none;border:0}
+html.wide2 #gc-float{position:absolute;top:24px;left:6px;max-width:calc(100% - 60px);z-index:6;pointer-events:none;display:flex;flex-direction:column;align-items:flex-start;gap:3px}
+html.wide2 #gc-float>*{pointer-events:auto;margin:0;padding:2px 3px;background:rgba(2,10,4,.78);border:1px solid var(--border);max-width:100%}
+html.wide2 #gc-float .gc-ctl{gap:3px;align-items:center}
+html.wide2 #gc-float .gc-btn{padding:.1rem .4rem;min-height:1.5rem}
+html.wide2 #gc-float .gc-tab{margin-left:0}
+html.wide2 #gc-float .gc-ovl{border-top:1px solid var(--border)}
 html.wide2 #gc-root #locDate{padding:.1rem .4rem;max-width:9rem}
-html.wide2 #gc-status{margin-top:.25rem;min-height:0}
+html.wide2 #gc-status{padding:1px 4px;min-height:0}
 html.wide2 #gc-status:empty{display:none}
-html.wide2 #gc-index{margin-top:.35rem;padding-top:.3rem}
-html.wide2 #gc-root.collapsed #gc-mappanel{display:flex}
+html.wide2 #gc-index{padding:2px 6px;max-height:50vh;overflow:auto;width:30rem}
+html.wide2 #gc-index>summary{margin:0}
+html.wide2 #gc-index:not([open]){width:auto}
+/* navigation data: as tall as its content, at most about a third of the column; scrolls inside itself */
+html.wide2 #gc-root #gc-navdata{flex:0 1 auto;max-height:32vh;min-height:0;overflow:auto;margin:0;display:block;padding:8px 10px}
+html.wide2 #gc-navdata .gc-gtitle{margin:.35rem 0 .2rem}
+html.wide2 #gc-root.collapsed #gc-mappanel{display:block}
 .map-mode .wrap{max-width:none}
 .map-mode .wrap>:not(#gc-root),.map-mode #gc-root>.group-title,.map-mode #gc-mappanel>.gc-ptitle,.map-mode .warp-test-btn{display:none!important}
 html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75rem / 1rem ratio kept */
@@ -5835,10 +5845,25 @@ el.appendChild(d);
   'use strict';
   var html = document.documentElement, mq = window.matchMedia ? window.matchMedia('(min-width: 1100px)') : null;
   function pref() { return safeStorageGet('vt_layout') === '1' ? '1' : '2'; }
+  // 2 columns: the map panel's control rows float over the chart's top-left (#gc-float), as in the map view; put back on leaving
+  var mp = document.getElementById('gc-mappanel'), order = null, fl = null;
+  function floatOn() {
+    if (fl || !mp) return;
+    order = Array.prototype.slice.call(mp.children);
+    fl = document.createElement('div'); fl.id = 'gc-float';
+    order.forEach(function (el) { if (el.id !== 'gc-chart' && !el.classList.contains('gc-ptitle')) fl.appendChild(el); });
+    mp.appendChild(fl);
+  }
+  function floatOff() {
+    if (!fl) return;
+    order.forEach(function (el) { mp.appendChild(el); });   // original order: title, date, chart, scale, overlays, systems, key, status, index
+    fl.parentNode.removeChild(fl); fl = null; order = null;
+  }
   function apply() {
     var wide = !!(mq && mq.matches) && !html.classList.contains('map-mode'), p = pref();
     html.classList.toggle('wide', wide);
     html.classList.toggle('wide2', wide && p === '2');
+    if (wide && p === '2') floatOn(); else floatOff();
     Array.prototype.forEach.call(document.querySelectorAll('#layoutBar [data-lay]'), function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-lay') === p ? 'true' : 'false'); });
   }
   Array.prototype.forEach.call(document.querySelectorAll('#layoutBar [data-lay]'), function (b) {
