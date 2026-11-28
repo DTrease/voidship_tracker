@@ -495,6 +495,31 @@ a.gc-btn{display:inline-flex;align-items:center;text-decoration:none}
 .gc-kv [hidden]{display:none}
 #gc-jumpLy{width:6rem;max-width:6rem}
 #gc-jumpInfo{margin:.3rem 0 0}
+/* jump planner: target search, waypoint plot, list and summary */
+#gc-jtIn{flex:1;min-width:8rem}
+.gc-sug{list-style:none;margin:2px 0 0;padding:0;border:1px solid var(--border);background:var(--panel2)}
+.gc-sug li{display:flex;justify-content:space-between;gap:.6rem;padding:.12rem .45rem;font-size:.75rem;border-top:1px solid rgba(15,77,31,.6);cursor:pointer}
+.gc-sug li:first-child{border-top:0}
+.gc-sug li[aria-selected="true"],.gc-sug li:hover{background:rgba(57,255,107,.12);color:var(--hi)}
+.gc-sug li span:last-child{color:var(--dim);white-space:nowrap}
+.gc-sug li u{text-decoration:underline;color:var(--green)}
+.gc-jmsg{border:1px dashed var(--green-dim);padding:.3rem .5rem;margin:.4rem 0 0;font-size:.75rem}
+.gc-jmsg.gc-in,.gc-jmsg.gc-jdone{border:1px solid var(--green);background:rgba(57,255,107,.08)}
+.gc-jmsg b{font-weight:400;color:var(--hi);text-transform:uppercase;letter-spacing:.08em}
+#gc-jtPlot{display:block;width:100%;max-width:26rem;height:auto;background:var(--bg);border:1px solid var(--border);margin-top:.35rem}
+#gc-jtPlot text{font-family:'VT323','VT323 Dots',monospace;text-transform:uppercase;letter-spacing:.06em}
+#gc-jtPlot .gc-wp{cursor:pointer}
+#gc-jtPlot .gc-jring{stroke-dasharray:5 4;animation:gcJring 6s linear infinite}
+@keyframes gcJring{to{stroke-dashoffset:-90}}
+@media (prefers-reduced-motion:reduce){#gc-jtPlot .gc-jring{animation:none}}
+.gc-wps{margin:.3rem 0 0;padding:0;list-style:none;columns:2;column-gap:.8rem;font-size:.75rem}
+.gc-wps li{display:flex;gap:.35rem;break-inside:avoid;padding:.06rem .2rem;cursor:pointer;border:1px solid transparent}
+.gc-wps li:hover{border-color:var(--border)}
+.gc-wps li i{font-style:normal;color:var(--dim);min-width:1.2rem;text-align:right}
+.gc-wps li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gc-wps li em{font-style:normal;margin-left:auto;color:var(--dim);white-space:nowrap}
+.gc-wps li[aria-current="true"]{border-color:var(--green);background:rgba(57,255,107,.1);color:var(--hi)}
+#gc-jtSum .gc-kv{margin-top:.35rem}
 .gc-ovl+.gc-ovl{margin-top:.35rem;padding-top:0;border-top:0}   /* systems // sits right under overlays // */
 
 #gc-root #locDate{text-transform:none;max-width:12rem}
@@ -810,6 +835,21 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
         <button class="gc-btn" id="gc-jumpOff" type="button">clear</button>
       </div>
       <p class="gc-dim gc-sm" id="gc-jumpInfo"></p>
+      <!-- target search: shows once a range is set. suggestions sit inline under the field -->
+      <div id="gc-jt" hidden>
+        <div class="gc-ctl gc-lab">
+          <span class="gc-dim gc-sm">target //</span>
+          <input type="text" id="gc-jtIn" maxlength="40" autocomplete="off" spellcheck="false" placeholder="system name" aria-label="jump target" aria-autocomplete="list" aria-controls="gc-jtSug">
+        </div>
+        <ul class="gc-sug" id="gc-jtSug" role="listbox" hidden></ul>
+        <div id="gc-jtOut" hidden>
+          <p class="gc-jmsg" id="gc-jtMsg"></p>
+          <svg id="gc-jtPlot" viewBox="0 0 360 210" aria-label="waypoints toward the target" hidden></svg>
+          <ol class="gc-wps" id="gc-jtList"></ol>
+          <div id="gc-jtSum"></div>
+          <p class="gc-jmsg gc-jdone" id="gc-jtDone" hidden></p>
+        </div>
+      </div>
     </div>
     </div>
   </div>
@@ -3556,7 +3596,7 @@ el.appendChild(d);
     ship.e = e; ship.n = n; ship.u = u; ship.at = at; shipP.copy(V(e, n, u));
     var a = stalkGeo.attributes.position; a.setXYZ(0, shipP.x, shipP.y, shipP.z); a.setXYZ(1, shipP.x, 0, shipP.z); a.needsUpdate = true;
     stalk.visible = Math.abs(u) > 0.06;
-    saveShip(silent); refreshTierShip(); refreshShip();
+    saveShip(silent); refreshTierShip(); refreshShip(); jtReplan();   // jump planner follows the ship (any device's move)
   }
   $('gc-sname').addEventListener('input', function () { ship.name = this.value.trim().slice(0, 40) || SHIP_NAME; saveShip(); refreshShip(); });
   $('gc-bShipFly').addEventListener('click', function () { flyShip(); if (chart.scrollIntoView) chart.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' }); });
@@ -4344,21 +4384,27 @@ el.appendChild(d);
     return Object.keys(ks);
   }
 
-  function buildLocal(f) {
-    dropScene(sceneL); dropItems(1);
-    sceneL = new THREE.Scene(); sceneL.background = scene.background;
-    LS = []; LSmap = {};
-    var c = new Cloud(), i, r, a, x, y, z, special = [], wx = f.p.x, wy = f.p.y, wz = f.p.z;
-    function field(px, py, pz, key) { c.add(px, py, pz, 0.5, 0.6, 1.6); var s = { p: new THREE.Vector3(px, py, pz), key: key, name: null, place: null }; LS.push(s); LSmap[key] = s; }
-    keptKeys(f).forEach(function (k) { var s = legacyStar(f, k); if (s) field(s.p.x, s.p.y, s.p.z, k); });   // referenced old stars stay put
-    // the field: as many stars as the real density here allows (relative to the sun's), placed by rejection against that density
+  // the stars of a local group, without building its scene: [{p (ly, from the focus), key}]. referenced old stars first, then the
+  // real-density field. same seed every call, so the jump planner and the local view agree. leaves the shared rnd seed as the field left it
+  function fieldStars(f) {
+    var out = [], i, r, a, x, y, z, wx = f.p.x, wy = f.p.y, wz = f.p.z;
+    keptKeys(f).forEach(function (k) { var s = legacyStar(f, k); if (s) out.push(s); });   // referenced old stars stay put
+    // as many stars as the real density here allows (relative to the sun's), placed by rejection against that density
     var fm = fieldMean(wx, wy, wz, galRho), n = Math.round(FIELD_BASE * Math.max(0.1, Math.min(FIELD_CAP, fm.mean / SUN_FIELD))), top = fm.max * 1.15, tries = 0;
     seed = hashStr('L2|' + f.key);
     for (i = 0; i < n && tries < n * 60; tries++) {
       r = FIELD_R * Math.sqrt(rnd()); a = rnd() * 6.2832; x = r * Math.cos(a); z = r * Math.sin(a); y = (rnd() * 2 - 1) * FIELD_H;
       if (rnd() * top > galRho(wx + x / 1000, wy + y / 1000, wz + z / 1000)) continue;
-      field(x, y, z, f.key + '#g' + i); i++;
+      out.push({ p: new THREE.Vector3(x, y, z), key: f.key + '#g' + i, name: null, place: null }); i++;
     }
+    return out;
+  }
+  function buildLocal(f) {
+    dropScene(sceneL); dropItems(1);
+    sceneL = new THREE.Scene(); sceneL.background = scene.background;
+    LS = []; LSmap = {};
+    var c = new Cloud(), i, r, a, special = [];
+    fieldStars(f).forEach(function (s) { c.add(s.p.x, s.p.y, s.p.z, 0.5, 0.6, 1.6); LS.push(s); LSmap[s.key] = s; });
     function spec(s) { special.push(s); LSmap[s.key] = s; return s; }
     if (STORM[f.id]) {   // a warp storm: its swirl fills the local view, scaled to the storm (the eye is the largest)
       var sk = STORM[f.id][1] / 1.4;
@@ -4600,13 +4646,203 @@ el.appendChild(d);
     if (ly * 3 <= 1900) { var f = shipFocus(); goLocal(f, Math.max(60, ly * 3)); refreshTierShip(); if (shipItemL.on) goal.target.copy(shipItemL.p); }   // short jumps read best in the local view
     else { if (tier !== 0) { goGalaxy(); cur.radius = goal.radius = 20; } goal.target.copy(shipP); goal.radius = Math.max(2.2, ly / 1000 * 3); clampGoal(); }
     status('// jump range ' + ly.toLocaleString('en-US') + ' ly');
+    $('gc-jt').hidden = false; jtReplan();   // the target search shows once there is a range
   }
-  function clearJump() { jumpR = 0; $('gc-jumpInfo').textContent = ''; status(''); }
+  function clearJump() { jumpR = 0; $('gc-jumpInfo').textContent = ''; status(''); $('gc-jt').hidden = true; $('gc-jtOut').hidden = true; $('gc-jtSug').hidden = true; }
   $('gc-bJump').addEventListener('click', function () { var on = toggle(this); $('gc-jump').hidden = !on; if (on) $('gc-jumpLy').focus(); else clearJump(); });
   function goJump() { var v = Math.round(+$('gc-jumpLy').value); if (!(v > 0)) { status('// enter a range in ly'); return; } showJump(Math.min(75000, v)); }
   $('gc-jumpGo').addEventListener('click', goJump);
   $('gc-jumpLy').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); goJump(); } });
-  $('gc-jumpOff').addEventListener('click', function () { $('gc-jumpLy').value = ''; clearJump(); });
+  $('gc-jumpOff').addEventListener('click', function () { $('gc-jumpLy').value = ''; $('gc-jtIn').value = ''; jt.target = null; clearJump(); });
+
+  // ---- jump planner: target search and waypoints (version b, docs/mockups/jump-planner-b.html) ----
+  // targets: every charted place, sol's named neighbours, stars added to an overlay, the stars of the local group on view and of the
+  // local group round the ship. waypoints: charted systems and stars of the ship's local group within range and within JT_CONE degrees
+  // of the line to the target, ranked by how much nearer the target they bring the ship (user's pick, cone kept on purpose).
+  var JT_CONE = 35, JT_N = 10, jt = { target: null, sel: 0, wps: [], sug: [], hi: -1 }, shipField = { key: '', f: null, list: [] };
+  function lyN(v) { return Math.round(v).toLocaleString('en-US') + ' ly'; }
+  function shipStars() {   // the stars round the ship (generated once per ship local group)
+    var f = shipFocus(), k = f.key + '|' + keptKeys(f).join(',');
+    if (shipField.key !== k) { var keep = seed; shipField = { key: k, f: f, list: fieldStars(f) }; seed = keep; }
+    return shipField;
+  }
+  function starEntry(f, s) { return { key: s.key, name: starLabel(s.key), w: f.p.clone().addScaledVector(s.p, 0.001), f: f }; }
+  function placeEntry(pl) { return { key: 'p:' + pl.id, name: pl.name, w: pl.p.clone(), pl: pl }; }
+  function nearWorld(s) { var l = s[1] * Math.PI / 180, b = s[2] * Math.PI / 180, d = s[3] / 1000; return SOL.clone().add(new THREE.Vector3(d * Math.cos(b) * Math.cos(l), d * Math.sin(b), -d * Math.cos(b) * Math.sin(l))); }
+  var jtCache = { key: '', list: [] };
+  function jtTargets() {   // every system the search knows, once each, with a rank: 0 charted place, 1 named / added / surveyed star, 2 generated star
+    var sf = shipStars(), ck = sf.key + '|' + (focus && tier > 0 ? focus.key : '') + '|' + JSON.stringify(pins).length + '|' + Object.keys(saved).length;
+    if (jtCache.key === ck) return jtCache.list;
+    var out = [], seen = {}, add = function (e, r) { if (e && !seen[e.key]) { seen[e.key] = 1; e.rank = r; out.push(e); } };
+    PLACES.forEach(function (pl) { add(placeEntry(pl), 0); });
+    NEAR.forEach(function (s) { add({ key: 'n:' + s[0], name: s[0], w: nearWorld(s), f: placeFocus(byId.sol) }, 1); });
+    Object.keys(pins).forEach(function (g) { Object.keys(pins[g]).forEach(function (k) { if (k.slice(0, 2) !== 'p:') { var q = pins[g][k]; add({ key: k, name: starLabel(k), w: V(q.e, q.n, q.u) }, 1); } }); });
+    function local(f, s) { if (!s.place && s.key.slice(0, 2) !== 'n:' && s.key.slice(0, 2) !== 'p:') add(starEntry(f, s), saved[s.key] ? 1 : 2); }
+    if (focus && tier > 0) LS.forEach(function (s) { local(focus, s); });
+    sf.list.forEach(function (s) { local(sf.f, s); });
+    jtCache = { key: ck, list: out };
+    return out;
+  }
+  function jtSuggest() {
+    var q = $('gc-jtIn').value.trim().toLowerCase(), ul = $('gc-jtSug');
+    jt.sug = []; jt.hi = -1; ul.textContent = '';
+    if (q.length < 2) { ul.hidden = true; return; }
+    var all = jtTargets(), hits = [];
+    all.forEach(function (e) { var i = e.name.toLowerCase().indexOf(q); if (i >= 0) hits.push({ e: e, at: i, d: e.w.distanceTo(shipP) }); });
+    hits.sort(function (a, b) { return a.e.rank - b.e.rank || (a.at === 0 ? 0 : 1) - (b.at === 0 ? 0 : 1) || a.d - b.d; });   // charted first, then named, then generated
+    jt.sug = hits.slice(0, 6).map(function (h) { return h.e; });
+    jt.sug.forEach(function (e, n) {
+      var li = document.createElement('li'), a = document.createElement('span'), b = document.createElement('span'), i = e.name.toLowerCase().indexOf(q), u = document.createElement('u');
+      li.setAttribute('role', 'option'); li.setAttribute('aria-selected', 'false');
+      a.appendChild(document.createTextNode(e.name.slice(0, i))); u.textContent = e.name.slice(i, i + q.length); a.appendChild(u); a.appendChild(document.createTextNode(e.name.slice(i + q.length)));
+      b.textContent = (e.pl ? e.pl.region.split(' // ')[0] : (e.f ? 'local group: ' + e.f.name : 'added')) + ' // ' + lyN(e.w.distanceTo(shipP) * 1000);
+      li.appendChild(a); li.appendChild(b);
+      li.addEventListener('mousedown', function (ev) { ev.preventDefault(); jtSetTarget(e); });   // mousedown: before the field loses focus
+      ul.appendChild(li);
+    });
+    ul.hidden = !jt.sug.length;
+    if (!jt.sug.length) { ul.hidden = false; var li = document.createElement('li'); li.textContent = '// no system on record'; li.style.cursor = 'default'; ul.appendChild(li); }
+  }
+  function jtHi(n) { jt.hi = n; Array.prototype.forEach.call($('gc-jtSug').children, function (li, i) { li.setAttribute('aria-selected', i === n ? 'true' : 'false'); }); }
+  function jtSetTarget(e) { jt.target = e; jt.sel = 0; $('gc-jtIn').value = e.name; $('gc-jtSug').hidden = true; $('gc-jtDone').hidden = true; jtPlan(); }
+  $('gc-jtIn').addEventListener('input', function () { jtSuggest(); });
+  $('gc-jtIn').addEventListener('keydown', function (ev) {
+    if (ev.key === 'ArrowDown' && jt.sug.length) { ev.preventDefault(); jtHi((jt.hi + 1) % jt.sug.length); }
+    else if (ev.key === 'ArrowUp' && jt.sug.length) { ev.preventDefault(); jtHi((jt.hi - 1 + jt.sug.length) % jt.sug.length); }
+    else if (ev.key === 'Escape') { $('gc-jtSug').hidden = true; }
+    else if (ev.key === 'Enter') {
+      ev.preventDefault(); if (!jt.sug.length) jtSuggest();
+      var v = this.value.trim().toLowerCase(), exact = jt.sug.filter(function (e) { return e.name.toLowerCase() === v; })[0];
+      var pick = jt.hi >= 0 ? jt.sug[jt.hi] : (exact || jt.sug[0]);
+      if (pick) jtSetTarget(pick); else status('// no system on record');
+    }
+  });
+  $('gc-jtIn').addEventListener('blur', function () { setTimeout(function () { $('gc-jtSug').hidden = true; }, 150); });
+
+  function jtPlan() {   // works out in range / waypoints for the current ship, range and target, then draws
+    var out = $('gc-jtOut'), t = jt.target;
+    if (!t || !(jumpR > 0)) { out.hidden = true; return; }
+    out.hidden = false;
+    var S = shipP, D = t.w.distanceTo(S) * 1000;
+    jt.wps = [];
+    if (D <= jumpR) { jt.inRange = true; jtDraw(); return; }
+    jt.inRange = false;
+    var dir = t.w.clone().sub(S).normalize(), cosCone = Math.cos(JT_CONE * Math.PI / 180), cands = [], seen = {};
+    function consider(e) {
+      if (seen[e.key]) return; seen[e.key] = 1;
+      var v = e.w.clone().sub(S), d = v.length() * 1000; if (d > jumpR || d < 0.5) return;
+      var c = v.dot(dir) / (d / 1000); if (c < cosCone) return;
+      var gain = D - e.w.distanceTo(t.w) * 1000; if (gain <= 0) return;
+      e.jump = d; e.off = Math.acos(Math.min(1, c)) * 180 / Math.PI; e.gain = gain; e.v = v; cands.push(e);
+    }
+    PLACES.forEach(function (pl) { if (SYS[pl.id] && pl.id !== ship.at) consider(placeEntry(pl)); });
+    var sf = shipStars(); sf.list.forEach(function (s) { if (s.key !== ship.star) consider(starEntry(sf.f, s)); });
+    cands.sort(function (a, b) { return b.gain - a.gain; });
+    jt.wps = cands.slice(0, JT_N); jt.dir = dir; jt.D = D;
+    if (jt.sel >= jt.wps.length) jt.sel = 0;
+    jtDraw();
+  }
+  function jtWords(def) {   // a system's keywords: its notable worlds and any xenos
+    if (!def) return '';
+    var w = [];
+    def.bodies.forEach(function (b) {
+      if (w.length < 2 && (XHAB.test(b.type) || /station|hulk|xenos|tomb|maiden|daemon|shattered/.test(b.type))) w.push(b.type + ': ' + b.name);
+    });
+    def.bodies.forEach(function (b) { var m = / \/\/ ([a-z ]+ (traces|infestation|overrun))$/.exec(b.note || ''); if (m && w.length < 3 && w.indexOf(m[1]) < 0) w.push(m[1]); });
+    return w.join(' // ');
+  }
+  function jtSummary(e, wp) {   // the system summary under the list, with "jump here"
+    var box = $('gc-jtSum'); box.textContent = '';
+    if (!e) return;
+    var def = sysDef(e.key), h = document.createElement('h3'), sp = document.createElement('span');
+    h.className = 'gc-gtitle gc-sec'; sp.textContent = (wp ? 'waypoint ' + (jt.sel + 1) + ': ' : 'target: ') + e.name; h.appendChild(sp); box.appendChild(h);
+    var s1 = document.createElement('div'); s1.className = 'gc-dim gc-sm';
+    s1.textContent = '// ' + (e.pl ? e.pl.sub : (saved[e.key] ? 'surveyed' : 'auspex return')) + (def && def.cls ? ' // ' + def.cls : ''); box.appendChild(s1);
+    var s2 = document.createElement('p'); var kw = jtWords(def);
+    s2.textContent = def ? def.bodies.length + (def.bodies.length === 1 ? ' body' : ' bodies') + ' on record' + (kw ? ' // ' + kw : '') : 'no survey on record.'; box.appendChild(s2);
+    var dl = document.createElement('dl'); dl.className = 'gc-kv';
+    function row(k, v) { var dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = k; dd.textContent = v; dl.appendChild(dt); dl.appendChild(dd); }
+    row('region', e.pl ? e.pl.region : (e.f ? 'local group: ' + e.f.name : 'uncharted'));
+    var al = def ? sysAlleg(e.key) : null; if (al) row('allegiance', al);
+    var d = e.w.distanceTo(shipP) * 1000;
+    row('jump', lyN(d) + (wp ? ' // ' + Math.round(e.off) + ' deg off course' : ''));
+    if (wp) row('then', lyN(jt.D - e.gain) + ' to ' + jt.target.name);
+    row('travel', 'warp ' + span(d * 0.024) + ' - ' + span(d * 0.096) + ' // real ' + span(d * 0.72) + ' - ' + span(d * 4.32));
+    box.appendChild(dl);
+    var c = document.createElement('div'); c.className = 'gc-ctl';
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'gc-btn'; b.textContent = 'jump here';
+    b.addEventListener('click', function () { jtJump(e); }); c.appendChild(b); box.appendChild(c);
+  }
+  function jtJump(e) {   // move the ship there (shared, like move ship here), then replot toward the same target
+    var w = e.w;
+    if (e.pl) setShip(e.pl.p.x, -e.pl.p.z, e.pl.p.y, e.pl.id); else setShip(w.x, -w.z, w.y, null, false, null, e.key);
+    var left = jt.target ? jt.target.w.distanceTo(shipP) * 1000 : 0, done = $('gc-jtDone');
+    done.innerHTML = ''; done.appendChild(document.createTextNode('// jump logged // ')); var bb = document.createElement('b'); bb.textContent = e.name; done.appendChild(bb);
+    done.appendChild(document.createTextNode(jt.target && jt.target.key !== e.key ? ' // ' + lyN(left) + ' to ' + jt.target.name + ' // waypoints replotted' : ' // arrived'));
+    done.hidden = false; jt.sel = 0; status('// jump logged // ' + e.name);
+    jtPlan();
+  }
+  function jtReplan() { if (jt && jt.target && jumpR > 0) jtPlan(); }   // jt may not exist yet while the chart is starting up
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function svgEl(tag, a, txt) { var el = document.createElementNS(SVGNS, tag); Object.keys(a).forEach(function (k) { el.setAttribute(k, a[k]); }); if (txt !== undefined) el.textContent = txt; return el; }
+  function jtDraw() {
+    var t = jt.target, msg = $('gc-jtMsg'), svg = $('gc-jtPlot'), ol = $('gc-jtList'), D = t.w.distanceTo(shipP) * 1000;
+    msg.textContent = ''; var b = document.createElement('b'); b.textContent = t.name; msg.appendChild(b);
+    ol.textContent = ''; svg.textContent = '';
+    if (jt.inRange) {
+      msg.className = 'gc-jmsg gc-in'; msg.appendChild(document.createTextNode(' // ' + lyN(D) + ' // in range // one jump'));
+      svg.setAttribute('hidden', ''); jtSummary(t, false); return;
+    }
+    msg.className = 'gc-jmsg'; msg.appendChild(document.createTextNode(' // ' + lyN(D) + ' // out of range' + (jt.wps.length ? '' : ' // no system in range toward it')));
+    if (!jt.wps.length) { svg.setAttribute('hidden', ''); jtSummary(null); return; }
+    svg.removeAttribute('hidden');
+    // the plot: ship left, course to the right; range ring to scale (95 px = jump range), 35 deg cone, numbered waypoints
+    var SX = 70, SY = 118, RR = 95, k = RR / jumpR, side = new THREE.Vector3(0, 1, 0).cross(jt.dir).normalize(), G = '#39ff6b', DG = '#1e8f3a', DM = '#3f8a52', HI = '#c2ffd1', TX = '#8fffab';
+    if (side.lengthSq() < 1e-6) side.set(1, 0, 0);
+    var ca = JT_CONE * Math.PI / 180, cx = SX + RR * Math.cos(ca), cy1 = SY - RR * Math.sin(ca), cy2 = SY + RR * Math.sin(ca);
+    svg.appendChild(svgEl('defs', {})).appendChild(svgEl('marker', { id: 'gc-jar', viewBox: '0 0 6 6', refX: 5, refY: 3, markerWidth: 5, markerHeight: 5, orient: 'auto' })).appendChild(svgEl('path', { d: 'M0 0L6 3L0 6z', fill: G }));
+    var rul = svgEl('g', { stroke: DG, 'stroke-width': 0.75 }); rul.appendChild(svgEl('line', { x1: 10, y1: 12, x2: 350, y2: 12 }));
+    [10, 95, 180, 265, 350].forEach(function (x, i) { rul.appendChild(svgEl('line', { x1: x, y1: 12, x2: x, y2: i % 2 ? 16 : 18 })); }); svg.appendChild(rul);
+    svg.appendChild(svgEl('text', { x: 12, y: 28, 'font-size': 11, fill: DM }, 'ship'));
+    svg.appendChild(svgEl('text', { x: 180, y: 28, 'font-size': 11, fill: DM, 'text-anchor': 'middle' }, 'range ' + lyN(jumpR)));
+    svg.appendChild(svgEl('text', { x: 348, y: 28, 'font-size': 11, fill: DM, 'text-anchor': 'end' }, 'course'));
+    svg.appendChild(svgEl('path', { d: 'M' + SX + ' ' + SY + ' L' + cx.toFixed(1) + ' ' + cy1.toFixed(1) + ' A' + RR + ' ' + RR + ' 0 0 1 ' + cx.toFixed(1) + ' ' + cy2.toFixed(1) + ' Z', fill: 'rgba(57,255,107,.05)', stroke: DG, 'stroke-width': 0.75, 'stroke-dasharray': '3 2' }));
+    svg.appendChild(svgEl('circle', { 'class': 'gc-jring', cx: SX, cy: SY, r: RR, fill: 'none', stroke: DG, 'stroke-width': 1 }));
+    svg.appendChild(svgEl('line', { x1: SX, y1: SY, x2: 346, y2: SY, stroke: G, 'stroke-width': 1.4, 'marker-end': 'url(#gc-jar)' }));
+    svg.appendChild(svgEl('text', { x: 350, y: SY - 8, 'font-size': 14, fill: G, 'text-anchor': 'end' }, t.name));
+    svg.appendChild(svgEl('text', { x: 350, y: SY + 16, 'font-size': 11, fill: DM, 'text-anchor': 'end' }, lyN(D)));
+    svg.appendChild(svgEl('rect', { x: SX - 5, y: SY - 5, width: 10, height: 10, fill: 'none', stroke: G, 'stroke-width': 1.2 }));
+    var here = ship.at && byId[ship.at] ? byId[ship.at].name : (ship.star ? starLabel(ship.star) : 'ship');
+    svg.appendChild(svgEl('text', { x: SX - 16, y: SY + 20, 'font-size': 11, fill: DM, 'text-anchor': 'middle' }, here));
+    // labels kept clear of each other, the ship and the target
+    var boxes = [[SX - 46, SY + 10, 60, 12], [350 - t.name.length * 7 - 4, SY - 20, t.name.length * 7 + 6, 30], [0, 0, 360, 30], [200, 196, 160, 14]];
+    function clear(bx) { return boxes.every(function (o) { return bx[0] + bx[2] < o[0] || bx[0] > o[0] + o[2] || bx[1] + bx[3] < o[1] || bx[1] > o[1] + o[3]; }); }
+    var pts = jt.wps.map(function (e) { var al = e.v.dot(jt.dir) * 1000, sd = e.v.dot(side) * 1000; return [SX + al * k, SY - sd * k]; });
+    pts.forEach(function (p) { boxes.push([p[0] - 3, p[1] - 3, 6, 6]); });
+    var g = svgEl('g', { 'font-size': 11 });
+    jt.wps.forEach(function (e, i) {
+      var p = pts[i], on = i === jt.sel, wg = svgEl('g', { 'class': 'gc-wp' }), lab = String(i + 1), wdt = lab.length * 6 + (on ? 3 : 0), hgt = on ? 13 : 10;
+      if (on) wg.appendChild(svgEl('rect', { x: p[0] - 7, y: p[1] - 7, width: 14, height: 14, fill: 'rgba(57,255,107,.1)', stroke: G, 'stroke-dasharray': '3 2' }));
+      wg.appendChild(svgEl('circle', { cx: p[0], cy: p[1], r: on ? 2.6 : 2, fill: on ? HI : G }));
+      wg.appendChild(svgEl('circle', { cx: p[0], cy: p[1], r: 8, fill: 'transparent' }));
+      var spots = [[p[0] + 7, p[1] - 3, 'start'], [p[0] - 7, p[1] - 3, 'end'], [p[0], p[1] - 8, 'middle'], [p[0], p[1] + 14, 'middle'], [p[0] + 7, p[1] + 10, 'start'], [p[0] - 7, p[1] + 10, 'end']], pick = spots[0];
+      for (var j = 0; j < spots.length; j++) { var s = spots[j], x0 = s[2] === 'start' ? s[0] : (s[2] === 'end' ? s[0] - wdt : s[0] - wdt / 2), bx = [x0, s[1] - hgt + 2, wdt, hgt]; if (clear(bx)) { pick = s; boxes.push(bx); break; } }
+      wg.appendChild(svgEl('text', { x: pick[0], y: pick[1], 'text-anchor': pick[2], fill: on ? HI : TX, 'font-size': on ? 14 : 11 }, lab));
+      wg.addEventListener('click', function () { jtPick(i); });
+      g.appendChild(wg);
+    });
+    var sp = pts[jt.sel]; svg.appendChild(svgEl('line', { x1: SX, y1: SY, x2: sp[0], y2: sp[1], stroke: HI, 'stroke-width': 1, 'stroke-dasharray': '3 2' }));
+    svg.appendChild(g);
+    svg.appendChild(svgEl('text', { x: 350, y: 204, 'font-size': 11, fill: DM, 'text-anchor': 'end' }, 'plot ref jp-1 // top down // range to scale'));
+    jt.wps.forEach(function (e, i) {
+      var li = document.createElement('li'), a = document.createElement('i'), n = document.createElement('span'), m = document.createElement('em');
+      a.textContent = i + 1; n.textContent = e.name; m.textContent = '+' + Math.round(e.gain).toLocaleString('en-US');
+      li.appendChild(a); li.appendChild(n); li.appendChild(m); if (i === jt.sel) li.setAttribute('aria-current', 'true');
+      li.title = 'ly nearer ' + t.name; li.addEventListener('click', function () { jtPick(i); }); ol.appendChild(li);
+    });
+    jtSummary(jt.wps[jt.sel], true);
+  }
+  function jtPick(i) { jt.sel = i; $('gc-jtDone').hidden = true; jtDraw(); }
 
   // ---- selection: stars and bodies ----
   function setSelStar(s) {
