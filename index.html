@@ -451,6 +451,7 @@ a.gc-btn{display:inline-flex;align-items:center;text-decoration:none}
 .gc-acts .gc-btn{white-space:nowrap}   /* selected system actions: one row, each button kept whole */
 .gc-one .gc-btn{white-space:nowrap;padding-left:.45rem;padding-right:.45rem;flex:0 1 auto;min-width:0}
 #gc-status{margin:.4rem 0 0;color:var(--dim);font-size:.75rem;min-height:1em}
+#gc-status:empty{display:none}   /* messages only; no hint line */
 
 /* detail, ship, index */
 .gc-kv{display:grid;grid-template-columns:auto 1fr;gap:.15rem .9rem;margin:.4rem 0 0}
@@ -567,15 +568,18 @@ html.map-mode body{padding:0;height:100vh;height:100dvh;min-height:0;overflow:hi
    navigation pinned on the left (60%): starmap fills it, navigation data in its bottom ~30% scrolling inside itself.
    the other sections stack on the right (40%) and scroll with the page. grid placement only: no element moves in the dom */
 #layoutBar{display:none}
-html.wide #layoutBar{display:flex;position:sticky;top:0;z-index:13;justify-content:flex-end;align-items:center;gap:.35rem;margin:-16px -12px 6px;padding:4px 12px;
+html.wide #layoutBar{display:flex;position:sticky;top:0;z-index:13;justify-content:flex-start;align-items:center;gap:.35rem;margin:-16px -12px 6px;padding:4px 12px;
   background:rgba(2,10,4,.94);border-bottom:1px solid var(--border);box-shadow:0 2px 8px rgba(2,10,4,.9)}   /* pinned strip: takes its own space at rest (user's request) */
 html.wide #layoutBar .gc-btn{font-family:var(--term);text-shadow:inherit;font-size:.75rem}
-html.wide .warp-test-btn{top:6px;left:12px;padding:.15rem .5rem;font-size:var(--fs-s)}   /* gm's warp button: top left, sized to sit in the layout strip */
+#lbLead{display:flex;align-items:center;gap:.8rem;min-width:0}
+html.wide #layoutBar .lb-lay{margin-left:auto}
+html.wide #layoutBar .warp-test-btn{position:static;padding:.15rem .5rem;font-size:var(--fs-s)}   /* gm's warp button: top left, in the strip */
+html.wide2 #layoutBar h1{font-size:1.15rem;letter-spacing:.2em;text-align:left;white-space:nowrap}
+html.wide2 #layoutBar h1::before,html.wide2 #layoutBar h1::after{content:none}
+html.wide2 #layoutBar #connLine{margin:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 html.wide2{--lbh:42px}
 html.wide2 .wrap{max-width:1600px;display:grid;grid-template-columns:minmax(0,3fr) minmax(420px,2fr);column-gap:14px;align-items:start}
 /* the map column starts right under the strip: title and connection line sit at the top of the right column */
-html.wide2 .wrap>h1{grid-column:2;grid-row:1;margin:0;font-size:1.6rem}
-html.wide2 .wrap>#connLine{grid-column:2;grid-row:2;margin:2px 0 8px}
 html.wide2 #gc-root{grid-column:1;grid-row:1 / span 6;position:sticky;top:var(--lbh);height:calc(100vh - var(--lbh) - 8px);align-self:start;margin:0;display:flex;flex-direction:column}
 html.wide2 .wrap>section.group:nth-of-type(2){grid-column:2;grid-row:3}
 html.wide2 .wrap>section.group:nth-of-type(3){grid-column:2;grid-row:4}
@@ -589,18 +593,22 @@ html.wide2 .wrap>section.group:not(#gc-root)>.group-title{margin-bottom:6px}
 html.wide2 #gc-root>.group-title,html.wide2 #gc-mappanel>.gc-ptitle{display:none}
 html.wide2 #gc-root #gc-mappanel{flex:1 1 auto;min-height:300px;margin:0 0 6px;padding:0;position:relative;overflow:hidden;display:block}
 html.wide2 #gc-root #gc-chart{position:absolute;inset:0;aspect-ratio:auto;max-height:none;border:0}
-html.wide2 #gc-float{position:absolute;top:24px;left:6px;max-width:calc(100% - 60px);z-index:6;pointer-events:none;display:flex;flex-direction:column;align-items:flex-start;gap:3px}
-html.wide2 #gc-float>*{pointer-events:auto;margin:0;padding:2px 3px;background:rgba(2,10,4,.78);border:1px solid var(--border);max-width:100%}
-html.wide2 #gc-float .gc-ctl{gap:3px;align-items:center}
-html.wide2 #gc-float .gc-btn{padding:.1rem .4rem;min-height:1.5rem}
-html.wide2 #gc-float .gc-tab{margin-left:0}
-html.wide2 #gc-float .gc-ovl{border-top:1px solid var(--border)}
+/* compact controls: scale, overlays and systems share one plate, side by side, wrapping only when they must */
+html.wide2 #gc-float{position:absolute;top:24px;left:6px;max-width:calc(100% - 60px);z-index:6;pointer-events:none;display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;
+  gap:2px 10px;padding:2px 5px;background:rgba(2,10,4,.8);border:1px solid var(--border)}
+html.wide2 #gc-float>*{pointer-events:auto;margin:0;padding:0;background:none;border:0;max-width:100%}
+html.wide2 #gc-float .gc-ctl{gap:2px;align-items:center;flex-wrap:nowrap}
+html.wide2 #gc-float .gc-ctl>.gc-dim{margin-right:2px}
+html.wide2 #gc-float .gc-btn{padding:0 .3rem;min-height:1.3rem;line-height:1.2}
+html.wide2 #gc-float .gc-tab{margin-left:4px}
+html.wide2 #gc-float .gc-ovl{border-top:0;padding-top:0;margin:0}
+html.wide2 #gc-float #gc-key,html.wide2 #gc-float #gc-status,html.wide2 #gc-float #gc-index[open],html.wide2 #gc-float #gc-push{flex-basis:100%}   /* these take their own line */
+html.wide2 #gc-float #gc-index>summary{font-size:.75rem;letter-spacing:.1em}   /* closed index: a small "> index [ + ]" at the end of the controls */
 html.wide2 #gc-root #locDate{padding:.1rem .4rem;max-width:9rem}
 html.wide2 #gc-status{padding:1px 4px;min-height:0}
 html.wide2 #gc-status:empty{display:none}
-html.wide2 #gc-index{padding:2px 6px;max-height:50vh;overflow:auto;width:30rem}
+html.wide2 #gc-index{padding:0;margin:0;border-top:0;max-height:50vh;overflow:auto}
 html.wide2 #gc-index>summary{margin:0}
-html.wide2 #gc-index:not([open]){width:auto}
 /* navigation data: as tall as its content, at most about a third of the column; scrolls inside itself */
 html.wide2 #gc-root #gc-navdata{flex:0 1 auto;max-height:32vh;min-height:0;overflow:auto;margin:0;display:block;padding:8px 10px}
 html.wide2 #gc-navdata .gc-gtitle{margin:.35rem 0 .2rem}
@@ -696,7 +704,8 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
 </div>
 <!-- layout switch: desktop only (>= 1100 px), pinned to the top -->
 <div id="layoutBar" role="group" aria-label="page layout">
-  <span class="gc-dim gc-sm">layout //</span>
+  <span id="lbLead"></span>   <!-- desktop: the gm's warp button and (2 columns) the title and connection line are moved in here by the layout script -->
+  <span class="gc-dim gc-sm lb-lay">layout //</span>
   <button class="gc-btn" type="button" data-lay="2" aria-pressed="true">2 columns</button>
   <button class="gc-btn" type="button" data-lay="1" aria-pressed="false">1 column</button>
 </div>
@@ -707,10 +716,6 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
 <h2 class="group-title"><span>Navigation</span></h2>
   <div class="gc-panel" id="gc-mappanel">
     <h2 class="gc-ptitle">&gt; starmap</h2>
-    <div class="gc-ctl gc-lab">
-      <span class="gc-dim gc-sm">date //</span>
-      <input id="locDate" aria-label="imperial date" placeholder="6.122.008.M31" onchange="saveLocation(this)">
-    </div>
     <div id="gc-chart">
       <canvas id="gc-sky" tabindex="0" aria-label="starmap. drag to turn, pinch or scroll to zoom."></canvas>
       <canvas id="gc-ink"></canvas>
@@ -774,7 +779,7 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
         <li><span class="gc-sw gc-cordon"></span>xersinia prohibited zone</li>
       </ul>
     </div>
-    <p id="gc-status">// drag: turn // pinch: zoom // 2 fingers: slide</p>
+    <p id="gc-status"></p>
 
     <details id="gc-index">
     <summary class="gc-ptitle">&gt; index</summary>
@@ -795,6 +800,10 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
 
   <div class="gc-panel" id="gc-navdata">
     <h2 class="gc-ptitle" id="gc-navhead">&gt; navigation data</h2>
+    <div class="gc-ctl gc-lab gc-date">
+      <span class="gc-dim gc-sm">date //</span>
+      <input id="locDate" aria-label="imperial date" placeholder="6.122.008.M31" onchange="saveLocation(this)">
+    </div>
     <div aria-live="polite">
     <h3 class="gc-gtitle gc-sec"><span id="gc-dtitle">selected system</span></h3>
     <div id="gc-dnone" class="gc-dim">// nothing selected</div>
@@ -3531,7 +3540,7 @@ el.appendChild(d);
   });
 
   // ---------------- panels ----------------
-  var selected = null, placing = false, HINT = document.documentElement.classList.contains('map-mode') ? '' : '// drag: turn // pinch: zoom // local group: tap any star';   // map view: no hint line
+  var selected = null, placing = false, HINT = '';   // no mouse / touch hint line in any view (user); the status line only shows messages
   function ly(kly) { return (kly < 0.095 ? Math.round(kly * 1000) : Math.round(kly * 10) * 100).toLocaleString('en-US') + ' ly'; }
   function status(t) { $('gc-status').textContent = t || HINT; }
   function select(id) { selected = id; if (id) zoomPt = null; items.forEach(function (it) { if (it.id) it.el.classList.toggle('gc-sel', it.id === id); }); }
@@ -5859,11 +5868,23 @@ el.appendChild(d);
     order.forEach(function (el) { mp.appendChild(el); });   // original order: title, date, chart, scale, overlays, systems, key, status, index
     fl.parentNode.removeChild(fl); fl = null; order = null;
   }
+  // the strip's left end: the gm's warp button on desktop; in 2 columns also the title and connection line.
+  // each is put back exactly where it came from (homes are taken once, before anything moves)
+  var lead = document.getElementById('lbLead'), t1 = document.querySelector('.wrap>h1');
+  if (t1 && !t1.id) t1.id = 'pageTitle';
+  var LEAD = ['warpTestBtn', 'pageTitle', 'connLine'], homes = {};
+  LEAD.forEach(function (id) { var el = document.getElementById(id); if (el) homes[id] = { parent: el.parentNode, next: el.nextSibling }; });
+  function home(id) { var el = document.getElementById(id), h = homes[id]; if (el && h && el.parentNode === lead) h.parent.insertBefore(el, h.next); }
+  function setLead(ids) {   // ids that belong in the strip, in strip order
+    LEAD.slice().reverse().forEach(function (id) { if (ids.indexOf(id) < 0) home(id); });   // back home: last first, so each "next" is in place
+    ids.forEach(function (id) { var el = document.getElementById(id); if (el && lead) lead.appendChild(el); });
+  }
   function apply() {
     var wide = !!(mq && mq.matches) && !html.classList.contains('map-mode'), p = pref();
     html.classList.toggle('wide', wide);
     html.classList.toggle('wide2', wide && p === '2');
     if (wide && p === '2') floatOn(); else floatOff();
+    setLead(!wide ? [] : (p === '2' ? LEAD : ['warpTestBtn']));
     Array.prototype.forEach.call(document.querySelectorAll('#layoutBar [data-lay]'), function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-lay') === p ? 'true' : 'false'); });
   }
   Array.prototype.forEach.call(document.querySelectorAll('#layoutBar [data-lay]'), function (b) {
