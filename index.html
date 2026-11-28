@@ -613,6 +613,15 @@ html.wide2 #gc-index>summary{margin:0}
 html.wide2 #gc-root #gc-navdata{flex:0 1 auto;max-height:32vh;min-height:0;overflow:auto;margin:0;display:block;padding:8px 10px}
 html.wide2 #gc-navdata .gc-gtitle{margin:.35rem 0 .2rem}
 html.wide2 #gc-root.collapsed #gc-mappanel{display:block}
+/* draggable divider between the map and navigation data (2 columns only). double-click resets; arrows nudge */
+#gc-split{display:none}
+html.wide2 #gc-root #gc-mappanel{margin-bottom:0}
+html.wide2 #gc-split{display:block;flex:none;height:10px;cursor:row-resize;position:relative;touch-action:none;outline:none}
+html.wide2 #gc-split::before{content:'';position:absolute;left:0;right:0;top:4px;height:1px;background:var(--border)}
+html.wide2 #gc-split::after{content:'';position:absolute;left:50%;top:2px;width:44px;height:5px;margin-left:-22px;border-top:1px solid var(--green-dim);border-bottom:1px solid var(--green-dim);background:var(--bg)}
+html.wide2 #gc-split:hover::before,html.wide2 #gc-split.gc-drag::before,html.wide2 #gc-split:focus-visible::before{background:var(--green-dim)}
+html.wide2 #gc-split:hover::after,html.wide2 #gc-split.gc-drag::after,html.wide2 #gc-split:focus-visible::after{border-color:var(--green);box-shadow:0 0 6px rgba(57,255,107,.5)}
+html.wide2.gc-sized #gc-root #gc-navdata{max-height:none}
 .map-mode .wrap{max-width:none}
 .map-mode .wrap>:not(#gc-root),.map-mode #gc-root>.group-title,.map-mode #gc-mappanel>.gc-ptitle,.map-mode .warp-test-btn{display:none!important}
 html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75rem / 1rem ratio kept */
@@ -5879,12 +5888,52 @@ el.appendChild(d);
     LEAD.slice().reverse().forEach(function (id) { if (ids.indexOf(id) < 0) home(id); });   // back home: last first, so each "next" is in place
     ids.forEach(function (id) { var el = document.getElementById(id); if (el && lead) lead.appendChild(el); });
   }
+  // draggable divider between the map and navigation data (2 columns). the split is stored as navigation data's share of the column
+  // (vt_split, 0..1), so it holds across window sizes. none stored: navigation data sizes to its content (max 32vh)
+  var root = document.getElementById('gc-root'), nav = document.getElementById('gc-navdata'), split = null, MAP_MIN = 240, NAV_MIN = 70;
+  if (root && nav) {
+    split = document.createElement('div'); split.id = 'gc-split'; split.tabIndex = 0;
+    split.setAttribute('role', 'separator'); split.setAttribute('aria-orientation', 'horizontal'); split.setAttribute('aria-label', 'resize map and navigation data');
+    split.title = 'drag to resize // double-click: reset';
+    root.insertBefore(split, nav);
+  }
+  function share() { var v = parseFloat(safeStorageGet('vt_split')); return v > 0 && v < 1 ? v : 0; }
+  function setNav(px, keep) {   // px: navigation data height, or 0 = back to content-sized
+    if (!nav) return;
+    if (!px) { nav.style.flex = ''; html.classList.remove('gc-sized'); if (keep) safeStorageRemove('vt_split'); return; }
+    var total = root.clientHeight, h = Math.max(NAV_MIN, Math.min(total - MAP_MIN, px));
+    nav.style.flex = '0 0 ' + Math.round(h) + 'px'; html.classList.add('gc-sized');
+    if (keep) safeStorageSet('vt_split', (h / total).toFixed(4));
+  }
+  function applySplit() { if (!html.classList.contains('wide2')) { setNav(0); return; } var s = share(); if (s) setNav(s * root.clientHeight); else setNav(0); }
+  if (split) {
+    var dragY = null;
+    split.addEventListener('pointerdown', function (ev) {
+      ev.preventDefault(); dragY = ev.clientY; split.classList.add('gc-drag');
+      try { split.setPointerCapture(ev.pointerId); } catch (e) { /* ignore */ }
+    });
+    split.addEventListener('pointermove', function (ev) {
+      if (dragY === null) return;
+      setNav(nav.getBoundingClientRect().bottom - ev.clientY - split.offsetHeight / 2, true);   // divider follows the pointer
+    });
+    function end() { dragY = null; split.classList.remove('gc-drag'); }
+    split.addEventListener('pointerup', end); split.addEventListener('pointercancel', end);
+    split.addEventListener('dblclick', function () { setNav(0, true); });
+    split.addEventListener('keydown', function (ev) {
+      var step = ev.shiftKey ? 80 : 20, cur = nav.getBoundingClientRect().height;
+      if (ev.key === 'ArrowUp') { ev.preventDefault(); setNav(cur + step, true); }
+      else if (ev.key === 'ArrowDown') { ev.preventDefault(); setNav(cur - step, true); }
+      else if (ev.key === 'Home' || ev.key === 'Enter') { ev.preventDefault(); setNav(0, true); }
+    });
+    window.addEventListener('resize', applySplit);
+  }
   function apply() {
     var wide = !!(mq && mq.matches) && !html.classList.contains('map-mode'), p = pref();
     html.classList.toggle('wide', wide);
     html.classList.toggle('wide2', wide && p === '2');
     if (wide && p === '2') floatOn(); else floatOff();
     setLead(!wide ? [] : (p === '2' ? LEAD : ['warpTestBtn']));
+    applySplit();
     Array.prototype.forEach.call(document.querySelectorAll('#layoutBar [data-lay]'), function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-lay') === p ? 'true' : 'false'); });
   }
   Array.prototype.forEach.call(document.querySelectorAll('#layoutBar [data-lay]'), function (b) {
