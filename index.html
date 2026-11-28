@@ -175,6 +175,15 @@ padding:7px 10px;font-family:inherit;font-size:var(--fs-s);width:100%;margin-top
 .die-select{background-color:var(--panel2);border:1px solid var(--border);color:var(--green);
 font-family:var(--term);font-size:var(--fs-m);padding:6px 20px 6px 6px;width:auto;max-width:72px;caret-color:var(--green)}
 .die-select:focus{outline:none;border-color:var(--green);box-shadow:0 0 6px rgba(57,255,107,.5)}
+/* a die that rolls: "d6" button (taps roll it in Fate) joined to a narrow arrow-only select (changes the die) */
+.die-roll{flex:none;background:var(--panel2);border:1px solid var(--border);border-right:0;color:var(--green);font-family:var(--term);font-size:var(--fs-s);
+  letter-spacing:.04em;padding:1px 5px;min-width:2.2em;cursor:pointer;text-shadow:inherit;align-self:stretch}   /* stretch: same height as its arrow */
+.die-roll:hover{border-color:var(--green-dim);background:rgba(57,255,107,.08)}
+.die-roll:active{border-color:var(--green);background:rgba(57,255,107,.2);color:var(--hi)}
+.die-roll:focus-visible{outline:1px solid var(--green);outline-offset:1px}
+select.die-select.die-pick{color:transparent;text-shadow:none;width:20px;min-width:20px;max-width:20px;padding-left:0;padding-right:0;flex:none;cursor:pointer;background-position:center;align-self:stretch}
+select.die-select.die-pick option{color:var(--green)}
+.roll-hist-die,.dice-result .roll-die,#dk-die{cursor:pointer}   /* tap to roll that die again */
 .cargo-bay{display:flex;align-items:center;gap:8px;margin-bottom:4px}
 .cargo-bay:last-child{margin-bottom:0}
 .cargo-bay .bay-head{color:var(--dim);font-size:var(--fs-s);text-transform:uppercase;letter-spacing:.04em;width:1.2rem;flex:none}
@@ -988,7 +997,31 @@ function fillDieSelect(sel, value){
     sel.appendChild(opt);
   });
   sel.value = DIE_OPTIONS.includes(value) ? value : 'd10';
+  dieRollable(sel);
 }
+// every die shown in the tracker rolls when tapped: the select becomes a small arrow (to change the die) with a "d6" button before it
+// that rolls that die in Fate (rollDie: same result box, roll log and effects). the button follows the select's value, however it is set
+const SELECT_VALUE = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+function dieRollable(sel){
+  if(sel._dieBtn){ sel._dieBtn.textContent = sel.value; return; }
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'die-roll'; b.textContent = sel.value;
+  b.title = 'roll'; b.setAttribute('aria-label', 'roll ' + sel.value + (sel.getAttribute('aria-label') ? ' // ' + sel.getAttribute('aria-label') : ''));
+  b.addEventListener('click', ev=>{ ev.stopPropagation(); const n = parseInt(String(sel.value).slice(1), 10); if(n > 0) rollDie(n); });
+  sel._dieBtn = b; sel.classList.add('die-pick');
+  Object.defineProperty(sel, 'value', { configurable:true,
+    get(){ return SELECT_VALUE.get.call(this); },
+    set(v){ SELECT_VALUE.set.call(this, v); b.textContent = SELECT_VALUE.get.call(this); b.setAttribute('aria-label', 'roll ' + b.textContent); } });
+  sel.addEventListener('change', ()=>{ b.textContent = SELECT_VALUE.get.call(sel); });
+  const place = ()=>{ if(sel.parentNode && b.parentNode !== sel.parentNode) sel.parentNode.insertBefore(b, sel); };
+  place(); if(!b.parentNode) queueMicrotask(place);   // a row still being built: put the button in once the select is in place
+}
+// die labels in roll results (roll log, Fate result, mini roller): tapping one rolls that die again
+document.addEventListener('click', ev=>{
+  const t = ev.target.closest && ev.target.closest('.roll-hist-die, .dice-result .roll-die, #dk-die');
+  if(!t) return;
+  const m = /d(\d+)/.exec(t.textContent || ''); if(m) rollDie(parseInt(m[1], 10));
+});
 
 function safeStorageGet(key){
 try { return localStorage.getItem(key); } catch(e) { return null; }
@@ -1313,7 +1346,7 @@ const COMPONENTS = [
   {id:'plasma', type:'jovian 2 plasma drive', at:'plasma'},
   {id:'warp', type:'strelov 1 warp engine', at:'engines'},
   {id:'geller', type:'geller field', at:'engines'},
-  {id:'shield', type:'single void shield', at:'defense', die:/shield/i},     // die: the row has a quality die; until one is stored, it is read from the old defense entry matching this
+  {id:'shield', type:'single void shield', at:'defense', die:/shield/i},     // die: until a quality is stored, read it from the old defense entry matching this (every row has a die; others start at d6)
   {id:'bridge', type:'combat bridge', at:'bridge'},
   {id:'life', type:'m-1.r life sustainer', at:'crew'},
   {id:'quarters', type:'voidsmen quarters', at:'crew'},
@@ -1338,7 +1371,7 @@ function compQuality(c){
 const s = compData[c.id];
 if(s && s.quality) return s.quality;
 if(c.die){ const d = Object.values(defenseData || {}).find(x=> x && c.die.test(x.desc || '')); if(d && d.quality) return d.quality; }
-return 'd10';
+return 'd6';   // every component has a die; d6 until one is set
 }
 function renderCompData(v){ compData = v || {}; renderComponents(); }
 function renderDefenseData(v){ defenseData = v || {}; renderComponents(); }
@@ -1571,7 +1604,7 @@ name.type = 'button'; name.className = 'comp-n'; name.textContent = c.type;
 loc.textContent = c.loc || DMG_SECTIONS[c.at]; name.appendChild(loc);
 name.addEventListener('click', ()=>{ if(window.ShipView && ShipView.pick) ShipView.pick(c.at); });
 row.appendChild(name);
-if(c.die){
+{   // every component has a quality die (tap the die to roll it, the arrow to change it)
   const sel = document.createElement('select'); sel.className = 'die-select'; sel.setAttribute('aria-label', c.type + ' quality');
   fillDieSelect(sel, compQuality(c));
   sel.onchange = ()=> db.ref('components/' + c.id).update({quality: sel.value});
