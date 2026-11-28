@@ -440,7 +440,18 @@ body.shake{animation:flicker 11s infinite, shipShake .55s cubic-bezier(.36,.07,.
 #gc-root .gc-btn{font-size:.75rem}   /* beats the #gc-root button font reset */
 a.gc-btn{display:inline-flex;align-items:center;text-decoration:none}
 .gc-tab{margin-left:auto}
-#gc-bBack,.map-mode #gc-bTab{display:none}
+#gc-bBack{display:none}
+/* map control stubs: "scale // galaxy [ + ]" until clicked, then the row's buttons */
+.gc-stubh{background:none;border:1px dashed transparent;color:var(--text);font-family:var(--term);font-size:.75rem;padding:0 .35rem;min-height:1.65rem;cursor:pointer;
+  display:inline-flex;align-items:center;gap:.35rem;letter-spacing:.04em;text-shadow:inherit}
+.gc-stubh::after{content:'[ + ]';color:var(--dim)}
+.gc-stubh[aria-expanded="true"]::after{content:'[ - ]'}
+.gc-stubh:hover,.gc-stubh:focus-visible{border-color:var(--green-dim);outline:none}
+.gc-stubv{color:var(--green)}
+.gc-stub.gc-open .gc-stubv{display:none}
+.gc-stub:not(.gc-open)>:not(.gc-stubh):not(.gc-tab){display:none}
+.gc-stub:not(.gc-open){display:inline-flex;vertical-align:middle;border-top:0;padding-top:0;margin:.3rem .5rem 0 0}   /* closed stubs share one line; an open one takes its own */
+#gc-root .gc-stubh{font-size:.75rem}
 .map-mode #gc-bBack{display:inline-flex}
 .gc-btn:hover{border-color:var(--green-dim)}
 .gc-btn:focus-visible,#gc-root input:focus-visible{outline:1px solid var(--green);outline-offset:2px}
@@ -756,22 +767,22 @@ html.map-mode{font-size:100%}   /* smaller type and spacing in the map view; .75
       <button class="gc-btn" id="gc-pushOpen" type="button">open</button>
       <button class="gc-btn gc-add" id="gc-pushNo" type="button">dismiss</button>
     </div>
-    <div class="gc-ctl gc-lab">
-      <span class="gc-dim gc-sm">scale //</span>
+    <!-- scale / overlays / systems: stubs showing the current setting; a click opens the row's buttons (script: "map control stubs") -->
+    <div class="gc-ctl gc-lab gc-stub">
+      <button class="gc-stubh" type="button" aria-expanded="false"><span class="gc-dim">scale //</span><span class="gc-stubv"></span></button>
       <button class="gc-btn" id="gc-bT0" type="button" aria-pressed="true">galaxy</button>
       <button class="gc-btn" id="gc-bT1" type="button" aria-pressed="false">local group</button>
       <button class="gc-btn" id="gc-bT2" type="button" aria-pressed="false">system</button>
-      <a class="gc-btn gc-add gc-tab" id="gc-bTab" href="?map=1" target="_blank" rel="noopener">open in new tab</a>
       <a class="gc-btn gc-tab" id="gc-bBack" href="./">&lt; back to terminal</a>
     </div>
-    <div class="gc-ctl gc-ovl">
-      <span class="gc-dim gc-sm">overlays //</span>
+    <div class="gc-ctl gc-ovl gc-stub">
+      <button class="gc-stubh" type="button" aria-expanded="false"><span class="gc-dim">overlays //</span><span class="gc-stubv"></span></button>
       <button class="gc-btn" id="gc-bSeg" type="button" aria-pressed="true">segmentums</button>
       <button class="gc-btn" id="gc-bGuides" type="button" aria-pressed="false">guides</button>
       <button class="gc-btn" id="gc-bDom" type="button" aria-pressed="false">dominions</button>
     </div>
-    <div class="gc-ctl gc-ovl">
-      <span class="gc-dim gc-sm">systems //</span>
+    <div class="gc-ctl gc-ovl gc-stub">
+      <button class="gc-stubh" type="button" aria-expanded="false"><span class="gc-dim">systems //</span><span class="gc-stubv"></span></button>
       <button class="gc-btn" id="gc-bCa" type="button" aria-pressed="false">campaign</button>
       <button class="gc-btn" id="gc-bLm" type="button" aria-pressed="false">other locations</button>
       <button class="gc-btn" id="gc-bHw" type="button" aria-pressed="false">astartes homeworlds</button>
@@ -5941,6 +5952,28 @@ el.appendChild(d);
   });
   if (mq) { if (mq.addEventListener) mq.addEventListener('change', apply); else if (mq.addListener) mq.addListener(apply); }
   apply();
+})();
+</script>
+<script>
+/* MAP CONTROL STUBS // scale, overlays and systems show as one-line stubs ("scale // galaxy [ + ]"); a click opens that row's buttons,
+   another closes it. the stub's value lists what is switched on (or "off"), kept current by watching the buttons' aria-pressed. every view */
+(function () {
+  'use strict';
+  Array.prototype.forEach.call(document.querySelectorAll('.gc-stub'), function (row) {
+    var head = row.querySelector('.gc-stubh'), val = row.querySelector('.gc-stubv');
+    if (!head || !val) return;
+    function sum() {
+      var on = Array.prototype.filter.call(row.querySelectorAll('.gc-btn[aria-pressed]'), function (b) { return b.getAttribute('aria-pressed') === 'true'; })
+        .map(function (b) { return b.textContent.trim(); });
+      val.textContent = on.length ? on.join(', ') : 'off';
+    }
+    head.addEventListener('click', function () {
+      var open = !row.classList.contains('gc-open');
+      row.classList.toggle('gc-open', open); head.setAttribute('aria-expanded', String(open));
+    });
+    if (window.MutationObserver) new MutationObserver(sum).observe(row, { subtree: true, attributes: true, attributeFilter: ['aria-pressed'] });
+    sum();
+  });
 })();
 </script>
 </body>
